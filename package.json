@@ -15,7 +15,17 @@
     "test:e2e": "playwright test",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
-    "supabase:types": "supabase gen types typescript --local > supabase/types.ts"
+    "supabase:types": "supabase gen types typescript --local > supabase/types.ts",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -64,7 +74,9 @@
     "@vitest/ui": "^4.1.5",
     "eslint": "^9",
     "eslint-config-prettier": "^10.1.1",
+    "husky": "^9.1.7",
     "jsdom": "^29.0.2",
+    "lint-staged": "^16.4.0",
     "msw": "^2.13.4",
     "prettier": "^3.5.3",
     "supabase": "^2.93.0",
