@@ -1,0 +1,41 @@
+---
+description: Konto project overview, tech stack, and reference docs
+alwaysApply: true
+---
+
+# Konto — Project Context
+
+Konto is a personal finance management (PFM) web app for the Western Balkans (primary market: Bosnia & Herzegovina). The app parses PDF bank statements and categorizes transactions. **Primary UI language is Bosnian (Latin script).**
+
+## Critical context documents
+
+Before making significant changes, reference these docs:
+
+- `docs/01-architecture.md` — tech stack, data model, API design, pipelines
+- `docs/02-security-privacy.md` — RLS, auth, encryption, GDPR
+- `docs/03-design-system.md` — UI components, tokens, copy guide
+- `docs/05-testing.md` — testing strategy, when to write tests
+- `docs/06-backlog.md` — epics, features, task prompts
+
+If a request conflicts with these docs, **STOP and ask for clarification** before coding.
+
+## Tech stack (non‑negotiable)
+
+- Next.js 15 App Router (no Pages Router)
+- TypeScript strict mode — no `any`, no `unknown` without narrowing
+- Tailwind CSS v4 for all styling (no CSS modules, no styled‑components)
+- shadcn/ui + Radix for primitives
+- Supabase: Postgres, Auth, Storage, Edge Functions
+- Zod for input validation (runtime + static types)
+- React Hook Form for forms
+- Sonner for toasts
+- `date-fns` with `bs` locale for dates
+- `lucide-react` for icons (import per‑icon, never the whole package)
+- pnpm as package manager
+
+## When unsure
+
+- Ask which approach the architecture doc recommends
+- Reference the relevant section of `docs/`
+- Prefer proven boring solutions over clever ones
+- If an action could leak data or break money math, STOP and flag it

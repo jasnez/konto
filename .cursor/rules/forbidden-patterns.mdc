@@ -1,0 +1,21 @@
+---
+description: Forbidden patterns across the codebase
+alwaysApply: true
+---
+
+# Forbidden Patterns
+
+- **Never** `parseFloat` or `Number()` on user‑entered money.
+- **Never** `console.log` sensitive data (email, amount, `merchant_raw`, notes).
+- **Never** `SELECT *` in Supabase queries — always specify columns.
+- **Never** use `any` — use `unknown` + narrowing, or proper types.
+- **Never** `dangerouslySetInnerHTML` without an explicit justification comment above the usage.
+- **Never** write raw SQL through Supabase `rpc()` without parameterization.
+- **Never** commit `.env*` files or any secrets.
+- **Never** use Pages Router patterns (`getServerSideProps`, `_app.tsx`, `pages/`).
+- **Never** create API routes for things a Server Action can do.
+- **Never** mutate props or state directly.
+- **Never** use `useEffect` for data fetching — use Server Components.
+- **Never** use `useState` for form state — use `react-hook-form`.
+- **Never** mix business logic into components — extract it into `lib/`.
+- **Never** use English in user‑facing strings — always Bosnian (Latin).

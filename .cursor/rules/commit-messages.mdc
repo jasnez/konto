@@ -1,0 +1,27 @@
+---
+description: Conventional commit message format
+alwaysApply: true
+---
+
+# Commit Messages
+
+Use Conventional Commits. Keep the subject **under 72 chars**, **imperative mood**, **lowercase scope**.
+
+## Allowed types
+
+`feat` · `fix` · `refactor` · `perf` · `docs` · `test` · `chore` · `build` · `ci` · `style`
+
+## Examples
+
+- `feat(transakcije): add transaction split functionality`
+- `fix(import): handle Raiffeisen decimal separator`
+- `refactor(db): extract category queries into lib`
+- `docs(arch): update multi-currency section`
+- `test(actions): cover transfer detection`
+- `chore(deps): bump supabase-js to 2.50`
+
+## Guidelines
+
+- One logical change per commit — don't mix unrelated work.
+- Scope is the affected area (`import`, `transakcije`, `deps`, `cursor`, ...).
+- Body is optional; use it to explain **why**, not what.

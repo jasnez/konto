@@ -1,0 +1,33 @@
+---
+description: File structure and naming conventions
+alwaysApply: true
+---
+
+# File Structure
+
+- Server Components are the default. Mark Client Components with `'use client'` at the top of the file — and only when interactivity is truly needed.
+- Server Actions live in `actions.ts` **adjacent to the route that uses them**. Start the file with `'use server'`.
+- One exported action per function, named camelCase with a verb.
+- Validation schemas are colocated with actions, named `XxxxSchema`, using Zod.
+- Shared components go in `components/`; route‑local components stay in the route folder.
+- Utilities in `lib/` are grouped by domain: `lib/fx/`, `lib/supabase/`, `lib/format/`, ...
+- Supabase types are generated into `supabase/types.ts`. Import as `Database['public']['Tables']['xxx']['Row']`.
+
+## Supabase client split
+
+- `lib/supabase/server.ts` — Server Components & Actions (uses cookies)
+- `lib/supabase/client.ts` — Client Components
+- `lib/supabase/middleware.ts` — auth refresh in middleware
+- **Never** import the server and client variants from the same file.
+
+# Naming
+
+| Kind | Style | Example |
+| --- | --- | --- |
+| Files | kebab-case.ts | `money-input.tsx`, `create-transaction.ts` |
+| Components | PascalCase | `MoneyInput`, `TransactionRow` |
+| Functions | camelCase | `formatAmount`, `createTransaction` |
+| Types / Interfaces | PascalCase | `Transaction`, `CreateTransactionInput` |
+| Constants | SCREAMING_SNAKE_CASE | `BAM_EUR_RATE`, `MAX_PDF_SIZE` |
+| DB columns | snake_case | PostgreSQL convention; transform at the boundary |
+| Routes | Bosnian kebab-case | `/transakcije`, `/racuni/[id]`, `/uvoz` |

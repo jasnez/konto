@@ -1,0 +1,20 @@
+---
+description: Testing requirements and conventions
+globs: __tests__/**/*,**/*.test.ts,**/*.test.tsx
+alwaysApply: false
+---
+
+# Testing Requirements
+
+- Every Server Action with business logic needs a unit test in `__tests__/actions/`.
+- Every monetary calculation needs a test with **edge cases**: `0`, negative, large values, rounding/precision.
+- Every RLS policy needs an integration test that verifies **user A cannot access user B's data**.
+- Critical flows are covered by Playwright E2E: sign‑in, add transaction, upload PDF, delete account.
+- Run tests **before** claiming a task is done.
+
+# Conventions
+
+- Vitest for unit/component tests; test files in `__tests__/**/*.test.ts(x)`.
+- Share the Zod schema used by the Server Action; assert on the Action's return shape (`{ success, data?, error?, details? }`), not on thrown exceptions — Server Actions never throw.
+- For money assertions, compare **`bigint`** values (`expect(result).toBe(1250n)`), not formatted strings.
+- Keep tests deterministic: no real network, no real clock — inject dates/FX rates.

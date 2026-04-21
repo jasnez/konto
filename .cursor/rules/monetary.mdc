@@ -1,0 +1,31 @@
+---
+description: Monetary math and formatting rules — never break these
+alwaysApply: true
+---
+
+# Monetary Rules (NEVER break)
+
+- All money amounts are `bigint` in **minor units** (cents for EUR/BAM/USD).
+- **Never** use `float`/`number` for money. Ever.
+- **Never** use `parseFloat` on amount inputs — use the custom parser in `lib/format/parse-money.ts`.
+- BAM ↔ EUR uses the **fixed** Currency Board constant `1 EUR = 1.95583 BAM`, not an API.
+- Every transaction row stores: `original_amount_cents`, `original_currency`, `base_amount_cents`, `base_currency`, `fx_rate`, `fx_rate_date`.
+- Display formatting uses `Intl.NumberFormat('bs-BA', { style: 'currency', currency: 'BAM' })`.
+- Minus sign in display is Unicode `−` (U+2212), **not** hyphen `-`.
+- FX conversion uses the rate for the **transaction date**, not today.
+- Any `amount * rate` must be explicitly rounded: `Math.round(Number(cents) * rate)`.
+
+## Examples
+
+```ts
+// BAD
+const total = 12.50 + 0.1; // float math
+input.value.toFixed(2);    // precision loss
+parseFloat("12,50");       // returns 12, not 12.50
+
+// GOOD
+const totalCents: bigint = 1250n + 10n;
+new Intl.NumberFormat('bs-BA', { style: 'currency', currency: 'BAM' })
+  .format(Number(totalCents) / 100);
+parseMoneyString("12,50"); // returns 1250n
+```

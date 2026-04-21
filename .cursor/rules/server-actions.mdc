@@ -1,0 +1,48 @@
+---
+description: Server Action template, form pattern, and error handling
+globs: **/actions.ts
+alwaysApply: false
+---
+
+# Server Action template
+
+```ts
+'use server';
+import { z } from 'zod';
+import { createClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
+
+const InputSchema = z.object({ /* ... */ });
+
+export async function doThing(input: unknown) {
+  const parsed = InputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false as const, error: 'VALIDATION_ERROR', details: parsed.error.flatten() };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false as const, error: 'UNAUTHORIZED' };
+
+  // Explicit ownership check
+  // Business logic
+  // DB operation
+  // revalidatePath(...) for affected routes
+
+  return { success: true as const, data: result };
+}
+```
+
+## Error handling
+
+- Server Actions return `{ success: boolean, data?, error?, details? }`.
+- **Never** throw from Server Actions — always return an error object.
+- Client checks `!result.success` and surfaces via `toast.error(...)`.
+- Log server‑side with a structured format: `console.error('action_name_error', { userId, error: err.message })`.
+
+## Form pattern (paired client component)
+
+- Client component uses `react-hook-form` + Zod resolver.
+- **Share the same Zod schema** with the Server Action (import, don't re‑declare).
+- Submit calls the Server Action and handles the returned result.
+- Optimistic update when applicable; roll back on error.

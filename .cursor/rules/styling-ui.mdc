@@ -1,0 +1,31 @@
+---
+description: Tailwind styling, UI, copy, and perf rules for React files
+globs: **/*.tsx
+alwaysApply: false
+---
+
+# Styling
+
+- Tailwind utility classes, ordered logically: **layout → box → typography → color → state**.
+- Use design tokens via CSS variables (e.g. `bg-primary`, `text-foreground`).
+- **Never** hardcode colors in hex — use tokens.
+- Touch targets are **minimum `h-11` (44px)** on mobile.
+- Always add `tabular-nums` on money displays.
+
+# Language & copy
+
+- All user‑facing text in Bosnian (Latin).
+- Address the user with **"ti"**, not **"Vi"**.
+- Currency display: `1.234,56 KM` (European format).
+- Dates: `15.4.2026.` or `15. apr. 2026.`.
+- Error messages: humane, not technical IDs.
+- Full copy guide: `docs/03-design-system.md` section 7.
+
+# Performance
+
+- Dashboard queries are paginated (default 50 rows).
+- Heavy charts lazy‑loaded: `dynamic(() => import(...), { ssr: false })`.
+- Images always through `next/image`.
+- Don't import whole `lucide-react` — import per icon.
+- `recharts` is heavy — only import on pages that actually use it.
+- Always cover **empty / loading / error** states.

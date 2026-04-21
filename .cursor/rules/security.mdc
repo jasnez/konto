@@ -1,0 +1,28 @@
+---
+description: Authorization, auth, and data-leakage rules
+alwaysApply: true
+---
+
+# Authorization (non‑negotiable)
+
+- Every Server Action **starts** with an auth check via `supabase.auth.getUser()`.
+- Every mutation performs an **explicit** resource ownership check — not just RLS.
+- RLS is defense‑in‑depth, NOT the only layer.
+- The `service_role` key is **never** used in client‑side code and never exposed to the client.
+- Never trust `user_id` from a request payload — always use `auth.uid()` or `getUser().id`.
+
+## Forbidden security patterns
+
+- Server Action without `getUser()` check → **stop, fix, commit**.
+- "RLS only" without app‑level ownership verification.
+- Input validation only on the client (Zod on the Server Action is mandatory).
+- SSR data fetch without user context check.
+- Raw SQL through Supabase `rpc()` without parameterization.
+- `SELECT *` — always specify columns.
+- Committing `.env*` files or any secrets.
+
+## Logging hygiene
+
+- **Never** `console.log` sensitive data (email, amount, `merchant_raw`, notes).
+- Structured server logs only: `console.error('action_name_error', { userId, error: err.message })`.
+- Redact PII — never log `merchant_raw` + `amount` + `user_id` together.
