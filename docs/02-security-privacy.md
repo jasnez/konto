@@ -21,30 +21,30 @@
 
 ### 2.1 Akteri i motivi
 
-| Akter | Motiv | Vjerovatnoća | Impact |
-|---|---|---|---|
-| Casual attacker (bot) | Automatizovani scan, credential stuffing | Visoka | Nizak ako osnovno radimo |
-| Motivisani napadač (npr. bivši partner korisnika) | Pristup finansijama određene osobe | Niska | Visok |
-| Insajder (ti sam u rage quit-u) | Krađa baze, brisanje | Mala, ali postoji | Katastrofa |
-| Vendor compromise (Supabase, Vercel) | Supply chain | Niska | Visok |
-| LLM provider data leak | Model pamti PII | Srednja | Srednji |
-| Regulator / policija | Legalni zahtjev za podatke | Vrlo niska | Različito |
-| Korisnik sam sebi | Gubi pristup accountu, greške | Visoka | Nizak do srednji |
+| Akter                                             | Motiv                                    | Vjerovatnoća      | Impact                   |
+| ------------------------------------------------- | ---------------------------------------- | ----------------- | ------------------------ |
+| Casual attacker (bot)                             | Automatizovani scan, credential stuffing | Visoka            | Nizak ako osnovno radimo |
+| Motivisani napadač (npr. bivši partner korisnika) | Pristup finansijama određene osobe       | Niska             | Visok                    |
+| Insajder (ti sam u rage quit-u)                   | Krađa baze, brisanje                     | Mala, ali postoji | Katastrofa               |
+| Vendor compromise (Supabase, Vercel)              | Supply chain                             | Niska             | Visok                    |
+| LLM provider data leak                            | Model pamti PII                          | Srednja           | Srednji                  |
+| Regulator / policija                              | Legalni zahtjev za podatke               | Vrlo niska        | Različito                |
+| Korisnik sam sebi                                 | Gubi pristup accountu, greške            | Visoka            | Nizak do srednji         |
 
 ### 2.2 Assets i njihova klasifikacija
 
-| Asset | Klasifikacija | Retention |
-|---|---|---|
-| Email adresa | PII | Dok god nalog postoji |
-| Magic link tokeni | Secret | 15 min |
-| `auth.users` row | PII | Dok god nalog postoji |
-| Transakcije (iznos + merchant + datum) | PFI (personalno finansijski) | Dok god nalog postoji |
-| PDF izvodi (original) | PFI + potencijalno IBAN-i, imena | **≤24h** 🔒 |
-| Kategorije, tagovi, notes | PFI | Dok god nalog postoji |
-| Audit log | Sigurnosno relevantno | 90 dana rolling |
-| Analytics events | Aggregated, neidentifikovano | Koliko PostHog retention |
-| FX rates | Public | Neograničeno |
-| Seed merchant dictionary | Public | Neograničeno |
+| Asset                                  | Klasifikacija                    | Retention                |
+| -------------------------------------- | -------------------------------- | ------------------------ |
+| Email adresa                           | PII                              | Dok god nalog postoji    |
+| Magic link tokeni                      | Secret                           | 15 min                   |
+| `auth.users` row                       | PII                              | Dok god nalog postoji    |
+| Transakcije (iznos + merchant + datum) | PFI (personalno finansijski)     | Dok god nalog postoji    |
+| PDF izvodi (original)                  | PFI + potencijalno IBAN-i, imena | **≤24h** 🔒              |
+| Kategorije, tagovi, notes              | PFI                              | Dok god nalog postoji    |
+| Audit log                              | Sigurnosno relevantno            | 90 dana rolling          |
+| Analytics events                       | Aggregated, neidentifikovano     | Koliko PostHog retention |
+| FX rates                               | Public                           | Neograničeno             |
+| Seed merchant dictionary               | Public                           | Neograničeno             |
 
 ### 2.3 Attack scenarios koje aktivno braniomo
 
@@ -77,17 +77,20 @@
 ### 3.1 Auth flow
 
 **Faza 0–1:** Email magic link isključivo.
+
 - Korisnik unosi email
 - Sistem šalje link sa JWT tokenom (15 min validnost)
 - Klik na link → Supabase Auth validira → session cookie setovan
 - Nema password-a = nema password-related vektora (phishing još uvijek postoji)
 
 **Faza 2–3:** Dodaj opciono:
+
 - **Passkey / WebAuthn** — najbolja UX za mobile, platform authenticator
 - **TOTP 2FA** — opt-in za paranoid users
 - **Recovery codes** — generisani prilikom setup-a, 10 jednokratnih kodova
 
 **Nikad u Konto:**
+
 - SMS 2FA (SIM swap)
 - Security questions ("What was your mother's maiden name")
 - Password reset preko email-a bez second factor-a (phishing)
@@ -104,6 +107,7 @@
 ### 3.3 Password-less specifics
 
 Magic link email mora imati:
+
 - **Precizno vrijeme isticanja** ("Ovaj link ističe u 14:35 CEST, za 15 minuta")
 - **Source fingerprint** ("Zatraženo sa: Chrome na MacBook-u, Sarajevo")
 - **One-click report** ("Nisam ja zatražio ovo" → flaguje pokušaj, auto revoke-uje session-e za email)
@@ -118,15 +122,15 @@ Magic link email mora imati:
 
 Kroz Upstash Redis ili Supabase Edge Function sa pg table:
 
-| Endpoint | Limit | Key |
-|---|---|---|
-| Magic link request | 3/sat | email (normalized) |
-| Magic link verify | 10/min | IP |
-| Failed login attempts | 5/15min | email |
-| PDF upload | 10/dan | user_id |
-| LLM categorize | 50/dan | user_id |
-| Profile update | 10/min | user_id |
-| Account delete | 1/dan | user_id |
+| Endpoint              | Limit   | Key                |
+| --------------------- | ------- | ------------------ |
+| Magic link request    | 3/sat   | email (normalized) |
+| Magic link verify     | 10/min  | IP                 |
+| Failed login attempts | 5/15min | email              |
+| PDF upload            | 10/dan  | user_id            |
+| LLM categorize        | 50/dan  | user_id            |
+| Profile update        | 10/min  | user_id            |
+| Account delete        | 1/dan   | user_id            |
 
 ---
 
@@ -137,21 +141,24 @@ Kroz Upstash Redis ili Supabase Edge Function sa pg table:
 **Pravilo nepregovarivo:** Svaka tabela sa `user_id` kolonom ima RLS enabled i policies koje filtriraju po `auth.uid() = user_id`.
 
 **Standardni obrazac:**
+
 ```sql
 alter table public.XYZ enable row level security;
 
 create policy "users manage own XYZ" on public.XYZ
-  for all 
+  for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 ```
 
 **Gotcha-e:**
+
 - `service_role` key **zaobilazi RLS**. Koristi ga samo kad ti stvarno treba (npr. cron job koji čita više korisnika).
 - RLS policies na UPDATE/DELETE moraju imati **i `using` i `with check`**. `using` filtrira koje rowove vidiš, `with check` validira da nova vrijednost ostaje tvoja.
 - Ne zaboravi RLS na **svim novim tabelama** — postavi `alter table enable row level security` odmah pri kreiranju.
 
 **Test za svaku novu tabelu:**
+
 ```sql
 -- Iz service role (superuser) — ovo treba vidjeti sve:
 select count(*) from public.XYZ;
@@ -173,7 +180,9 @@ select count(*) from public.XYZ where user_id = 'user-a-uuid';
 
 ```typescript
 // PRAVILO: Svaki Server Action počinje sa:
-const { data: { user } } = await supabase.auth.getUser();
+const {
+  data: { user },
+} = await supabase.auth.getUser();
 if (!user) return { success: false, error: 'UNAUTHORIZED' };
 
 // Ako Action operira na konkretnom resursu, eksplicitno verifikuj ownership:
@@ -182,7 +191,7 @@ const { data: resource } = await supabase
   .select('id, user_id')
   .eq('id', resourceId)
   .single();
-  
+
 if (!resource || resource.user_id !== user.id) {
   return { success: false, error: 'FORBIDDEN' };
 }
@@ -241,6 +250,7 @@ using (
 ### 5.2 Enkripcija u mirovanju (at rest)
 
 **Platform-level (out of the box):**
+
 - Supabase Postgres: AES-256 disk encryption (AWS EBS)
 - Supabase Storage: AES-256 (S3)
 - Vercel logs: enkriptovani
@@ -248,11 +258,13 @@ using (
 **Application-level (dodatna za najosjetljivije):**
 
 Za Fazu 2+ razmotriti **envelope enkripciju** za:
+
 - `transactions.notes` (slobodan tekst, može sadržavati PII)
 - `transactions.description`
 - `merchants.notes`
 
 Pattern:
+
 ```typescript
 // Master key u env var, rotabilan
 const MASTER_KEY = process.env.ENCRYPTION_MASTER_KEY; // 32 bytes base64
@@ -276,6 +288,7 @@ function encryptField(plaintext: string, userDek: Buffer): string {
 ### 5.3 PDF handling specifično 🔒
 
 **Pravila non-negotiable:**
+
 1. PDF se uploadaje preko signed URL-a, nikad kroz serversku multipart formu (štedi resurse)
 2. Parser pokreće u **Supabase Edge Function**, ne u Vercel runtime-u (da PDF ne prolazi kroz web layer)
 3. **PDF se briše u roku od 24h** — automatski kroz pg_cron job
@@ -283,6 +296,7 @@ function encryptField(plaintext: string, userDek: Buffer): string {
 5. Hash (SHA-256) se računa i čuva u `import_batches` za dedup — sam fajl se briše
 
 **Cron job:**
+
 ```sql
 -- Runs every hour
 select cron.schedule(
@@ -292,7 +306,7 @@ select cron.schedule(
     delete from storage.objects
     where bucket_id = 'statements'
       and created_at < now() - interval '24 hours';
-    
+
     update public.import_batches
     set storage_path = null
     where storage_path is not null
@@ -313,6 +327,7 @@ select cron.schedule(
 6. **Nikad ne šalji više od jednog korisnika** u istom batch pozivu
 
 **Prompt izolacija:**
+
 ```
 System: [Instrukcije — nikad user-kontrolisan sadržaj]
 
@@ -323,6 +338,7 @@ User: Parsiraj sljedeći izvod:
 
 [Ostatak instrukcija i šeme]
 ```
+
 User-provided sadržaj se **uvijek** nalazi unutar `<USER_INPUT>` tagova, nikad miješano sa instrukcijama.
 
 ---
@@ -331,14 +347,14 @@ User-provided sadržaj se **uvijek** nalazi unutar `<USER_INPUT>` tagova, nikad 
 
 ### 6.1 Legal bases
 
-| Processing | Legal basis |
-|---|---|
-| Auth + account management | Contract (Art 6.1.b) |
-| Finansijski podaci (transakcije) | Contract (Art 6.1.b) |
-| Email komunikacija o nalogu | Contract (Art 6.1.b) |
-| Analytics | Legitimate interest (Art 6.1.f) + opt-out |
-| Marketing emails | Consent (Art 6.1.a) — opt-in, ne default |
-| Vanjsko dijeljenje (affiliate) | **Never without explicit consent** |
+| Processing                       | Legal basis                               |
+| -------------------------------- | ----------------------------------------- |
+| Auth + account management        | Contract (Art 6.1.b)                      |
+| Finansijski podaci (transakcije) | Contract (Art 6.1.b)                      |
+| Email komunikacija o nalogu      | Contract (Art 6.1.b)                      |
+| Analytics                        | Legitimate interest (Art 6.1.f) + opt-out |
+| Marketing emails                 | Consent (Art 6.1.a) — opt-in, ne default  |
+| Vanjsko dijeljenje (affiliate)   | **Never without explicit consent**        |
 
 ### 6.2 Data subject rights (implement u Fazi 0–1 osnovne, Faza 3 advanced)
 
@@ -369,16 +385,16 @@ User clicks "Obriši nalog"
 
 ### 6.4 Data retention policies
 
-| Vrsta | Retention | Razlog |
-|---|---|---|
-| Aktivni nalog + podaci | Dok god aktivan | Contract |
-| Obrisani nalog | 30 dana soft → hard delete | GDPR + chance to recover |
-| PDF izvodi | **24 sata** 🔒 | Minimizacija |
-| Audit log | 90 dana | Sigurnost |
-| Backup-i | 30 dana | Operational |
-| Analytics | PostHog default (7 godina, aggregated) | Legitimate interest |
-| Email logs (Resend) | 30 dana | Delivery debugging |
-| Sentry errors | 90 dana | Debugging |
+| Vrsta                  | Retention                              | Razlog                   |
+| ---------------------- | -------------------------------------- | ------------------------ |
+| Aktivni nalog + podaci | Dok god aktivan                        | Contract                 |
+| Obrisani nalog         | 30 dana soft → hard delete             | GDPR + chance to recover |
+| PDF izvodi             | **24 sata** 🔒                         | Minimizacija             |
+| Audit log              | 90 dana                                | Sigurnost                |
+| Backup-i               | 30 dana                                | Operational              |
+| Analytics              | PostHog default (7 godina, aggregated) | Legitimate interest      |
+| Email logs (Resend)    | 30 dana                                | Delivery debugging       |
+| Sentry errors          | 90 dana                                | Debugging                |
 
 ### 6.5 Data Processing Agreements (DPAs)
 
@@ -398,6 +414,7 @@ User clicks "Obriši nalog"
 ### 6.6 Lokalni BiH specifikum
 
 Novi Zakon o zaštiti ličnih podataka BiH (okt 2025):
+
 - Materijalno usklađen sa GDPR-om
 - Tranzicioni period do okt 2027.
 - Nadležno tijelo: **Agencija za zaštitu ličnih podataka BiH**
@@ -405,6 +422,7 @@ Novi Zakon o zaštiti ličnih podataka BiH (okt 2025):
 - DPO: ne obavezan ispod 10k korisnika, razmotriti oko 5k
 
 Srbija ZZPL:
+
 - Ako primaš srpske korisnike, prijava kod Povjerenika nije obavezna ali preporučljiva
 - Mirror-aj GDPR approach
 
@@ -435,8 +453,15 @@ Srbija ZZPL:
     { key: 'X-Frame-Options', value: 'DENY' },
     { key: 'X-Content-Type-Options', value: 'nosniff' },
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-    { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()' },
-    { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://eu.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co https://eu.i.posthog.com wss://*.supabase.co; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" },
+    {
+      key: 'Permissions-Policy',
+      value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+    },
+    {
+      key: 'Content-Security-Policy',
+      value:
+        "default-src 'self'; script-src 'self' 'unsafe-inline' https://eu.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co https://eu.i.posthog.com wss://*.supabase.co; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+    },
   ];
   ```
 - [x] `X-Powered-By` header disabled
@@ -534,12 +559,12 @@ Srbija ZZPL:
 
 ### 8.1 Incident severity levels
 
-| Nivo | Definicija | Response time | Action |
-|---|---|---|---|
-| P0 | Data breach, production down, mass user impact | Immediately | All hands, customer comms |
-| P1 | Sigurnosna ranjivost confirmed, fikse-able | <4h | Hotfix, user notification ako potrebno |
-| P2 | Single user-impacting bug | <24h | Fix in next release |
-| P3 | Nice-to-have | When convenient | Backlog |
+| Nivo | Definicija                                     | Response time   | Action                                 |
+| ---- | ---------------------------------------------- | --------------- | -------------------------------------- |
+| P0   | Data breach, production down, mass user impact | Immediately     | All hands, customer comms              |
+| P1   | Sigurnosna ranjivost confirmed, fikse-able     | <4h             | Hotfix, user notification ako potrebno |
+| P2   | Single user-impacting bug                      | <24h            | Fix in next release                    |
+| P3   | Nice-to-have                                   | When convenient | Backlog                                |
 
 ### 8.2 Data breach response plan
 
@@ -575,6 +600,7 @@ Kredibilitet bez SOC 2. U Fazi 0–3 gradimo sljedeće:
 ### 9.1 `/sigurnost` stranica
 
 Javna stranica koja opisuje:
+
 - Gdje hostamo podatke (EU)
 - Šta enkriptujemo i gdje
 - Koji vendori imaju pristup i zašto
@@ -595,6 +621,7 @@ Policy: https://konto.ba/sigurnost/disclosure
 ### 9.3 Transparency report (Faza 3+)
 
 Godišnji izvještaj:
+
 - Broj government data requestova (ako je bilo)
 - Broj data breach incidenata
 - Uptime statistika
@@ -602,6 +629,7 @@ Godišnji izvještaj:
 ### 9.4 Open source elemente
 
 Faza 4+: publish-ati open source sljedeće (ako ima smisla):
+
 - Merchant dictionary seed (`konto-merchants-ba`)
 - Bank parser templates
 - Crypto utilities (ako implementiramo E2EE vault)
@@ -611,6 +639,7 @@ Faza 4+: publish-ati open source sljedeće (ako ima smisla):
 ## 10. Compliance Checklist by Phase
 
 ### Faza 0 (Pre-launch za sebe)
+
 - [ ] RLS na svakoj user-owned tabeli
 - [ ] HTTPS only (Vercel default)
 - [ ] Security headers konfigurisani
@@ -619,6 +648,7 @@ Faza 4+: publish-ati open source sljedeće (ako ima smisla):
 - [ ] Git hooks (gitleaks) instalirani
 
 ### Faza 1 (Manual MVP)
+
 - [ ] Privacy policy + Terms drafted
 - [ ] Account delete flow
 - [ ] Data export (JSON) flow
@@ -626,12 +656,14 @@ Faza 4+: publish-ati open source sljedeće (ako ima smisla):
 - [ ] Sentry sa beforeSend PII redaction
 
 ### Faza 2 (Parser izvoda)
+
 - [ ] PDF 24h auto-delete cron
 - [ ] LLM PII redaction pre-prompt
 - [ ] File size + MIME + magic bytes validation
 - [ ] Rate limiting na upload
 
 ### Faza 3 (Insighti)
+
 - [ ] Rate limiting na sve endpointe
 - [ ] Passkey support (opcioni)
 - [ ] Session list u settings
@@ -639,6 +671,7 @@ Faza 4+: publish-ati open source sljedeće (ako ima smisla):
 - [ ] `security.txt`
 
 ### Faza 4 (Beta korisnici, public launch)
+
 - [ ] Jedan pentest (€5-10k, find-a-pentester za solo indie)
 - [ ] Bug bounty program (opcioni, Huntr ili sličan)
 - [ ] GDPR Article 30 registar processing activities
@@ -664,6 +697,6 @@ Faza 4+: publish-ati open source sljedeće (ako ima smisla):
 
 ## 12. Change Log
 
-| Datum | Verzija | Promjena |
-|---|---|---|
-| 2026-04-21 | 1.0 | Inicijalna verzija |
+| Datum      | Verzija | Promjena           |
+| ---------- | ------- | ------------------ |
+| 2026-04-21 | 1.0     | Inicijalna verzija |

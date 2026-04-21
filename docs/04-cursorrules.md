@@ -18,7 +18,7 @@ Ovaj dokument radi dvije stvari:
 
 Kreiraj `.cursorrules` u root-u repo-a sa **tačno ovim sadržajem**:
 
-```
+````
 # Konto — Project Rules for Cursor
 
 You are working on Konto, a personal finance management (PFM) web app for Western Balkans (primary market: Bosnia & Herzegovina). The app parses PDF bank statements and categorizes transactions. Primary language of UI is Bosnian (Latin script).
@@ -119,18 +119,20 @@ export async function doThing(input: unknown) {
   // Business logic
   // DB operation
   // revalidatePath for affected routes
-  
+
   return { success: true as const, data: result };
 }
-```
+````
 
 ### Supabase client pattern
+
 - `lib/supabase/server.ts` — for Server Components & Actions (uses cookies)
 - `lib/supabase/client.ts` — for Client Components
 - `lib/supabase/middleware.ts` — for auth refresh in middleware
 - Never import Supabase client from both sides in the same file
 
 ### Form pattern
+
 - Client component with `react-hook-form` + Zod resolver
 - Same Zod schema as Server Action (import/share)
 - Submit calls Server Action, handles result
@@ -172,6 +174,7 @@ export async function doThing(input: unknown) {
 ## Commit messages
 
 Use Conventional Commits format:
+
 - `feat(scope): add transaction split functionality`
 - `fix(import): handle Raiffeisen decimal separator`
 - `refactor(db): extract category queries into lib`
@@ -204,6 +207,7 @@ Keep subject under 72 chars, imperative mood, lowercase scope.
 - Dates: "15.4.2026." or "15. apr. 2026."
 - Error messages: humane, not technical IDs
 - See /docs/03-design-system.md section 7 for full copy guide
+
 ```
 
 **Kraj `.cursorrules`.** Kopiraj sve između prvog i drugog trostrukog back-tick-a u fajl.
@@ -217,46 +221,59 @@ Keep subject under 72 chars, imperative mood, lowercase scope.
 Kad god zadajes task, koristi ovu strukturu:
 
 ```
+
 # Task: [kratak naslov]
 
 ## Kontekst
+
 [1-2 rečenice: zašto, koji feature, koji sloj]
 
 ## Reference dokumenti
+
 - /docs/01-architecture.md sekcija X
 - /docs/03-design-system.md sekcija Y
 - Prethodni fajlovi: [paste putanja ako postoji]
 
 ## Zahtjev
+
 [Šta konkretno treba uraditi — bullet points su OK]
 
 ## Acceptance criteria
+
 - [ ] A
 - [ ] B
 - [ ] C
 
 ## Fajlovi koje dirnuti
+
 - `app/.../page.tsx` (kreiraj)
 - `lib/.../helper.ts` (izmijeni)
 
 ## Ne radi ovo
+
 - [konkretne stvari koje znaš da želiš izbjeći]
+
 ```
 
 ### 3.2 Primjer konkretnog prompt-a
 
 ```
+
 # Task: Kreiraj MoneyInput komponentu
 
 ## Kontekst
+
 Dio Faze 1 (manual transaction entry). Komponenta se koristi za unos novčanog iznosa u formama — ne prikazuje, nego prima input. Mora raditi sa cents internally, a prikazivati user-friendly format.
 
 ## Reference
+
 - /docs/03-design-system.md sekcija 3.3.2 (MoneyInput spec)
 - /docs/01-architecture.md sekcija 4.1 (monetary rules)
 
 ## Zahtjev
+
 Kreiraj `components/money-input.tsx` koji:
+
 - Prima `value: bigint` (cents) i `onChange: (cents: bigint) => void` kao controlled komponentu
 - Interni state drži formatiranu vrijednost kao string dok korisnik tipka
 - Na blur formatira sa thousands separator (locale-aware)
@@ -267,6 +284,7 @@ Kreiraj `components/money-input.tsx` koji:
 - Podržava negativne vrijednosti ako je `allowNegative` prop true
 
 ## Acceptance criteria
+
 - [ ] Unos "12,50" → onChange called sa 1250n
 - [ ] Unos "-43,5" → onChange called sa -4350n (ako allowNegative)
 - [ ] Unos "abc" → nema promjene state-a
@@ -275,14 +293,17 @@ Kreiraj `components/money-input.tsx` koji:
 - [ ] Test fajl `__tests__/money-input.test.tsx` pokriva sve edge cases
 
 ## Fajlovi
+
 - `components/money-input.tsx` (kreiraj)
 - `components/money-input.test.tsx` (kreiraj)
 - `lib/format/parse-money.ts` (kreiraj — utility funkciju za parsing)
 
 ## Ne radi ovo
+
 - Ne koristi parseFloat — pravi custom parser
 - Ne koristi controlled input sa cents value direktno (treba string intermediate state)
 - Ne hardcoduj "KM" — koristi Currency Select
+
 ```
 
 ### 3.3 Kad prepuštаеѕ šire odluke Cursor-u
@@ -290,12 +311,14 @@ Kreiraj `components/money-input.tsx` koji:
 Ako ne znaš tačno kako, kaži to eksplicitno:
 
 ```
+
 Nisam siguran kako da handle-ujem case kad korisnik briše zadnju cifru u MoneyInput. Šta preporučuješ? Koji su pros/cons opcija:
 A) Vrati na 0n
 B) Pretvori u null (optional prop)
 C) Drži string ""
 
 Prije nego što kodiraš, objasni trade-off.
+
 ```
 
 Cursor dobro reaguje na ovaj pristup — daje ti opcije, ti biraš.
@@ -303,6 +326,7 @@ Cursor dobro reaguje na ovaj pristup — daje ti opcije, ti biraš.
 ### 3.4 Kad imaš već postojeći kod i praviš izmjene
 
 ```
+
 # Task: Dodaj transfer pair logic u createTransaction
 
 Već imam `app/(app)/transakcije/actions.ts` koji kreira transakciju. Sada treba dodati slučaj kad `is_transfer=true` — mora se kreirati pair transakcija u drugom računu.
@@ -310,11 +334,13 @@ Već imam `app/(app)/transakcije/actions.ts` koji kreira transakciju. Sada treba
 [paste postojeći kod ovdje]
 
 Proširi funkciju tako da:
+
 - Ako `is_transfer=true` i `transfer_to_account_id` je prosljeđeno, kreiraj drugu transakciju u tom računu sa obrnutim znakom
 - Obje transakcije imaju `transfer_pair_id` postavljen na id-ove jedna druge (transaction u PG — update nakon insert)
 - Koristi `supabase.rpc('create_transfer_pair', ...)` umjesto dva odvojena insert-a da bi bilo atomic
 
 Kreiraj i migration za RPC funkciju.
+
 ```
 
 ### 3.5 Kad Cursor griješi
@@ -322,6 +348,7 @@ Kreiraj i migration za RPC funkciju.
 Ne rekukiraj — korigeraj konkretno:
 
 ```
+
 Dobro, ali dva problema:
 
 1. Koristiš `parseFloat("12,50")` što će vratiti 12, ne 12.50, jer ne razumije zarez. Refaktoriši koristeći `parseMoneyString` iz `lib/format/parse-money.ts` (ili je kreiraj ako ne postoji).
@@ -329,6 +356,7 @@ Dobro, ali dva problema:
 2. Server Action ne provjerava user ownership nad account_id prije insert-a. Dodaj check iz templatea u .cursorrules.
 
 Fix ovo u istom fajlu, ne pravi novi.
+
 ```
 
 ---
@@ -349,8 +377,10 @@ Iza `.cursorrules`, Cursor će vidjeti:
 **Pravilo:** za bilo koji task složeniji od jedne funkcije, eksplicitno referenciraj relevantne dokumente:
 
 ```
+
 @/docs/01-architecture.md#5.2
 @/docs/03-design-system.md#3.3.2
+
 ```
 
 Ili vučeš fajlove u chat (Cursor podržava file drag).
@@ -427,6 +457,7 @@ Svaki fajl koji Cursor generiše, prije `git commit`:
 ### 6.1 Daily flow (solo founder)
 
 ```
+
 1. Otvori backlog (/docs/06-backlog.md)
 2. Izaberi sljedeći task po prioritetu
 3. Kreiraj feature branch: git checkout -b feature/task-slug
@@ -438,7 +469,8 @@ Svaki fajl koji Cursor generiše, prije `git commit`:
 9. Vercel preview deploy → klikni link, manualno testiraj
 10. Merge u main (solo, pa nema PR review-a)
 11. Označi task u backlogu kao done
-```
+
+````
 
 ### 6.2 Commit cadence
 
@@ -458,7 +490,7 @@ Prije bilo kog od sljedećih, manual backup (jer si solo):
 ```bash
 supabase db dump --project-ref xxx -f backup-$(date +%Y-%m-%d-%H%M).sql
 # Encrypt + upload to offsite storage (S3, Backblaze, iCloud)
-```
+````
 
 ---
 
@@ -494,12 +526,14 @@ supabase db dump --project-ref xxx -f backup-$(date +%Y-%m-%d-%H%M).sql
 ## 8. Kako ažurirati `.cursorrules`
 
 Ovaj fajl je zivo pravilo. Ažuriraj ga kad:
+
 - Otkriješ pattern koji Cursor stalno krši
 - Dodaš novu biblioteku i treba pravilo kako je koristiti
 - Promjeniš naming konvenciju
 - Uvedes novu security konvenciju
 
 **Kako:**
+
 1. Edit `.cursorrules`
 2. Commit sa poruka `chore(cursor): add rule about X`
 3. Restartuj Cursor ili otvori novu chat sesiju (Cursor cache-uje)
@@ -511,9 +545,10 @@ Ovaj fajl je zivo pravilo. Ažuriraj ga kad:
 Kad dodaješ potpuno novi feature (npr. budžeti u Fazi 3):
 
 **Korak 1: Arhitektonski dizajn**
+
 ```
-Prompt: "Pročitaj /docs/01-architecture.md. Predloži dizajn za budget feature. 
-Treba da podržava: weekly/monthly/yearly period, rollover unused, 
+Prompt: "Pročitaj /docs/01-architecture.md. Predloži dizajn za budget feature.
+Treba da podržava: weekly/monthly/yearly period, rollover unused,
 per-category ili total. Ne kodiraj još. Vrati:
 - Predlog data model promjena (tabela, polja)
 - Predlog RLS policy
@@ -522,32 +557,37 @@ per-category ili total. Ne kodiraj još. Vrati:
 ```
 
 **Korak 2: Migration**
+
 ```
-Prompt: "Na osnovu dogovorenog dizajna, napiši Supabase migration. 
+Prompt: "Na osnovu dogovorenog dizajna, napiši Supabase migration.
 Kreiraj u supabase/migrations/ sa timestamp prefixom."
 ```
 
 **Korak 3: Types**
+
 ```
-Prompt: "Regeneriši Supabase types (supabase gen types typescript --project-id xxx) 
+Prompt: "Regeneriši Supabase types (supabase gen types typescript --project-id xxx)
 i pokaži mi diff."
 ```
 
 **Korak 4: Server Actions**
+
 ```
 Prompt: "Implementiraj Server Action createBudget. Prati template iz .cursorrules.
 Uključi Zod validaciju i RLS test scenarij."
 ```
 
 **Korak 5: UI**
+
 ```
-Prompt: "Napravi stranicu /budzet sa listom budžeta. Prati patterns iz 
+Prompt: "Napravi stranicu /budzet sa listom budžeta. Prati patterns iz
 /docs/03-design-system.md sekcija 4. Desktop + mobile oba."
 ```
 
 **Korak 6: Testovi**
+
 ```
-Prompt: "Dodaj Vitest testove za createBudget Server Action i Playwright E2E 
+Prompt: "Dodaj Vitest testove za createBudget Server Action i Playwright E2E
 test za budget create flow."
 ```
 
@@ -558,41 +598,48 @@ test za budget create flow."
 ## 10. Cheatsheet za česte operacije
 
 ### Novi Server Action
+
 ```
-Prompt: "Kreiraj Server Action `xxx` u app/(app)/.../actions.ts koji radi Y. 
+Prompt: "Kreiraj Server Action `xxx` u app/(app)/.../actions.ts koji radi Y.
 Prati template iz .cursorrules."
 ```
 
 ### Nova shadcn komponenta
+
 ```
 pnpm dlx shadcn@latest add <component>
 ```
 
 ### Novi test
+
 ```
-Prompt: "Napiši Vitest test za <file>. Pokrij: success case, validation error, 
+Prompt: "Napiši Vitest test za <file>. Pokrij: success case, validation error,
 auth error, edge cases za money math."
 ```
 
 ### Nova migration
+
 ```bash
 supabase migration new add_xxx_to_yyy
 # Pa prompt: "Popuni migration sa ALTER TABLE za dodavanje kolone Z..."
 ```
 
 ### Regeneration types
+
 ```bash
 pnpm run supabase:types
 # Alias u package.json: "supabase gen types typescript --project-id $PROJECT_ID > supabase/types.ts"
 ```
 
 ### Lint + format
+
 ```bash
 pnpm lint
 pnpm format
 ```
 
 ### Sve testove lokalno
+
 ```bash
 pnpm test        # Vitest
 pnpm test:e2e    # Playwright
@@ -602,6 +649,6 @@ pnpm test:e2e    # Playwright
 
 ## 11. Change Log
 
-| Datum | Verzija | Promjena |
-|---|---|---|
-| 2026-04-21 | 1.0 | Inicijalna verzija |
+| Datum      | Verzija | Promjena           |
+| ---------- | ------- | ------------------ |
+| 2026-04-21 | 1.0     | Inicijalna verzija |

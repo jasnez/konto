@@ -10,6 +10,7 @@
 Ovaj dokument je **single source of truth** za tehničku arhitekturu Konto aplikacije. Sve odluke o data modelu, servisnim slojevima, vanjskim integracijama i ML pipeline-u su definisane ovdje. Cursor, svaki novi codebase assistant, svaki budući ti-iz-budućnosti — svi kreću odavde.
 
 Pravila čitanja:
+
 - Ako pišeš kod koji nije u skladu s ovim dokumentom, prvo ažuriraj dokument, potom kod.
 - Svaka sekcija označena 🔒 je **nepregovarivo** (narušavanje znači bezbjednosni incident ili nemogući refactoring).
 - Svaka sekcija označena ⚠️ je **pretpostavka** koju treba validirati u Fazi 1–2.
@@ -25,6 +26,7 @@ Pravila čitanja:
 **Primarni korisnik Faze 4+:** Pojedinac ili porodica u BiH, Srbiji, CG, SMK, 25–55 godina, latiničar, koristi mobilni kao primarni uređaj.
 
 **Non-goals (eksplicitno NE gradimo):**
+
 - Investicijsko praćenje, crypto, NFT, net worth dashboardi
 - Plaćanje, prenos novca, bilo kakav movement of funds
 - Kreditno savjetovanje, loan comparison, kartica-affiliate
@@ -32,6 +34,7 @@ Pravila čitanja:
 - Multi-user account sharing u Fazi 0–3 (Faza 4 uvodi basic family sharing)
 
 **Ključna ograničenja:**
+
 - Solo founder, minimalan budžet (€500/mj ceiling prve godine)
 - Razvoj kroz Cursor (stack mora biti LLM-friendly)
 - Mobile-first, PWA u Fazi 0–4, native u Fazi 5+
@@ -85,6 +88,7 @@ Pravila čitanja:
 ### 3.2 Regionalnost 🔒
 
 **Sve kritične podatke hostamo u EU:**
+
 - Supabase projekat: **Frankfurt (eu-central-1)** ili **Ireland (eu-west-1)**
 - Vercel deploy regions: **fra1, dub1** za server functions
 - Gemini API pozivi: **eu-west region** kad god je dostupno
@@ -94,33 +98,34 @@ Pravila čitanja:
 
 ### 3.3 Tech stack (finalan za Faze 0–4)
 
-| Sloj | Tehnologija | Verzija | Obrazloženje |
-|---|---|---|---|
-| Frontend framework | Next.js | 15.x (App Router) | Cursor najbolje pokriva |
-| Jezik | TypeScript | 5.6+ (strict) | Type safety za financije je nepregovarivo |
-| UI komponente | shadcn/ui + Radix | latest | Copy-paste, full control, dark mode |
-| Styling | Tailwind CSS | 3.4+ | Konvencija, Cursor-friendly |
-| Form handling | React Hook Form + Zod | latest | Validacija shared client/server |
-| Data fetching | Server Components + Server Actions | Next 15 | Minimizira client bundle |
-| State (client) | Zustand | 5.x | Samo gdje je stvarno potrebno |
-| Charts | Recharts | 2.x | Besplatan, dovoljan za PFM |
-| Icons | Lucide React | latest | Dolazi sa shadcn |
-| Database | PostgreSQL via Supabase | 15+ | RLS = built-in per-user izolacija |
-| Auth | Supabase Auth | latest | Email magic link, passkey kasnije |
-| File storage | Supabase Storage | latest | RLS policies za PDF-ove |
-| Background jobs | Supabase Edge Functions + pg_cron | latest | Za FX refresh, PDF cleanup |
-| Email | Resend | free tier | 3k mj besplatno, dovoljno |
-| Analytics | PostHog (EU cloud) | latest | Privacy-friendly, 1M eventa besplatno |
-| Error tracking | Sentry | free tier | sa `beforeSend` PII redakcijom |
-| LLM (Faza 2+) | Gemini 2.5 Flash-Lite | latest | €0.006/izvod, jeftin i tačan |
-| OCR fallback (Faza 2+) | Mistral OCR 3 | latest | $0.001/stranica za skenove |
-| FX rates | Frankfurter API + ECB fallback | - | ECB zvanični kursevi |
-| Hosting (app) | Vercel | Hobby → Pro | Free za Fazu 0, $20/mj od Faze 4 |
-| DNS / CDN | Cloudflare | free | DNS + DDoS zaštita |
-| Version control | GitHub | free | Privatni repo |
-| IDE | Cursor | Pro | Claude Sonnet 4.6 / Opus model |
+| Sloj                   | Tehnologija                        | Verzija           | Obrazloženje                              |
+| ---------------------- | ---------------------------------- | ----------------- | ----------------------------------------- |
+| Frontend framework     | Next.js                            | 15.x (App Router) | Cursor najbolje pokriva                   |
+| Jezik                  | TypeScript                         | 5.6+ (strict)     | Type safety za financije je nepregovarivo |
+| UI komponente          | shadcn/ui + Radix                  | latest            | Copy-paste, full control, dark mode       |
+| Styling                | Tailwind CSS                       | 3.4+              | Konvencija, Cursor-friendly               |
+| Form handling          | React Hook Form + Zod              | latest            | Validacija shared client/server           |
+| Data fetching          | Server Components + Server Actions | Next 15           | Minimizira client bundle                  |
+| State (client)         | Zustand                            | 5.x               | Samo gdje je stvarno potrebno             |
+| Charts                 | Recharts                           | 2.x               | Besplatan, dovoljan za PFM                |
+| Icons                  | Lucide React                       | latest            | Dolazi sa shadcn                          |
+| Database               | PostgreSQL via Supabase            | 15+               | RLS = built-in per-user izolacija         |
+| Auth                   | Supabase Auth                      | latest            | Email magic link, passkey kasnije         |
+| File storage           | Supabase Storage                   | latest            | RLS policies za PDF-ove                   |
+| Background jobs        | Supabase Edge Functions + pg_cron  | latest            | Za FX refresh, PDF cleanup                |
+| Email                  | Resend                             | free tier         | 3k mj besplatno, dovoljno                 |
+| Analytics              | PostHog (EU cloud)                 | latest            | Privacy-friendly, 1M eventa besplatno     |
+| Error tracking         | Sentry                             | free tier         | sa `beforeSend` PII redakcijom            |
+| LLM (Faza 2+)          | Gemini 2.5 Flash-Lite              | latest            | €0.006/izvod, jeftin i tačan              |
+| OCR fallback (Faza 2+) | Mistral OCR 3                      | latest            | $0.001/stranica za skenove                |
+| FX rates               | Frankfurter API + ECB fallback     | -                 | ECB zvanični kursevi                      |
+| Hosting (app)          | Vercel                             | Hobby → Pro       | Free za Fazu 0, $20/mj od Faze 4          |
+| DNS / CDN              | Cloudflare                         | free              | DNS + DDoS zaštita                        |
+| Version control        | GitHub                             | free              | Privatni repo                             |
+| IDE                    | Cursor                             | Pro               | Claude Sonnet 4.6 / Opus model            |
 
 **Eksplicitno NE koristimo:**
+
 - Firebase (vendor lock-in, nepredvidiva cijena)
 - Auth0/Clerk (preskupo, Supabase Auth dovoljan)
 - MongoDB/NoSQL (financije traže ACID tranzakcije)
@@ -139,18 +144,19 @@ Ovo je sekcija koju **pročitaj dvaput**. 90% financijskih bug-ova u aplikacijam
 
 ```typescript
 // KRIVO — nikad ovako
-const price = 12.99;                    // float precision pakao
-const total = price * 1.17;             // 15.198300000000002
+const price = 12.99; // float precision pakao
+const total = price * 1.17; // 15.198300000000002
 
 // TAČNO — uvijek ovako
-const priceCents = 1299;                // 1299 "centa" = 12.99
-const taxRate = 17;                     // u bps (basis points)? ili percent × 100?
-const totalCents = Math.round(priceCents * 1.17);  // zaokruži EKSPLICITNO
+const priceCents = 1299; // 1299 "centa" = 12.99
+const taxRate = 17; // u bps (basis points)? ili percent × 100?
+const totalCents = Math.round(priceCents * 1.17); // zaokruži EKSPLICITNO
 ```
 
 **Pravilo 🔒:** Svaki novčani iznos u bazi, API payload-u, biznis logici je **`bigint` u najmanjim jedinicama valute** (centi za EUR, feninzi za BAM, pare za RSD, centi za USD).
 
 **Konverzija u UI:** Tek na samoj ivici render-a:
+
 ```typescript
 function formatAmount(cents: bigint, currency: string, locale = 'bs-BA'): string {
   const amount = Number(cents) / 100;
@@ -162,6 +168,7 @@ function formatAmount(cents: bigint, currency: string, locale = 'bs-BA'): string
 ```
 
 **Pravilo za minor units po valuti:**
+
 - BAM, EUR, RSD, USD, GBP, CHF — 2 decimale, `cents = amount × 100`
 - JPY, HUF — 0 decimala (ako ikad dođemo), `cents = amount`
 - BHD, KWD — 3 decimale (ne očekujemo, ali budi svjestan)
@@ -170,21 +177,23 @@ function formatAmount(cents: bigint, currency: string, locale = 'bs-BA'): string
 
 Svaka transakcija **uvijek** čuva šest podataka:
 
-| Field | Tip | Opis |
-|---|---|---|
-| `original_amount_cents` | `bigint` | Kako ga je banka zabilježila |
-| `original_currency` | `text` (ISO 4217) | Valuta računa / transakcije |
-| `base_amount_cents` | `bigint` | Konvertovano u korisnikovu base currency |
-| `base_currency` | `text` (ISO 4217) | Korisnikova izabrana reporting valuta |
-| `fx_rate` | `numeric(20,10)` | Rate = base/original, snapshot |
-| `fx_rate_date` | `date` | Datum rate-a koji smo koristili |
+| Field                   | Tip               | Opis                                     |
+| ----------------------- | ----------------- | ---------------------------------------- |
+| `original_amount_cents` | `bigint`          | Kako ga je banka zabilježila             |
+| `original_currency`     | `text` (ISO 4217) | Valuta računa / transakcije              |
+| `base_amount_cents`     | `bigint`          | Konvertovano u korisnikovu base currency |
+| `base_currency`         | `text` (ISO 4217) | Korisnikova izabrana reporting valuta    |
+| `fx_rate`               | `numeric(20,10)`  | Rate = base/original, snapshot           |
+| `fx_rate_date`          | `date`            | Datum rate-a koji smo koristili          |
 
 **Zašto oba iznosa, a ne samo konvertovani:**
+
 1. Bank reconciliacija — korisnik mora moći da vidi isti iznos kao u svojoj banci
 2. Historical accuracy — FX kursevi se mijenjaju, ali prošla transakcija je finalna
 3. Promjena base currency — ako prebaciš sa BAM na EUR, možeš rekonvertovati sve ex-post
 
 **Pravilo koji FX kurs koristimo:**
+
 - Za transakcije parsirane iz PDF-a: FX rate **na datum transakcije** (ne trenutni)
 - Za manualne transakcije: FX rate **na datum unosa** (korisnik može override-ovati)
 - Izvor: ECB kurs iz Frankfurter API-ja, fallback na exchangerate.host
@@ -193,6 +202,7 @@ Svaka transakcija **uvijek** čuva šest podataka:
 ### 4.3 BAM specifičnosti
 
 **BAM je vezan za EUR fiksnim kursom** (Currency Board od 1997):
+
 - **1 EUR = 1,95583 BAM** (konstantno)
 - **1 BAM = 0,51129 EUR** (obrnuto)
 
@@ -217,7 +227,7 @@ export const EUR_BAM_RATE = 1 / BAM_EUR_RATE;
 -- Outflow transakcija (Raiffeisen −100 EUR)
 INSERT INTO transactions (... is_transfer=true, transfer_pair_id=B ...)
 
--- Inflow transakcija (Revolut +100 EUR)  
+-- Inflow transakcija (Revolut +100 EUR)
 INSERT INTO transactions (... is_transfer=true, transfer_pair_id=A ...)
 
 -- Obje imaju category_id = NULL ili category_id = <Transfers> sistemska
@@ -225,6 +235,7 @@ INSERT INTO transactions (... is_transfer=true, transfer_pair_id=A ...)
 ```
 
 Detekcija transferi se radi:
+
 - **Manualno** u UI ("Ovo je transfer" checkbox)
 - **Automatski** u Fazi 2+: matching po iznosu (±0.5%), datumu (±3 dana), i komplementarnom smjeru između dva usera-vlastita računa
 
@@ -271,9 +282,9 @@ $$ language plpgsql;
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
-  base_currency text not null default 'BAM' 
+  base_currency text not null default 'BAM'
     check (base_currency in ('BAM','EUR','RSD','USD','GBP','CHF','MKD','HRK')),
-  locale text not null default 'bs-BA' 
+  locale text not null default 'bs-BA'
     check (locale in ('bs-BA','sr-RS-Latn','sr-RS-Cyrl','hr-HR','mk-MK','en-US')),
   timezone text not null default 'Europe/Sarajevo',
   week_start smallint not null default 1 check (week_start in (0,1)),   -- 1=pon
@@ -355,7 +366,7 @@ create table public.categories (
   parent_id uuid references public.categories(id) on delete set null,
   icon text,
   color text,
-  kind text not null default 'expense' 
+  kind text not null default 'expense'
     check (kind in ('expense','income','transfer','saving','investment')),
   is_system boolean not null default false,                   -- seed kategorije
   sort_order int not null default 0,
@@ -408,7 +419,7 @@ create table public.merchant_aliases (
   user_id uuid not null references auth.users(id) on delete cascade,
   merchant_id uuid not null references public.merchants(id) on delete cascade,
   pattern text not null,                                      -- može biti regex ili literal
-  pattern_type text not null default 'contains' 
+  pattern_type text not null default 'contains'
     check (pattern_type in ('exact','contains','starts_with','regex')),
   created_at timestamptz not null default now()
 );
@@ -447,9 +458,9 @@ create table public.import_batches (
   deleted_at timestamptz
 );
 
-create index idx_batches_user on public.import_batches(user_id, created_at desc) 
+create index idx_batches_user on public.import_batches(user_id, created_at desc)
   where deleted_at is null;
-create index idx_batches_hash on public.import_batches(user_id, file_hash_sha256) 
+create index idx_batches_hash on public.import_batches(user_id, file_hash_sha256)
   where deleted_at is null;
 
 alter table public.import_batches enable row level security;
@@ -528,16 +539,16 @@ create table public.transactions (
 );
 
 -- Indeksi koji stvarno koristimo
-create index idx_tx_user_date on public.transactions(user_id, transaction_date desc) 
+create index idx_tx_user_date on public.transactions(user_id, transaction_date desc)
   where deleted_at is null;
-create index idx_tx_account on public.transactions(account_id, transaction_date desc) 
+create index idx_tx_account on public.transactions(account_id, transaction_date desc)
   where deleted_at is null;
 create index idx_tx_category on public.transactions(category_id) where deleted_at is null;
 create index idx_tx_merchant on public.transactions(merchant_id) where deleted_at is null;
 create index idx_tx_batch on public.transactions(import_batch_id);
 create index idx_tx_dedup on public.transactions(user_id, dedup_hash) where deleted_at is null;
 create index idx_tx_transfer_pair on public.transactions(transfer_pair_id);
-create index idx_tx_merchant_raw_trgm on public.transactions 
+create index idx_tx_merchant_raw_trgm on public.transactions
   using gin (merchant_raw gin_trgm_ops);
 
 create trigger tx_updated_at before update on public.transactions
@@ -583,7 +594,7 @@ create table public.categorization_rules (
   user_id uuid not null references auth.users(id) on delete cascade,
   name text,
   priority int not null default 0,                            -- veći = prije
-  
+
   -- Conditions (sve ANDed)
   match_merchant_pattern text,
   match_merchant_pattern_type text check (match_merchant_pattern_type in ('exact','contains','regex')),
@@ -606,7 +617,7 @@ create table public.categorization_rules (
   updated_at timestamptz not null default now()
 );
 
-create index idx_rules_user on public.categorization_rules(user_id, priority desc) 
+create index idx_rules_user on public.categorization_rules(user_id, priority desc)
   where is_active = true;
 create trigger rules_updated_at before update on public.categorization_rules
   for each row execute function public.trigger_set_updated_at();
@@ -764,7 +775,7 @@ create table public.insights (
   created_at timestamptz not null default now()
 );
 
-create index idx_insights_user on public.insights(user_id, created_at desc) 
+create index idx_insights_user on public.insights(user_id, created_at desc)
   where is_dismissed = false;
 alter table public.insights enable row level security;
 create policy "users manage own insights" on public.insights
@@ -808,6 +819,7 @@ Ovo je živa lista; inicijalno seedaj top ~100 merchanta u `/db/seeds/merchants-
 - `categorization_rules.applied_count` — update-uje se u aplikacionom sloju.
 
 **Trigger pattern:**
+
 ```sql
 create or replace function public.update_account_balance()
 returns trigger as $$
@@ -819,15 +831,15 @@ begin
   elsif (tg_op = 'UPDATE') then
     if (old.account_id = new.account_id) then
       update public.accounts
-      set current_balance_cents = current_balance_cents 
+      set current_balance_cents = current_balance_cents
         - old.original_amount_cents + new.original_amount_cents
       where id = new.account_id;
     else
       -- Premještanje između računa
-      update public.accounts 
+      update public.accounts
       set current_balance_cents = current_balance_cents - old.original_amount_cents
       where id = old.account_id;
-      update public.accounts 
+      update public.accounts
       set current_balance_cents = current_balance_cents + new.original_amount_cents
       where id = new.account_id;
     end if;
@@ -873,7 +885,7 @@ import { revalidatePath } from 'next/cache';
 
 const CreateTransactionSchema = z.object({
   account_id: z.string().uuid(),
-  amount_cents: z.bigint().refine(v => v !== 0n, 'Iznos ne može biti 0'),
+  amount_cents: z.bigint().refine((v) => v !== 0n, 'Iznos ne može biti 0'),
   currency: z.string().length(3),
   transaction_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   merchant_raw: z.string().max(200).optional(),
@@ -890,7 +902,9 @@ export async function createTransaction(input: unknown) {
 
   // 2. Authenticate
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { success: false, error: 'UNAUTHORIZED' };
 
   // 3. Authorize — provjeri da user posjeduje account
@@ -914,7 +928,7 @@ export async function createTransaction(input: unknown) {
     parsed.data.amount_cents,
     parsed.data.currency,
     baseCurrency,
-    parsed.data.transaction_date
+    parsed.data.transaction_date,
   );
 
   // 5. Dedup
@@ -965,22 +979,23 @@ export async function createTransaction(input: unknown) {
 
 Svi Server Actions vraćaju `{ success: boolean, data?, error?, details? }`. Kodovi:
 
-| Kod | HTTP ekvivalent | Značenje |
-|---|---|---|
-| `UNAUTHORIZED` | 401 | User nije ulogiran |
-| `FORBIDDEN` | 403 | User nema pristup resursu |
-| `NOT_FOUND` | 404 | Resurs ne postoji (ili RLS filtrira) |
-| `VALIDATION_ERROR` | 400 | Zod validacija neuspjela |
-| `CONFLICT` | 409 | Duplikat, stanje konflikt |
-| `RATE_LIMITED` | 429 | Previše zahtjeva |
-| `DATABASE_ERROR` | 500 | PG greška |
-| `EXTERNAL_SERVICE_ERROR` | 502 | LLM/FX/email neuspjeh |
-| `INTERNAL_ERROR` | 500 | Sve ostalo |
+| Kod                      | HTTP ekvivalent | Značenje                             |
+| ------------------------ | --------------- | ------------------------------------ |
+| `UNAUTHORIZED`           | 401             | User nije ulogiran                   |
+| `FORBIDDEN`              | 403             | User nema pristup resursu            |
+| `NOT_FOUND`              | 404             | Resurs ne postoji (ili RLS filtrira) |
+| `VALIDATION_ERROR`       | 400             | Zod validacija neuspjela             |
+| `CONFLICT`               | 409             | Duplikat, stanje konflikt            |
+| `RATE_LIMITED`           | 429             | Previše zahtjeva                     |
+| `DATABASE_ERROR`         | 500             | PG greška                            |
+| `EXTERNAL_SERVICE_ERROR` | 502             | LLM/FX/email neuspjeh                |
+| `INTERNAL_ERROR`         | 500             | Sve ostalo                           |
 
 ### 6.4 Rate limiting
 
 Faza 0–2: Ne implementiramo eksplicitno (Supabase ima svoje limite).
 Faza 3+: Upstash Redis + sliding window za:
+
 - Magic link send: 3/sat/email
 - PDF upload: 10/dan/user
 - LLM-powered endpoint-i: 50/dan/user
@@ -1029,6 +1044,7 @@ Upload → Validate → Hash & dedup → Detect type
 ### 7.2 Templates za top banke u BiH
 
 Prioritet za Fazu 2:
+
 1. **Raiffeisen Bank BiH** (najveća, ti si vjerovatno klijent)
 2. **UniCredit Bank BiH**
 3. **Intesa Sanpaolo Banka BiH**
@@ -1036,6 +1052,7 @@ Prioritet za Fazu 2:
 5. **ASA Banka**
 
 Svaka banka ima poseban template fajl: `lib/parsers/templates/raiffeisen-ba.ts`. Template definira:
+
 - Fingerprint: regex koji pogađa njihov header ("Raiffeisen Bank d.d. Bosna i Hercegovina")
 - Ekstraktori: gdje je datum, iznos, opis, saldo
 - Transformacije: datum format (dd.mm.yyyy), decimalni separator (zarez)
@@ -1089,6 +1106,7 @@ Pravila:
 ### 7.4 Reconciliacija
 
 Nakon parsiranja:
+
 ```typescript
 const sumOfTransactions = transactions.reduce((s, t) => s + t.amount_cents, 0n);
 const expectedDelta = account.balance_end_cents - account.balance_start_cents;
@@ -1110,12 +1128,14 @@ if (abs(sumOfTransactions - expectedDelta) > tolerance) {
 ### 7.5 Troškovi i limiti
 
 Ocjenjeni mjesečni trošak (po korisniku):
+
 - 2 izvoda/mj × 5 stranica = 10 stranica
 - Gemini 2.5 Flash-Lite: ~$0.006/izvod = $0.012/mj
 - Mistral OCR fallback (~20% slučajeva): $0.001/str × 10 × 0.2 = $0.002/mj
 - Ukupno: **~$0.014/mj/korisnik**
 
 Hard limit za Fazu 2 (dok nismo sigurni):
+
 - 10 PDF upload-a/dan/korisnik
 - Ako batch > 50 transakcija, korisnik mora confirm-ovati prije LLM poziva
 
@@ -1196,12 +1216,12 @@ Pravila:
 
 ### 9.1 Environments
 
-| Environment | URL | Supabase | Svrha |
-|---|---|---|---|
-| Local dev | `http://localhost:3000` | `konto-dev` projekat | Razvoj, feature rad |
-| Preview | `konto-pr-{n}.vercel.app` | `konto-dev` | PR reviews, share link |
-| Staging | `staging.konto.ba` | `konto-staging` | Manual smoke testing |
-| Production | `konto.ba` (ili kasnije) | `konto-prod` | Live |
+| Environment | URL                       | Supabase             | Svrha                  |
+| ----------- | ------------------------- | -------------------- | ---------------------- |
+| Local dev   | `http://localhost:3000`   | `konto-dev` projekat | Razvoj, feature rad    |
+| Preview     | `konto-pr-{n}.vercel.app` | `konto-dev`          | PR reviews, share link |
+| Staging     | `staging.konto.ba`        | `konto-staging`      | Manual smoke testing   |
+| Production  | `konto.ba` (ili kasnije)  | `konto-prod`         | Live                   |
 
 ### 9.2 Deployment workflow
 
@@ -1270,6 +1290,7 @@ FEATURE_INSIGHTS=false
 ### 10.2 Metrics (Faza 3+)
 
 Custom events kroz PostHog:
+
 - `transaction_created` (props: source, has_category, currency)
 - `pdf_uploaded` (props: pages, file_size_kb, bank)
 - `pdf_parsed` (props: success, tx_count, duration_ms, cost_cents)
@@ -1281,6 +1302,7 @@ Nikad u event-ima: actual amounts, merchant names, user email. Samo opaque user 
 ### 10.3 Alerts
 
 Faza 3+, kroz Sentry:
+
 - Error rate > 1% u bilo kom endpointu — email
 - PDF parsing failure rate > 10% u 24h — email
 - Supabase quota > 80% — email
@@ -1291,17 +1313,18 @@ Faza 3+, kroz Sentry:
 
 Ciljevi koji utiču na arhitekturu:
 
-| Metrika | Cilj | Mjerenje |
-|---|---|---|
-| LCP (Largest Contentful Paint) | < 2.5s | Vercel Analytics |
-| TTI (Time to Interactive) | < 3.5s | Vercel Analytics |
-| Dashboard first load | < 1.5s after auth | Custom timing |
-| Transaction list paginated | < 500ms p95 | PostHog |
-| Quick-add submit | < 300ms p95 | PostHog |
-| PDF parsing | < 30s za 5-str izvod | Custom |
-| Bundle size (client JS) | < 300KB gzip | Next build |
+| Metrika                        | Cilj                 | Mjerenje         |
+| ------------------------------ | -------------------- | ---------------- |
+| LCP (Largest Contentful Paint) | < 2.5s               | Vercel Analytics |
+| TTI (Time to Interactive)      | < 3.5s               | Vercel Analytics |
+| Dashboard first load           | < 1.5s after auth    | Custom timing    |
+| Transaction list paginated     | < 500ms p95          | PostHog          |
+| Quick-add submit               | < 300ms p95          | PostHog          |
+| PDF parsing                    | < 30s za 5-str izvod | Custom           |
+| Bundle size (client JS)        | < 300KB gzip         | Next build       |
 
 **Mobile-first performance:**
+
 - Svaka stranica prolazi Lighthouse mobile test, cilj ≥ 90 Performance
 - Dashboard sa 1000+ transakcija mora biti paginiran (50 po stranici)
 - Charts lazy-loaded (dynamic import)
@@ -1312,12 +1335,14 @@ Ciljevi koji utiču na arhitekturu:
 ## 12. Scalability Assumptions
 
 Faza 0–4 ciljano (do 1000 korisnika):
+
 - **Monolit Next.js** bez micro services-a
 - **Postgres single instance** (Supabase Pro je dovoljan)
 - **Vercel Hobby → Pro** tier
 - **Pohrana:** ≤ 5GB Storage, ≤ 500MB DB
 
 Skaliranje preporuke (Faza 5+ ili 1000+ korisnika):
+
 - Supabase → Team plan ($599/mj) ili migracija na vlastiti PG
 - Dodaj Redis za rate limiting i cache
 - Offload parsing na background queue (Inngest, Trigger.dev)
@@ -1343,6 +1368,6 @@ Ova pitanja treba odlučiti prije kraja Faze 2:
 
 ## 14. Change Log
 
-| Datum | Verzija | Promjena |
-|---|---|---|
-| 2026-04-21 | 1.0 | Inicijalna verzija |
+| Datum      | Verzija | Promjena           |
+| ---------- | ------- | ------------------ |
+| 2026-04-21 | 1.0     | Inicijalna verzija |

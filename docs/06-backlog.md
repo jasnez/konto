@@ -12,6 +12,7 @@ Backlog je organizovan u **5 faza**, svaka faza ima **Epike**, svaki Epic ima **
 **Taskovi su pisani kao Cursor prompt-ovi.** Svaki task možeš direktno kopirati u Cursor chat, plus referentne dokumente, i dobijaš izvediv rezultat.
 
 **Legenda:**
+
 - 🔒 Kritičan (ne može se skipovati)
 - ⚡ Brz (< 30 min sa Cursor-om)
 - 🐢 Spor (> 2h fokusiranog rada)
@@ -50,6 +51,7 @@ Backlog je organizovan u **5 faza**, svaka faza ima **Epike**, svaki Epic ima **
 **Reference:** `/docs/01-architecture.md` sekcija 3.3
 
 **Prompt za Cursor:**
+
 ```
 Napravi Next.js 15 projekt u tekućem folderu.
 
@@ -73,6 +75,7 @@ Završi tako da `pnpm dev` pokreće app na localhost:3000 i prikazuje default Ne
 ```
 
 **Acceptance:**
+
 - [ ] `pnpm dev` radi, localhost:3000 se otvara
 - [ ] `pnpm build` bez errors/warnings
 - [ ] `pnpm lint` bez errors
@@ -89,6 +92,7 @@ Završi tako da `pnpm dev` pokreće app na localhost:3000 i prikazuje default Ne
 **Prompt:** Nema prompta. Ti sam kopiraj sadržaj iz `docs/04-cursorrules.md` sekcija 2 u fajl `.cursorrules` u rootu projekta. Commit sa porukom `chore: add cursor rules`.
 
 **Acceptance:**
+
 - [ ] `.cursorrules` postoji u rootu
 - [ ] Cursor u sljedećem prompt-u pokazuje da je pročitao pravila (test: pitaj "Koji je currency za default korisnika?" — treba reći BAM)
 
@@ -97,6 +101,7 @@ Završi tako da `pnpm dev` pokreće app na localhost:3000 i prikazuje default Ne
 ### [F0-E1-T3] ⚡ Instaliraj core dependencies
 
 **Prompt:**
+
 ```
 Instaliraj sljedeće pakete u Next.js projektu:
 
@@ -137,6 +142,7 @@ Kreiraj osnovni test `lib/utils.test.ts` koji testira neku trivijalnu funkciju (
 ```
 
 **Acceptance:**
+
 - [ ] Svi paketi instalirani bez vulnerabilities (`pnpm audit`)
 - [ ] `pnpm test` pokreće vitest i prolazi
 - [ ] `pnpm exec playwright install --with-deps chromium` uspješan
@@ -146,6 +152,7 @@ Kreiraj osnovni test `lib/utils.test.ts` koji testira neku trivijalnu funkciju (
 ### [F0-E1-T4] ⚡ Setup shadcn/ui
 
 **Prompt:**
+
 ```
 Inicijalizuj shadcn/ui u ovom Next.js 15 projektu:
 
@@ -179,6 +186,7 @@ Verifikuj tako što ćeš privremeno dodati button na home page koji trigger-uje
 ```
 
 **Acceptance:**
+
 - [ ] `components/ui/` postoji sa svim instaliranim komponentama
 - [ ] Dark/light mode se prebacuje na osnovu OS settings-a
 - [ ] Test toast klikom na dugme radi
@@ -189,6 +197,7 @@ Verifikuj tako što ćeš privremeno dodati button na home page koji trigger-uje
 ### [F0-E1-T5] ⚡ Setup fontova i base layout
 
 **Prompt:**
+
 ```
 Ažuriraj `app/layout.tsx`:
 
@@ -208,6 +217,7 @@ Završi tako da pokretanjem `pnpm dev` vidimo lijepo renderovanu home stranicu s
 ```
 
 **Acceptance:**
+
 - [ ] Inter font se učitava
 - [ ] Bosanska dijakritika (ć, č, š, đ, ž) se pravilno renderuje
 - [ ] 404 i error page postoje i imaju bosanski copy
@@ -217,7 +227,8 @@ Završi tako da pokretanjem `pnpm dev` vidimo lijepo renderovanu home stranicu s
 ### [F0-E1-T6] 🔒 Git hooks i pre-commit checks
 
 **Prompt:**
-```
+
+````
 Setup Husky + lint-staged + gitleaks u projektu:
 
 1. Instaliraj: `pnpm add -D husky lint-staged`
@@ -226,8 +237,10 @@ Setup Husky + lint-staged + gitleaks u projektu:
 ```bash
 pnpm exec lint-staged
 pnpm typecheck
-```
+````
+
 4. U `package.json` dodaj `lint-staged` config:
+
 ```json
 {
   "lint-staged": {
@@ -236,12 +249,15 @@ pnpm typecheck
   }
 }
 ```
+
 5. Instaliraj gitleaks binarno (prema OS-u) i dodaj u pre-commit:
+
 ```bash
 gitleaks protect --staged --verbose || exit 1
 ```
 
 Testiraj: napravi probni commit koji sadrži fake API key string (npr. `SUPABASE_KEY=sk_live_123`) — hook treba da ga odbije. Potom uradi proper commit.
+
 ```
 
 **Acceptance:**
@@ -261,7 +277,7 @@ Testiraj: napravi probni commit koji sadrži fake API key string (npr. `SUPABASE
 1. Idi na https://supabase.com, napravi nalog (2FA obavezan).
 2. Kreiraj novi projekt: `konto-dev`, region **Frankfurt (eu-central-1)**.
 3. Zapiši Project URL i `anon` key + `service_role` key (služi se password manager-om).
-4. U Dashboard → Auth → Providers: disable sve osim Email (magic link). 
+4. U Dashboard → Auth → Providers: disable sve osim Email (magic link).
 5. U Auth → URL Configuration: dodaj `http://localhost:3000/**` u Redirect URLs.
 6. U Project Settings → API: zabilježi keys.
 7. Instaliraj Supabase CLI: `brew install supabase/tap/supabase` (Mac) ili appropriate za OS.
@@ -277,11 +293,12 @@ Testiraj: napravi probni commit koji sadrži fake API key string (npr. `SUPABASE
 
 **Prompt:**
 ```
+
 U repo-u, setup Supabase lokalni development:
 
 1. `supabase init` u repo-u (kreira supabase/ folder sa config.toml)
 2. U `supabase/config.toml` postavi:
-   - project_id = "konto-dev"  
+   - project_id = "konto-dev"
    - api.port = 54321
    - db.port = 54322
    - studio.port = 54323
@@ -293,6 +310,7 @@ U repo-u, setup Supabase lokalni development:
    ```
 4. Kreiraj `.env.example` sa istim varijablama ali bez vrijednosti — commit-uj.
 5. Kreiraj `lib/supabase/server.ts` za Server Components/Actions:
+
 ```typescript
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -304,78 +322,95 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return cookieStore.getAll(); },
+        getAll() {
+          return cookieStore.getAll();
+        },
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, options),
             );
           } catch {
             // Server Component — safe to ignore
           }
         },
       },
-    }
+    },
   );
 }
 ```
 
 6. Kreiraj `lib/supabase/client.ts` za Client Components:
+
 ```typescript
 import { createBrowserClient } from '@supabase/ssr';
 
 export function createClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 }
 ```
 
 7. Kreiraj `lib/supabase/middleware.ts` za refresh tokena:
+
 ```typescript
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
-  
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return request.cookies.getAll(); },
+        getAll() {
+          return request.cookies.getAll();
+        },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, options),
           );
         },
       },
-    }
+    },
   );
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   // Protected routes
-  const protectedPaths = ['/pocetna', '/transakcije', '/racuni', '/budzet', '/ciljevi', '/uvidi', '/uvoz', '/podesavanja', '/kategorije'];
-  const isProtected = protectedPaths.some(p => request.nextUrl.pathname.startsWith(p));
-  
+  const protectedPaths = [
+    '/pocetna',
+    '/transakcije',
+    '/racuni',
+    '/budzet',
+    '/ciljevi',
+    '/uvidi',
+    '/uvoz',
+    '/podesavanja',
+    '/kategorije',
+  ];
+  const isProtected = protectedPaths.some((p) => request.nextUrl.pathname.startsWith(p));
+
   if (isProtected && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/prijava';
     return NextResponse.redirect(url);
   }
-  
+
   return supabaseResponse;
 }
 ```
 
 8. Kreiraj `middleware.ts` u root-u:
+
 ```typescript
 import { updateSession } from '@/lib/supabase/middleware';
 import type { NextRequest } from 'next/server';
@@ -390,6 +425,7 @@ export const config = {
 ```
 
 Verifikuj: `pnpm dev` pokreće bez errors, middleware logi (console) pokazuju da se getUser() poziva.
+
 ```
 
 **Acceptance:**
@@ -403,12 +439,15 @@ Verifikuj: `pnpm dev` pokreće bez errors, middleware logi (console) pokazuju da
 
 **Prompt:**
 ```
+
 Kreiraj prvu Supabase migration koja kreira osnovnu schemu za Konto.
 
 Komande:
+
 1. `supabase migration new 00001_initial_schema`
 
 Popuni generirani fajl sa SQL-om iz /docs/01-architecture.md sekcija 5.2, ali samo sljedeće tabele (ostale ćemo dodati u kasnijim migration-ama):
+
 - extensions (uuid-ossp, pgcrypto, pg_trgm)
 - trigger_set_updated_at function
 - profiles + RLS + handle_new_user trigger
@@ -424,6 +463,7 @@ Dodaj na kraj migration-a SQL za seed sistemskih kategorija — ali zakomentaris
 Umjesto toga, zamijeni `handle_new_user` trigger funkciju tako da pored inserta u profiles, pozove `insert_default_categories(user_id)` helper funkciju. Ta helper funkcija INSERT-uje sve default kategorije iz /docs/01-architecture.md sekcija 5.3.
 
 Verifikuj lokalno:
+
 - `supabase start`
 - `supabase db reset` (primjenjuje migration)
 - U Supabase Studio (localhost:54323) vidi tabele i provjeri RLS icon
@@ -432,9 +472,11 @@ Verifikuj lokalno:
 - Pokušaj isti INSERT kao anon role — RLS blokira
 
 Ažuriraj `package.json` scripts:
+
 - "supabase:start": "supabase start"
-- "supabase:reset": "supabase db reset"  
+- "supabase:reset": "supabase db reset"
 - "supabase:types": "supabase gen types typescript --local > supabase/types.ts"
+
 ```
 
 **Acceptance:**
@@ -450,18 +492,21 @@ Ažuriraj `package.json` scripts:
 
 **Prompt:**
 ```
+
 Pokreni `pnpm supabase:types` da generiše TypeScript types iz schema.
 
 Kreiraj utility fajlove:
+
 - `lib/supabase/types.ts` koji re-eksportuje types iz generated fajla sa lepšim imenima:
+
 ```typescript
 import type { Database } from '@/supabase/types';
 
-export type Tables<T extends keyof Database['public']['Tables']> = 
+export type Tables<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Row'];
-export type Insert<T extends keyof Database['public']['Tables']> = 
+export type Insert<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Insert'];
-export type Update<T extends keyof Database['public']['Tables']> = 
+export type Update<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Update'];
 
 export type Profile = Tables<'profiles'>;
@@ -473,7 +518,9 @@ export type Transaction = Tables<'transactions'>;
 Dodaj skriptu u package.json: "postinstall": "supabase gen types typescript --local > supabase/types.ts || true" (tako da se types regenerišu).
 
 Verifikuj da TypeScript zna tipove:
+
 - U bilo kom fajlu, `import type { Transaction } from '@/lib/supabase/types'` treba auto-complete kolone.
+
 ```
 
 **Acceptance:**
@@ -491,9 +538,11 @@ Verifikuj da TypeScript zna tipove:
 
 **Prompt:**
 ```
+
 Kreiraj:
 
 1. `app/(marketing)/page.tsx` — public landing
+
 - Minimalna, focused na jednom message-u
 - Header: logo "Konto" + dugme "Prijavi se"
 - Hero: naslov "Novac, lokalno i privatno.", podnaslov "Lična financije koje žive na tvom kontu — bez povezivanja banke.", primarno dugme "Napravi nalog besplatno"
@@ -504,6 +553,7 @@ Kreiraj:
 2. `app/(marketing)/layout.tsx` — layout sa header + footer
 
 3. `app/(auth)/prijava/page.tsx` — magic link forma
+
 - Centered card, max-w-sm
 - Input polje: email (type=email, required, autoComplete=email)
 - Submit button: "Pošalji link"
@@ -514,6 +564,7 @@ Kreiraj:
 4. `app/(auth)/layout.tsx` — minimalan layout (samo centered container)
 
 5. `app/(auth)/prijava/actions.ts`:
+
 ```typescript
 'use server';
 import { z } from 'zod';
@@ -528,7 +579,7 @@ export async function sendMagicLink(input: unknown) {
   if (!parsed.success) {
     return { success: false as const, error: 'VALIDATION_ERROR', details: parsed.error.flatten() };
   }
-  
+
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data.email,
@@ -536,17 +587,18 @@ export async function sendMagicLink(input: unknown) {
       emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
     },
   });
-  
+
   if (error) {
     console.error('signin_error', { error: error.message });
     return { success: false as const, error: 'EMAIL_SEND_FAILED' };
   }
-  
+
   return { success: true as const };
 }
 ```
 
 6. `app/auth/callback/route.ts` — handler za magic link redirect:
+
 ```typescript
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
@@ -555,7 +607,7 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
   const next = searchParams.get('next') ?? '/pocetna';
-  
+
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -563,12 +615,13 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
-  
+
   return NextResponse.redirect(`${origin}/prijava?error=true`);
 }
 ```
 
 Sve stranice prate design system iz /docs/03-design-system.md.
+
 ```
 
 **Acceptance:**
@@ -584,12 +637,15 @@ Sve stranice prate design system iz /docs/03-design-system.md.
 
 **Prompt:**
 ```
+
 Kreiraj:
 
 1. Server Action `app/(app)/podesavanja/actions.ts`:
+
 - `signOut()` — koristi supabase.auth.signOut(), redirect('/prijava')
 
 2. `app/(app)/podesavanja/page.tsx`:
+
 - Pokaži trenutni email + display_name (iz profiles)
 - Input za display_name (može edit)
 - Select za base_currency (BAM default, EUR, RSD, USD, MKD)
@@ -599,29 +655,30 @@ Kreiraj:
 - Submit zove Server Action updateProfile
 
 3. Server Action updateProfile:
+
 ```typescript
 'use server';
 const UpdateProfileSchema = z.object({
   display_name: z.string().min(1).max(100).optional(),
-  base_currency: z.enum(['BAM','EUR','RSD','USD','GBP','CHF','MKD','HRK']).optional(),
-  locale: z.enum(['bs-BA','sr-RS-Latn','sr-RS-Cyrl','hr-HR','mk-MK','en-US']).optional(),
+  base_currency: z.enum(['BAM', 'EUR', 'RSD', 'USD', 'GBP', 'CHF', 'MKD', 'HRK']).optional(),
+  locale: z.enum(['bs-BA', 'sr-RS-Latn', 'sr-RS-Cyrl', 'hr-HR', 'mk-MK', 'en-US']).optional(),
 });
 
 export async function updateProfile(input: unknown) {
   const parsed = UpdateProfileSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: 'VALIDATION_ERROR', details: parsed.error.flatten() };
-  
+  if (!parsed.success)
+    return { success: false, error: 'VALIDATION_ERROR', details: parsed.error.flatten() };
+
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { success: false, error: 'UNAUTHORIZED' };
-  
-  const { error } = await supabase
-    .from('profiles')
-    .update(parsed.data)
-    .eq('id', user.id);
-  
+
+  const { error } = await supabase.from('profiles').update(parsed.data).eq('id', user.id);
+
   if (error) return { success: false, error: 'DATABASE_ERROR' };
-  
+
   revalidatePath('/podesavanja');
   return { success: true };
 }
@@ -629,6 +686,7 @@ export async function updateProfile(input: unknown) {
 
 Toast na uspjeh: "Sačuvano."
 Toast na grešku: "Nije uspjelo. Pokušaj ponovo."
+
 ```
 
 **Acceptance:**
@@ -645,26 +703,31 @@ Toast na grešku: "Nije uspjelo. Pokušaj ponovo."
 
 **Prompt:**
 ```
+
 Kreiraj `app/(app)/layout.tsx` — app shell sa responsive navigation:
 
 Desktop (md+):
+
 - Sidebar (240px širok, collapsible na 64px)
 - Top bar: page title + right-side actions slot
 - Main content area
 
 Mobile:
+
 - Top bar: hamburger ili account switcher + logo + actions
 - Bottom nav (fixed): Home, Transakcije, FAB (+), Uvidi, Više
 - Safe area padding za iOS/Android
 
 Nav items (Faza 0 — samo početna i podešavanja rade, ostali su placeholder):
+
 - Home → /pocetna
-- Transakcije → /transakcije  
-- + (FAB) → triggeruje quick-add modal (za sada samo empty dialog)
+- Transakcije → /transakcije
+- - (FAB) → triggeruje quick-add modal (za sada samo empty dialog)
 - Uvidi → /uvidi (placeholder)
 - Više → /podesavanja i ostatak
 
 Komponente:
+
 - components/shell/sidebar.tsx
 - components/shell/bottom-nav.tsx
 - components/shell/top-bar.tsx
@@ -678,6 +741,7 @@ Kreiraj `app/(app)/transakcije/page.tsx` placeholder.
 Kreiraj `app/(app)/uvidi/page.tsx` placeholder.
 
 Sva navigation koristi next/link (ne <a>).
+
 ```
 
 **Acceptance:**
@@ -728,15 +792,18 @@ Sva navigation koristi next/link (ne <a>).
 
 **Prompt:**
 ```
+
 Kreiraj `app/(app)/racuni/actions.ts` sa kompletnim CRUD-om za accounts tabelu.
 
 Akcije:
+
 1. `createAccount(input)` — prima: name, type, institution, currency, initial_balance_cents, icon, color
 2. `updateAccount(id, input)` — parcijalni update
 3. `deleteAccount(id)` — soft delete (set deleted_at)
 4. `reorderAccounts(orderedIds)` — ažurira sort_order
 
 Svaka akcija:
+
 - Zod validation schema (colocated)
 - Auth check via getUser()
 - Za update/delete: eksplicitna ownership provjera
@@ -744,32 +811,51 @@ Svaka akcija:
 - Return standard shape
 
 Schema za createAccount:
+
 ```typescript
 const CreateAccountSchema = z.object({
   name: z.string().min(1, 'Naziv je obavezan').max(100),
-  type: z.enum(['checking','savings','cash','credit_card','revolut','wise','investment','loan','other']),
+  type: z.enum([
+    'checking',
+    'savings',
+    'cash',
+    'credit_card',
+    'revolut',
+    'wise',
+    'investment',
+    'loan',
+    'other',
+  ]),
   institution: z.string().max(100).optional().nullable(),
-  currency: z.enum(['BAM','EUR','RSD','USD','GBP','CHF','MKD','HRK']),
+  currency: z.enum(['BAM', 'EUR', 'RSD', 'USD', 'GBP', 'CHF', 'MKD', 'HRK']),
   initial_balance_cents: z.bigint().default(0n),
   icon: z.string().max(10).optional().nullable(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().nullable(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional()
+    .nullable(),
 });
 ```
 
 NAPOMENA: bigint nije JSON-serializable. Rješenje: input.amount_cents stiže kao string, konvertuj sa `BigInt(amount_str)` u schema transform:
+
 ```typescript
-amount_cents: z.string().transform(val => BigInt(val))
+amount_cents: z.string().transform((val) => BigInt(val));
 ```
 
 Initial balance handling:
+
 - Ako je initial_balance_cents != 0, kreiraj prvu "opening balance" transakciju u tom računu sa source='manual' i category 'opening_balance' (kreiraj tu sistemsku kategoriju u migraciji).
 - Tako balance na accountu = sum transakcija, konzistentno.
 
 Napiši unit testove u `app/(app)/racuni/actions.test.ts`:
+
 - Success case
 - Validation error
 - Auth error
 - Ownership check (user B ne može update-ovati A-ov account)
+
 ```
 
 **Acceptance:**
@@ -785,16 +871,19 @@ Napiši unit testove u `app/(app)/racuni/actions.test.ts`:
 
 **Prompt:**
 ```
+
 Kreiraj:
 
 1. `app/(app)/racuni/page.tsx` (Server Component):
-- Fetch accounts: supabase.from('accounts').select('*').is('deleted_at', null).order('sort_order')
+
+- Fetch accounts: supabase.from('accounts').select('\*').is('deleted_at', null).order('sort_order')
 - Grid kartica (2 kolone desktop, 1 kolona mobile)
 - Svaka kartica: icon + name + institution + balance (large) + currency + menu (edit/delete)
 - Primary action u header-u: "Dodaj račun"
 - Empty state: "Još nema računa. Dodaj prvi da počneš."
 
 2. `app/(app)/racuni/novi/page.tsx`:
+
 - Forma za kreiranje
 - Polja: name (input), type (select sa predefinisanim opcijama i emoji), institution (combobox sa predefined BiH bankama), currency (select, BAM default), initial_balance (MoneyInput — **koristi placeholder komponentu za sada, pravićemo u T3**), icon picker, color picker
 - Submit zove createAccount Server Action
@@ -802,15 +891,18 @@ Kreiraj:
 - Na error: inline error
 
 3. `app/(app)/racuni/[id]/page.tsx`:
+
 - Prikaz accounta + lista zadnjih 50 transakcija (placeholder dok nemamo tx)
 - Menu: Edit, Delete (sa confirm dialog)
 
 4. `app/(app)/racuni/[id]/uredi/page.tsx`:
+
 - Ista forma kao novi, ali prepopulirana
 
 5. Komponenta `components/account-card.tsx` — kartica u listi.
 
 UI:
+
 - Koristi shadcn Card, Button, Input, Select, Combobox (command)
 - Bosanske rute (/racuni), bosanski copy
 - Svi tekstovi iz Design System copy guide-a
@@ -820,6 +912,7 @@ Bank combobox za BiH (pre-populated):
 ['Raiffeisen Bank d.d. BiH', 'UniCredit Bank d.d. BiH', 'Intesa Sanpaolo Banka BiH', 'NLB Banka BiH', 'Sparkasse Bank BiH', 'Nova banka', 'MF banka', 'ASA Banka', 'Addiko Bank BiH', 'ProCredit Bank', 'Union banka', 'Ziraat Bank', 'Privredna banka Sarajevo', 'Razvojna banka FBiH', 'Bosna Bank International']
 
 Account type opcije (sa emoji):
+
 - checking: 💳 Tekući račun
 - savings: 🏦 Štedni račun
 - cash: 💵 Gotovina
@@ -829,6 +922,7 @@ Account type opcije (sa emoji):
 - investment: 📈 Investicije
 - loan: 🏠 Kredit
 - other: 📦 Drugo
+
 ```
 
 **Acceptance:**
@@ -845,9 +939,11 @@ Account type opcije (sa emoji):
 
 **Prompt:**
 ```
+
 Kreiraj `components/money-input.tsx`:
 
 Specifikacija:
+
 - Controlled component: value: bigint (cents), onChange: (cents: bigint) => void
 - Prop `currency: string` i opcioni `onCurrencyChange`
 - Prop `allowNegative?: boolean` (default false)
@@ -859,6 +955,7 @@ Specifikacija:
 Interno state: raw string koji user tipka. Na blur se formatira sa thousands separator.
 
 Parsing pravila (lib/format/parse-money.ts):
+
 - Prihvata "1234" → 123400n (pretpostavljena 2 decimale)
 - Prihvata "12,50" (bs-BA) → 1250n
 - Prihvata "12.50" (en-US) → 1250n
@@ -867,18 +964,21 @@ Parsing pravila (lib/format/parse-money.ts):
 - Odbacuje sve ostalo (null return)
 
 Formatiranje (lib/format/format-money.ts):
+
 - formatMoney(1250n, 'BAM', 'bs-BA') → "12,50 KM"
 - formatMoney(1250n, 'BAM', 'bs-BA', { showCurrency: false }) → "12,50"
 - Koristi Intl.NumberFormat
 - BAM se prikazuje kao "KM", ostale kao ISO kod
 
 UI:
+
 - Input sa klasama za tabular-nums i right-aligned text
 - Currency pill desno (compact select ako onCurrencyChange postoji)
 - Focus ring prema design tokens
 - inputMode="decimal" za mobile brojčanu tastaturu
 
 Testovi u `components/money-input.test.tsx`:
+
 - Unos parsira u cents
 - Blur formatira
 - Negativne rade (ako allowNegative)
@@ -886,9 +986,11 @@ Testovi u `components/money-input.test.tsx`:
 - Change currency ne mijenja value
 
 Testovi u `lib/format/parse-money.test.ts`:
+
 - Sve edge cases iz /docs/05-testing.md sekcija 6.1
 
 Nakon što je komponenta gotova, ažuriraj forme iz T2 da koriste MoneyInput umjesto placeholder-a.
+
 ```
 
 **Acceptance:**
@@ -905,6 +1007,7 @@ Nakon što je komponenta gotova, ažuriraj forme iz T2 da koriste MoneyInput umj
 
 **Prompt:**
 ```
+
 Kreiraj migration `00002_merchants.sql`:
 
 - Kreiraj tabelu `merchants` prema /docs/01-architecture.md sekcija 5.2 (samo ta tabela)
@@ -914,6 +1017,7 @@ Kreiraj migration `00002_merchants.sql`:
 - Trigger merchants_updated_at
 
 Regeneriši types: `pnpm supabase:types`.
+
 ```
 
 **Acceptance:**
@@ -927,6 +1031,7 @@ Regeneriši types: `pnpm supabase:types`.
 
 **Prompt:**
 ```
+
 Kreiraj `app/(app)/kategorije/page.tsx`:
 
 - Fetch kategorije grupisane po kind (expense, income, transfer)
@@ -937,19 +1042,29 @@ Kreiraj `app/(app)/kategorije/page.tsx`:
 - "Dodaj kategoriju" primary button (otvara modal)
 
 Server Actions u `actions.ts`:
+
 - createCategory(input)
 - updateCategory(id, input)
 - deleteCategory(id) — provjeriti da nije sistemska
 - reorderCategories(orderedIds)
 
 Schema:
+
 ```typescript
 const CategorySchema = z.object({
   name: z.string().min(1).max(50),
-  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/, 'Samo latinična slova, brojevi i crtica'),
+  slug: z
+    .string()
+    .min(1)
+    .max(50)
+    .regex(/^[a-z0-9-]+$/, 'Samo latinična slova, brojevi i crtica'),
   icon: z.string().max(10).optional().nullable(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().nullable(),
-  kind: z.enum(['expense','income','transfer','saving','investment']),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional()
+    .nullable(),
+  kind: z.enum(['expense', 'income', 'transfer', 'saving', 'investment']),
   parent_id: z.string().uuid().optional().nullable(),
 });
 ```
@@ -957,6 +1072,7 @@ const CategorySchema = z.object({
 Automatski generiši slug iz name-a na blur name polja (koristi lib/format/slugify.ts — konvertuj bosanske dijakritike: čć→c, žš→zs, đ→dj).
 
 UI fokus na mobile: lista sa 64px row visine, touch handle za drag-and-drop (samo na desktop edit mode), tap za edit u modalu.
+
 ```
 
 **Acceptance:**
@@ -971,9 +1087,11 @@ UI fokus na mobile: lista sa 64px row visine, touch handle za drag-and-drop (sam
 
 **Prompt:**
 ```
+
 Kreiraj `app/(app)/merchants/page.tsx`:
 
 Za Fazu 1 minimalno:
+
 - Lista merchant-a (fetch iz merchants tabele)
 - Svaki row: icon + canonical_name + default_category + transaction_count
 - Dugme "Dodaj merchant"
@@ -981,17 +1099,20 @@ Za Fazu 1 minimalno:
 - Delete s confirm
 
 Server Actions:
+
 - createMerchant({canonical_name, display_name, default_category_id, icon, color})
 - updateMerchant
 - deleteMerchant (samo ako transaction_count = 0, inače warn)
 
 Potrebna pomoćna server akcija:
+
 - searchMerchants(query: string, limit: number): MerchantResult[]
   - pg_trgm fuzzy match na canonical_name
   - ORDER BY similarity DESC, transaction_count DESC LIMIT limit
   - Koristićemo ovo u sljedećem tasku za autocomplete u quick-add
 
 Unit test: searchMerchants vraća rezultate za tipične queries ("konz" → "Konzum", "hifa" → "Hifa-Oil"; ali ovdje testiraj sa seed mergjenjima).
+
 ```
 
 **Acceptance:**
@@ -1009,31 +1130,35 @@ Unit test: searchMerchants vraća rezultate za tipične queries ("konz" → "Kon
 
 **Prompt:**
 ```
+
 Kreiraj `lib/fx/` modul:
 
 1. `lib/fx/constants.ts`:
+
 ```typescript
 export const BAM_EUR_RATE = 1.95583;
 export const EUR_BAM_RATE = 1 / BAM_EUR_RATE; // 0.51129...
 ```
 
 2. `lib/fx/convert.ts`:
+
 ```typescript
 export async function convertToBase(
   amountCents: bigint,
   fromCurrency: string,
   toCurrency: string,
-  date: string // ISO yyyy-mm-dd
+  date: string, // ISO yyyy-mm-dd
 ): Promise<{
   baseCents: bigint;
   fxRate: number;
   fxRateDate: string;
   fxSource: 'identity' | 'currency_board' | 'ecb' | 'frankfurter' | 'stale';
   fxStale: boolean;
-}>
+}>;
 ```
 
 Logika:
+
 - Ako fromCurrency == toCurrency → identity (rate 1, source 'identity')
 - Ako par je BAM↔EUR → currency_board konstanta
 - Ostalo: fetch kurs iz fx_rates tabele za taj datum (za sada tabela je prazna, vraća null)
@@ -1042,18 +1167,21 @@ Logika:
 - Ako sve fail-uje, pokušaj zadnji poznati rate (MAX date < target date) i flag fxStale=true
 
 NAPOMENA: za Fazu 1 fx_rates tabela nije u schemi — dodaj je sada u migration `00003_fx_rates.sql`:
+
 - kreiraj fx_rates tabelu (vidi arch doc)
 - RLS policy: select public
 - Indeks idx_fx_quote_date
 
 3. `lib/fx/convert.test.ts`:
-Sve testove iz /docs/05-testing.md sekcija 6.2.
+   Sve testove iz /docs/05-testing.md sekcija 6.2.
 
 Koristi `vi.mock` za Frankfurter fetch u testovima (ne treba live HTTP).
 
 4. Kreiraj Edge Function za daily FX refresh (ne aktiviraj sada, samo scaffold):
+
 - `supabase/functions/fx-refresh/index.ts` — za sada samo placeholder sa TODO.
 - Registruj je u config.toml.
+
 ```
 
 **Acceptance:**
@@ -1070,11 +1198,13 @@ Koristi `vi.mock` za Frankfurter fetch u testovima (ne treba live HTTP).
 
 **Prompt:**
 ```
+
 Kreiraj `app/(app)/transakcije/actions.ts` sa `createTransaction` akcijom.
 
 Koristi template iz /docs/01-architecture.md sekcija 6.2 kao osnovu, ali dodaj:
 
 - Dedup hash computation prije insert-a (koristi `lib/dedup.ts` koji ćemo kreirati):
+
 ```typescript
 // lib/dedup.ts
 import crypto from 'node:crypto';
@@ -1102,6 +1232,7 @@ export function computeDedupHash(input: {
 - Revalidate: `/transakcije`, `/racuni/[account_id]`, `/pocetna`.
 
 Još dodaj:
+
 - `updateTransaction(id, input)`
 - `deleteTransaction(id)` — soft delete (set deleted_at)
 - `restoreTransaction(id)` — za undo toast
@@ -1110,15 +1241,17 @@ Još dodaj:
 Sve sa eksplicitnom ownership provjerom.
 
 Unit testovi u `actions.test.ts`:
+
 - create success
 - create with validation error
 - create unauthorized
 - create with duplicate — vraća DUPLICATE code
 - create cross-user account — vraća FORBIDDEN
 - FX konverzija — BAM transakcija sa BAM base currency → base_cents == original_cents
-- FX konverzija — EUR transakcija sa BAM base currency → base_cents = amount * 1.95583
+- FX konverzija — EUR transakcija sa BAM base currency → base_cents = amount \* 1.95583
 - delete sets deleted_at
 - bulk delete prolazi 50+ u jednoj transakciji
+
 ```
 
 **Acceptance:**
@@ -1134,11 +1267,13 @@ Unit testovi u `actions.test.ts`:
 
 **Prompt:**
 ```
+
 Kreiraj `components/quick-add-transaction.tsx`:
 
 Dialog (desktop) / Sheet (mobile) koji se triggeruje sa FAB-a ili keyboard shortcut `Cmd+K`.
 
 Layout (mobile full-height sheet):
+
 - Iznos MoneyInput (autofocus)
 - Tip: tabs (Trošak, Prihod, Transfer) — mijenja sign i kategoriju dropdown
 - Merchant — Combobox (shadcn Command) sa autocomplete iz searchMerchants
@@ -1151,19 +1286,23 @@ Layout (mobile full-height sheet):
 - Otkaži
 
 Keyboard:
+
 - Enter u amount polju → fokus merchant
 - Enter u merchant polju → fokus kategorija
 - Esc → close
 
 Optimistic update:
+
 - Odmah zatvori modal i pokaži toast "Transakcija je dodata."
 - Ako Server Action fail-uje, pokaži error toast sa Retry dugmetom koji re-open-uje modal sa istim vrijednostima
 
 Local storage "last used":
+
 - Posle svake transakcije, zapamti: zadnji račun, zadnja kategorija, zadnji merchant
 - Default iste vrijednosti u sljedećem otvaranju
 
 Komponente:
+
 - components/quick-add-transaction.tsx (main)
 - components/merchant-combobox.tsx (sa searchMerchants hook)
 - components/category-select.tsx (filter po kind)
@@ -1172,6 +1311,7 @@ Komponente:
 
 Koristi React Hook Form + zodResolver.
 Ista Zod schema kao Server Action — EXTRAKT u `lib/schemas/transaction.ts` da je dijelimo.
+
 ```
 
 **Acceptance:**
@@ -1190,17 +1330,20 @@ Ista Zod schema kao Server Action — EXTRAKT u `lib/schemas/transaction.ts` da 
 
 **Prompt:**
 ```
+
 Kreiraj `app/(app)/transakcije/page.tsx` (Server Component):
 
 Query string filtriranje:
+
 - ?account=<uuid>
 - ?category=<uuid>
 - ?from=<date>&to=<date>
-- ?search=<text>  — full-text na merchant_raw, description, notes
+- ?search=<text> — full-text na merchant_raw, description, notes
 - ?page=<n> (default 1, page size 50)
 - ?type=income|expense|transfer
 
 Layout:
+
 - Header: title + primary "+ Dodaj" button
 - Sticky filter bar ispod header-a:
   - Date range picker (default: ovaj mjesec)
@@ -1218,20 +1361,24 @@ Grupiraj po datumu: "Danas", "Juče", "Ova sedmica", "15. apr. 2026." itd. — d
 Empty state: "Još nema transakcija za ove filtere."
 
 Mobile:
+
 - Swipe left na row → quick actions (Edit, Delete)
 - Long press → select mode (checkbox se pojavi; onda bulk-bar u footer-u: "3 odabrano · Obriši · Premjesti")
 - Pull to refresh
 
 Desktop:
+
 - Hover row → akcije desno (Edit, Delete)
 - Shift+Click za range select
 - Cmd/Ctrl+Click za multi select
 
 Performance:
+
 - Server-side pagination (nikad fetch all)
 - React.cache() na fetchTransactions da se ne poziva duplo
 - Skeleton loading state
 - `select` samo potrebne kolone, JOIN-uj category i merchant kroz Supabase foreign references
+
 ```
 
 **Acceptance:**
@@ -1249,9 +1396,11 @@ Performance:
 
 **Prompt:**
 ```
+
 Kreiraj `app/(app)/transakcije/[id]/page.tsx`:
 
 Layout:
+
 - Back button
 - Hero: iznos (large) + date + merchant name
 - Detalji:
@@ -1272,9 +1421,11 @@ Layout:
 Inline edit za kategoriju — bez otvaranja forme, samo dropdown sa save on change.
 
 Related:
+
 - "Sve transakcije sa ovim merchant-om" link (filter shortcut)
 
 Edit stranica `[id]/uredi/page.tsx` — ista forma kao quick-add ali sa svim poljima expanded.
+
 ```
 
 **Acceptance:**
@@ -1293,42 +1444,50 @@ Edit stranica `[id]/uredi/page.tsx` — ista forma kao quick-add ali sa svim pol
 
 **Prompt:**
 ```
+
 Kreiraj/ažuriraj `app/(app)/pocetna/page.tsx`:
 
 Layout (Server Component, uses Suspense boundaries):
 
 1. Greeting banner:
+
 - "Dobro jutro/dan/veče, {first_name}"
 - (Opcioni) motivacioni text ako user tek počinje
 
 2. Hero card: Ukupno stanje
+
 - Sum svih accounts (current_balance_cents konvertovano u base_currency)
 - Large amount display
 - Badge: ±X% vs prošli mjesec
 - Link: "Svi računi" → /racuni
 
 3. Grid (2x2 desktop, 1x4 mobile):
+
 - Kartica "Potrošeno ovaj mjesec" — sum expense transakcija ovog mjeseca
 - Kartica "Prihodi ovaj mjesec"
 - Kartica "Sačuvano" (prihod - trošak)
 - Kartica "Prosječno dnevno" — moving avg last 30 days
 
 4. Sekcija "Zadnje transakcije":
+
 - 10 najnovijih
 - Link "Vidi sve"
 
 5. Sekcija "Trend" (Faza 3+): chart za sada placeholder
 
 Data fetching:
+
 - Paralelno kroz Promise.all
 - Suspense sa skeleton za svaku sekciju
 
 Komponente:
+
 - components/dashboard/balance-hero.tsx
 - components/dashboard/metric-card.tsx (reusable)
 - components/dashboard/recent-transactions.tsx
 
 Testiraj na mobile widths (360px) da nije zbijeno.
+
 ```
 
 **Acceptance:**
@@ -1344,6 +1503,7 @@ Testiraj na mobile widths (360px) da nije zbijeno.
 
 **Prompt:**
 ```
+
 Kreiraj `lib/queries/summary.ts`:
 
 ```typescript
@@ -1351,7 +1511,7 @@ export async function getMonthlySummary(
   supabase: SupabaseClient,
   userId: string,
   baseCurrency: string,
-  options: { year: number; month: number }
+  options: { year: number; month: number },
 ): Promise<{
   totalBalance: bigint;
   monthIncome: bigint;
@@ -1360,10 +1520,11 @@ export async function getMonthlySummary(
   prevMonthNet: bigint;
   netChangePercent: number;
   avgDailySpend: bigint;
-}>
+}>;
 ```
 
 Logika:
+
 - totalBalance: SUM(current_balance_cents) iz accounts, konvertovano u base currency
 - monthIncome: SUM(base_amount_cents) WHERE transaction_date u mjesecu AND kind='income' AND is_transfer=false AND is_excluded=false
 - monthExpense: isto ali kind='expense' (apsolutna vrijednost)
@@ -1372,8 +1533,10 @@ Logika:
 - avgDailySpend: monthExpense / dayOfMonth (ili broj dana u mjesecu ako je prošli)
 
 Performance:
+
 - Jedan SQL query sa CTE-ovima (jedna DB runda)
 - Koristi Supabase RPC funkciju za ovo (kreiraj u migration `00004_dashboard_rpc.sql`):
+
 ```sql
 create or replace function public.get_monthly_summary(
   p_year int,
@@ -1395,10 +1558,12 @@ $$;
 Koristi stable (immutable within query) funkciju — tako PG može keš-irati plan.
 
 Test u `lib/queries/summary.test.ts`:
+
 - Sa seed podacima (3 accounta, 20 transakcija)
 - Verifikuj totale
 - Verifikuj exclude is_transfer i is_excluded
 - Verifikuj kroz-valute (BAM + EUR računi, base = BAM)
+
 ```
 
 **Acceptance:**
@@ -1412,18 +1577,21 @@ Test u `lib/queries/summary.test.ts`:
 
 **Prompt:**
 ```
+
 Dodaj globalni keyboard shortcut za quick-add transakciju:
 
 - Cmd+K (Mac) / Ctrl+K (Win/Linux) → otvara quick-add modal iz bilo gdje u app-u
 - Esc → zatvara
 
 Implementacija:
+
 - Kreiraj hook `hooks/use-keyboard-shortcut.ts`:
+
 ```typescript
 export function useKeyboardShortcut(
   combo: string,
   handler: () => void,
-  options?: { preventDefault?: boolean; enabled?: boolean }
+  options?: { preventDefault?: boolean; enabled?: boolean },
 ) {
   // useEffect that listens to window keydown
   // parses "mod+k" format where mod=meta on Mac, ctrl on others
@@ -1434,6 +1602,7 @@ export function useKeyboardShortcut(
 - Trigger koji open-uje QuickAdd dialog (koristi Zustand store za global dialog state — `stores/ui.ts`)
 
 Zustand store:
+
 ```typescript
 // stores/ui.ts
 import { create } from 'zustand';
@@ -1454,6 +1623,7 @@ export const useUiStore = create<UiStore>((set) => ({
 FAB i Sidebar "+Add" dugme oboje pozivaju openQuickAdd.
 
 Prikaz shortcut hint-a: u FAB tooltip "Dodaj transakciju (⌘K)".
+
 ```
 
 **Acceptance:**
@@ -1471,15 +1641,18 @@ Prikaz shortcut hint-a: u FAB tooltip "Dodaj transakciju (⌘K)".
 
 **Prompt:**
 ```
+
 Kreiraj `app/(app)/podesavanja/izvoz/page.tsx` i Server Action.
 
 Stranica:
+
 - Naslov "Izvezi sve tvoje podatke"
 - Objasnjenje: "Dobićeš JSON fajl sa svim računima, transakcijama, kategorijama i merchants-ima. Koristi za backup ili migraciju."
 - Dugme "Preuzmi export"
 - Disclaimer: "Ovo može potrajati par sekundi."
 
 Server Action `exportAllData()`:
+
 1. Auth check
 2. Fetch sve user-related data:
    - profiles (bez password/token polja — nema ih nego sigurnost provjeri)
@@ -1491,29 +1664,34 @@ Server Action `exportAllData()`:
    - categorization_rules
    - budgets, goals, recurring (u Fazi 3 ako su popunjene)
 3. Serialize u JSON — pazi na BigInt serialization (pretvori u string sa sufix "cents"):
+
 ```typescript
 const replacer = (key: string, value: unknown) => {
   if (typeof value === 'bigint') return value.toString();
   return value;
 };
 ```
+
 4. Audit log event: 'export_data'
 5. Return kao download
 
 U UI, umjesto fetch kroz Server Action direktno (koji nije streamable), koristi Route Handler `/api/export/data`:
+
 ```typescript
 // app/api/export/data/route.ts
 export async function GET() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return new Response('Unauthorized', { status: 401 });
-  
+
   // fetch all + serialize
   const json = JSON.stringify(data, replacer, 2);
-  
+
   // Log audit
   await supabase.from('audit_log').insert({ user_id: user.id, event_type: 'export_data' });
-  
+
   return new Response(json, {
     headers: {
       'Content-Type': 'application/json',
@@ -1524,6 +1702,7 @@ export async function GET() {
 ```
 
 Rate limit: 1 export po satu (zapiši u audit_log, provjeri prije export-a).
+
 ```
 
 **Acceptance:**
@@ -1543,9 +1722,11 @@ Rate limit: 1 export po satu (zapiši u audit_log, provjeri prije export-a).
 
 **Prompt:**
 ```
+
 Implementiraj kompletan account delete flow:
 
 1. `app/(app)/podesavanja/obrisi/page.tsx`:
+
 - Warning title "Obriši svoj nalog"
 - Lista šta će se obrisati (sve računi, transakcije, kategorije, budžeti, ciljevi)
 - Napomena: "Nalog se soft-briše odmah. Nakon 30 dana se trajno briše."
@@ -1554,6 +1735,7 @@ Implementiraj kompletan account delete flow:
 - Dugme "Obriši nalog" (destructive)
 
 2. Server Action `requestAccountDeletion(email)`:
+
 - Auth check
 - Provjeri da email match-uje
 - Postavi profiles.deleted_at = now()
@@ -1563,10 +1745,12 @@ Implementiraj kompletan account delete flow:
 - Return redirect na "/obrisan" informativnu stranicu
 
 3. `app/obrisan/page.tsx` (public):
+
 - "Tvoj nalog je označen za brisanje. Automatski će biti trajno obrisan za 30 dana."
 - "Provjeri inbox za cancelation link ako si se predomislio."
 
 4. Server Action `cancelDeletion(token)`:
+
 - Decode token
 - Provjeri exp
 - profiles.deleted_at = NULL
@@ -1574,6 +1758,7 @@ Implementiraj kompletan account delete flow:
 - Redirect na /pocetna sa toast-om "Brisanje je otkazano."
 
 5. Cron job `hard_delete_accounts` (pg_cron ili Supabase Edge Function):
+
 - Dnevno provjeri profiles WHERE deleted_at < now() - interval '30 days'
 - Za svaki, poziv supabase.auth.admin.deleteUser(id) koji CASCADE-uje kroz auth.users → sve tabele (zbog ON DELETE CASCADE)
 - Audit log 'account_deleted' bez user_id (za retention)
@@ -1592,6 +1777,7 @@ Ako si se predomislio, klikni ovdje da otkažeš brisanje (link važi 24 sata):
 Ako nisi ti zatražio, odmah klikni gore i javi nam.
 
 Konto tim"
+
 ```
 
 **Acceptance:**
@@ -1610,31 +1796,38 @@ Konto tim"
 
 **Prompt:**
 ```
+
 Napiši Playwright E2E testove u `__tests__/e2e/`:
 
 1. `signin.spec.ts`:
+
 - Landing → "Prijavi se" → unosi email → success message
 - (Mock magic link klik kroz auth.admin API za test)
 
 2. `add-transaction.spec.ts`:
+
 - Ulogirati se kao test user
 - Desktop: Cmd+K → modal → popuni → submit → vidi u listi
 - Mobile: FAB → sheet → popuni → submit → vidi u listi
 
 3. `accounts-crud.spec.ts`:
+
 - Kreiraj račun → edit → delete → potvrdi removal
 
 4. `export-delete.spec.ts`:
+
 - Export → verifikuj download
 - Request account deletion → verifikuj middleware redirect
 
 5. Setup helpers `__tests__/e2e/helpers.ts`:
+
 - signInAsTestUser (koristi service_role da kreira user i session)
 - cleanupTestUser
 
 Playwright config treba da može pokrenuti local Supabase (supabase start u webServer command).
 
 Svi testovi trebaju proći u < 5 min ukupno.
+
 ```
 
 **Acceptance:**
@@ -1647,9 +1840,11 @@ Svi testovi trebaju proći u < 5 min ukupno.
 
 **Prompt:**
 ```
+
 Ažuriraj:
 
 1. README.md u root-u:
+
 - Project description (kratko)
 - Tech stack bullet points
 - Getting started (clone, pnpm install, supabase setup, .env.local, pnpm dev)
@@ -1657,6 +1852,7 @@ Ažuriraj:
 - Linkovi na dokumentaciju u /docs/
 
 2. Dodaj `docs/runbooks/` folder sa:
+
 - `runbooks/backup-restore.md` — kako uraditi backup i restore
 - `runbooks/migration-guide.md` — kako dodati migration
 - `runbooks/local-setup.md` — troubleshooting tipičnih setup problema
@@ -1664,10 +1860,12 @@ Ažuriraj:
 3. Ažuriraj `/docs/01-architecture.md` Change Log sa svim odlukama iz Faze 0–1.
 
 4. Kreiraj `docs/decisions/` folder za Architecture Decision Records (ADRs):
+
 - Template `0000-template.md`
 - Prvi ADR `0001-next-supabase-stack.md` — zašto smo izabrali ovaj stack
 - Drugi `0002-bigint-for-money.md` — zašto bigint
 - Treći `0003-bosnian-routes.md` — zašto bosanske rute
+
 ```
 
 **Acceptance:**
@@ -1681,20 +1879,24 @@ Ažuriraj:
 
 **Prompt:**
 ```
+
 Projdi kroz cijelu aplikaciju i popravi sitnice:
 
 1. Mobile:
+
 - Otvori na stvarnom telefonu (ne samo emulaciji)
 - Provjeri sve forme — tastatura ne smeta
 - Swipe i long-press rade prirodno
 - Bottom nav ne se seče sa home bar-om
 
 2. Dark mode:
+
 - Prođi svaku stranicu u dark mode
 - Provjeri contrast (axe DevTools)
 - Nijedan element ne treba biti jedva vidljiv
 
 3. Copy review:
+
 - Svaki user-facing string prođi
 - Konzistentno "ti", ne miješaj "Vi"
 - Bosanski latinica uniformno
@@ -1702,23 +1904,29 @@ Projdi kroz cijelu aplikaciju i popravi sitnice:
 - Datumi u bs formatu
 
 4. Performance:
+
 - Lighthouse mobile test na /pocetna, /transakcije, /racuni
 - Cilj: ≥ 90 Performance, 100 Accessibility
 - Fix low-hanging fruit (unused imports, bez lazy loading heavy stuff)
 
 5. Error states:
+
 - Isključi internet, kliknin bilo gdje — pravilan error
 - Stari session (sačekaj 7 dana) — redirect na sign-in gracefully
 
 6. Empty states:
+
 - Obriši sve transakcije → dashboard empty state
 - Obriši sve račune → svi ekrani imaju empty state
 
 7. 404:
+
 - Posjeti /nepoznato → 404 page se renderuje
 
 8. PWA basics (krajem Faze 1):
+
 - Kreiraj `app/manifest.ts` ili `public/manifest.json`:
+
 ```json
 {
   "name": "Konto",
@@ -1734,9 +1942,11 @@ Projdi kroz cijelu aplikaciju i popravi sitnice:
   ]
 }
 ```
+
 - Generiši ikone (192 i 512) — jednostavna "K" u zelenom kvadratu
 - Dodaj apple-touch-icon
 - Provjeri da "Add to home screen" radi na iOS Safari i Android Chrome
+
 ```
 
 **Acceptance:**
@@ -1766,17 +1976,18 @@ Projdi kroz cijelu aplikaciju i popravi sitnice:
 **Cursor prompt:**
 
 ```
+
 U novoj Supabase migration fajli (`supabase/migrations/XXXXXXXXXXXX_pdf_storage.sql`):
 
 1. Kreiraj privatan storage bucket "bank-statements":
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
-  'bank-statements',
-  'bank-statements',
-  false,
-  10485760, -- 10 MB
-  array['application/pdf']
+'bank-statements',
+'bank-statements',
+false,
+10485760, -- 10 MB
+array['application/pdf']
 );
 
 2. RLS policies — user može samo u svoj folder (`userId/...`):
@@ -1784,39 +1995,42 @@ values (
 create policy "Users can upload own PDFs"
 on storage.objects for insert to authenticated
 with check (
-  bucket_id = 'bank-statements'
-  and (storage.foldername(name))[1] = auth.uid()::text
+bucket_id = 'bank-statements'
+and (storage.foldername(name))[1] = auth.uid()::text
 );
 
 create policy "Users can read own PDFs"
 on storage.objects for select to authenticated
 using (
-  bucket_id = 'bank-statements'
-  and (storage.foldername(name))[1] = auth.uid()::text
+bucket_id = 'bank-statements'
+and (storage.foldername(name))[1] = auth.uid()::text
 );
 
 create policy "Users can delete own PDFs"
 on storage.objects for delete to authenticated
 using (
-  bucket_id = 'bank-statements'
-  and (storage.foldername(name))[1] = auth.uid()::text
+bucket_id = 'bank-statements'
+and (storage.foldername(name))[1] = auth.uid()::text
 );
 
 3. Scheduled cleanup — pg_cron job koji svaki sat briše PDF-ove starije od 24h:
 
 select cron.schedule(
-  'cleanup-old-statements',
-  '0 * * * *', -- svakih sat
-  $$
-  delete from storage.objects
-  where bucket_id = 'bank-statements'
-    and created_at < now() - interval '24 hours';
-  $$
+'cleanup-old-statements',
+'0 \* \* \* \*', -- svakih sat
+
+$$
+delete from storage.objects
+where bucket_id = 'bank-statements'
+  and created_at < now() - interval '24 hours';
+$$
+
 );
 
 Napomena: pg_cron extension mora biti uključen u Supabase projektu (Database → Extensions).
 
 Pokreni `supabase db push`. Provjeri u Supabase UI-ju da bucket postoji i da RLS policije važe.
+
 ```
 
 **Acceptance:**
@@ -1835,6 +2049,7 @@ Pokreni `supabase db push`. Provjeri u Supabase UI-ju da bucket postoji i da RLS
 **Cursor prompt:**
 
 ```
+
 Kreiraj `lib/server/actions/imports.ts` sa Server Actionom:
 
 "use server";
@@ -1844,90 +2059,92 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 const UploadSchema = z.object({
-  accountId: z.string().uuid(),
-  file: z.instanceof(File)
-    .refine(f => f.size <= 10 * 1024 * 1024, "Fajl je veći od 10 MB")
-    .refine(f => f.type === "application/pdf", "Samo PDF je dozvoljen"),
+accountId: z.string().uuid(),
+file: z.instanceof(File)
+.refine(f => f.size <= 10 _ 1024 _ 1024, "Fajl je veći od 10 MB")
+.refine(f => f.type === "application/pdf", "Samo PDF je dozvoljen"),
 });
 
 export async function uploadStatement(formData: FormData) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Niste prijavljeni." };
+const supabase = createClient();
+const { data: { user } } = await supabase.auth.getUser();
+if (!user) return { error: "Niste prijavljeni." };
 
-  const parsed = UploadSchema.safeParse({
-    accountId: formData.get("accountId"),
-    file: formData.get("file"),
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.errors[0].message };
-  }
+const parsed = UploadSchema.safeParse({
+accountId: formData.get("accountId"),
+file: formData.get("file"),
+});
+if (!parsed.success) {
+return { error: parsed.error.errors[0].message };
+}
 
-  const { accountId, file } = parsed.data;
+const { accountId, file } = parsed.data;
 
-  // Provjeri da account pripada useru
-  const { data: account } = await supabase
-    .from("accounts")
-    .select("id, user_id, bank_name")
-    .eq("id", accountId)
-    .eq("user_id", user.id)
-    .single();
-  if (!account) return { error: "Račun nije pronađen." };
+// Provjeri da account pripada useru
+const { data: account } = await supabase
+.from("accounts")
+.select("id, user_id, bank_name")
+.eq("id", accountId)
+.eq("user_id", user.id)
+.single();
+if (!account) return { error: "Račun nije pronađen." };
 
-  // Checksum da se izbjegne duplo uploadovanje
-  const arrayBuffer = await file.arrayBuffer();
-  const hash = await crypto.subtle.digest("SHA-256", arrayBuffer);
-  const checksum = Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
+// Checksum da se izbjegne duplo uploadovanje
+const arrayBuffer = await file.arrayBuffer();
+const hash = await crypto.subtle.digest("SHA-256", arrayBuffer);
+const checksum = Array.from(new Uint8Array(hash))
+.map(b => b.toString(16).padStart(2, "0"))
+.join("");
 
-  const { data: existing } = await supabase
-    .from("import_batches")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("checksum", checksum)
-    .maybeSingle();
-  if (existing) {
-    return { error: "Ovaj izvod je već uploadovan.", batchId: existing.id };
-  }
+const { data: existing } = await supabase
+.from("import_batches")
+.select("id")
+.eq("user_id", user.id)
+.eq("checksum", checksum)
+.maybeSingle();
+if (existing) {
+return { error: "Ovaj izvod je već uploadovan.", batchId: existing.id };
+}
 
-  // Upload u Storage
-  const path = `${user.id}/${crypto.randomUUID()}.pdf`;
-  const { error: uploadErr } = await supabase.storage
-    .from("bank-statements")
-    .upload(path, file, { contentType: "application/pdf" });
-  if (uploadErr) return { error: "Upload failed." };
+// Upload u Storage
+const path = `${user.id}/${crypto.randomUUID()}.pdf`;
+const { error: uploadErr } = await supabase.storage
+.from("bank-statements")
+.upload(path, file, { contentType: "application/pdf" });
+if (uploadErr) return { error: "Upload failed." };
 
-  // Kreiraj import_batch red
-  const { data: batch, error: insertErr } = await supabase
-    .from("import_batches")
-    .insert({
-      user_id: user.id,
-      account_id: accountId,
-      storage_path: path,
-      checksum,
-      status: "uploaded",
-      original_filename: file.name,
-    })
-    .select("id")
-    .single();
-  if (insertErr || !batch) {
-    // Cleanup storage ako insert fails
-    await supabase.storage.from("bank-statements").remove([path]);
-    return { error: "Database error." };
-  }
+// Kreiraj import_batch red
+const { data: batch, error: insertErr } = await supabase
+.from("import_batches")
+.insert({
+user_id: user.id,
+account_id: accountId,
+storage_path: path,
+checksum,
+status: "uploaded",
+original_filename: file.name,
+})
+.select("id")
+.single();
+if (insertErr || !batch) {
+// Cleanup storage ako insert fails
+await supabase.storage.from("bank-statements").remove([path]);
+return { error: "Database error." };
+}
 
-  revalidatePath("/import");
-  return { batchId: batch.id };
+revalidatePath("/import");
+return { batchId: batch.id };
 }
 
 Testovi u `lib/server/actions/__tests__/imports.test.ts`:
+
 - Prihvata validan PDF
 - Odbija fajl > 10 MB
 - Odbija non-PDF MIME type
 - Odbija ako account ne pripada useru
 - Detektuje duplikat preko checksum-a
 - Cleanup-uje Storage ako DB insert fails (mock scenario)
+
 ```
 
 **Acceptance:**
@@ -1946,6 +2163,7 @@ Testovi u `lib/server/actions/__tests__/imports.test.ts`:
 **Cursor prompt:**
 
 ```
+
 Kreiraj `app/(app)/import/page.tsx`:
 
 - Zaglavlje: "Uvezi izvod"
@@ -1961,20 +2179,24 @@ Kreiraj `app/(app)/import/page.tsx`:
 - Error handling: toast s porukom
 
 Klijent kod (upload):
+
 - Koristi formaction ili client-side fetch sa Server Actionom
 - Nakon uspjeha: redirect na `/import/[batchId]`
 
 Mobile-first:
+
 - Sve CTA dugmad min `h-12` (48px)
 - Touch targets ≥ 44x44 px
 - Drop zone na mobile ima "Izaberi iz galerije/fajlova" jasno odvojeno
 
 Lista prethodnih importa (na istoj stranici, ispod):
+
 - Tabela: Datum uploada, Banka, Status, # transakcija, Akcije (→ detalj)
 - Status bedževi: uploaded (siva), parsing (žuta), ready (plava), imported (zelena), failed (crvena)
 - Prazno stanje: "Još nisi uvezao niti jedan izvod. Prevuci PDF iznad."
 
 Referiši dizajn obrasce iz `03-design-system.md`.
+
 ```
 
 **Acceptance:**
@@ -1996,39 +2218,41 @@ Referiši dizajn obrasce iz `03-design-system.md`.
 **Cursor prompt:**
 
 ```
+
 Instaliraj: pnpm add pdfjs-dist
 
 Kreiraj `lib/parser/extract-text.ts`:
 
-import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+import \* as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
 export type ExtractResult = {
-  text: string;
-  pageCount: number;
-  hasText: boolean; // false ako je slika-PDF
+text: string;
+pageCount: number;
+hasText: boolean; // false ako je slika-PDF
 };
 
 export async function extractPdfText(buffer: ArrayBuffer): Promise<ExtractResult> {
-  const pdf = await pdfjs.getDocument({ data: buffer }).promise;
-  const pageCount = pdf.numPages;
-  const pages: string[] = [];
+const pdf = await pdfjs.getDocument({ data: buffer }).promise;
+const pageCount = pdf.numPages;
+const pages: string[] = [];
 
-  for (let i = 1; i <= pageCount; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const pageText = content.items
-      .map((item: any) => ("str" in item ? item.str : ""))
-      .join(" ");
-    pages.push(pageText);
-  }
+for (let i = 1; i <= pageCount; i++) {
+const page = await pdf.getPage(i);
+const content = await page.getTextContent();
+const pageText = content.items
+.map((item: any) => ("str" in item ? item.str : ""))
+.join(" ");
+pages.push(pageText);
+}
 
-  const fullText = pages.join("\n\n===PAGE_BREAK===\n\n");
-  const hasText = fullText.replace(/\s/g, "").length > 50;
+const fullText = pages.join("\n\n===PAGE_BREAK===\n\n");
+const hasText = fullText.replace(/\s/g, "").length > 50;
 
-  return { text: fullText, pageCount, hasText };
+return { text: fullText, pageCount, hasText };
 }
 
 Testovi u `lib/parser/__tests__/extract-text.test.ts`:
+
 - Fixture: `tests/fixtures/pdfs/raiffeisen-sample.pdf` (anonimizirana verzija pravog izvoda)
 - Fixture: `tests/fixtures/pdfs/image-only.pdf` (scanned)
 - Test: tekstualni PDF ekstraktuje > 100 karaktera
@@ -2036,6 +2260,7 @@ Testovi u `lib/parser/__tests__/extract-text.test.ts`:
 - Test: pageCount je tačan
 
 Napomena: Za testove koristi male fajlove (< 50 KB). Anonimiziraj prave podatke (zamijeni imena "Test Korisnik", iznose zadrži ili skaliraj).
+
 ```
 
 **Acceptance:**
@@ -2053,59 +2278,62 @@ Napomena: Za testove koristi male fajlove (< 50 KB). Anonimiziraj prave podatke 
 **Cursor prompt:**
 
 ```
+
 Kreiraj `lib/parser/redact-pii.ts`:
 
 export function redactPII(text: string): string {
-  let redacted = text;
+let redacted = text;
 
-  // IBAN: BA39 1290... → BA**-REDACTED-**
-  redacted = redacted.replace(
-    /\b[A-Z]{2}\d{2}[\s\-]?(?:\d[\s\-]?){10,30}\b/g,
-    "[IBAN-REDACTED]"
-  );
+// IBAN: BA39 1290... → BA**-REDACTED-**
+redacted = redacted.replace(
+/\b[A-Z]{2}\d{2}[\s\-]?(?:\d[\s\-]?){10,30}\b/g,
+"[IBAN-REDACTED]"
+);
 
-  // Kartice (PAN): 16 cifara (opciono sa razmacima ili crticama), Luhn check
-  redacted = redacted.replace(
-    /\b(?:\d[\s\-]?){13,19}\b/g,
-    (match) => {
-      const digits = match.replace(/\D/g, "");
-      if (isLuhnValid(digits)) {
-        return `****${digits.slice(-4)}`;
-      }
-      return match; // Ne maskiraj ako nije validan PAN
-    }
-  );
+// Kartice (PAN): 16 cifara (opciono sa razmacima ili crticama), Luhn check
+redacted = redacted.replace(
+/\b(?:\d[\s\-]?){13,19}\b/g,
+(match) => {
+const digits = match.replace(/\D/g, "");
+if (isLuhnValid(digits)) {
+return `****${digits.slice(-4)}`;
+}
+return match; // Ne maskiraj ako nije validan PAN
+}
+);
 
-  // JMBG (13 cifara): 1234567890123
-  redacted = redacted.replace(/\b\d{13}\b/g, (match) => {
-    // Ne maskiraj ako je dio većeg broja (npr. iznos)
-    return "[JMBG-REDACTED]";
-  });
+// JMBG (13 cifara): 1234567890123
+redacted = redacted.replace(/\b\d{13}\b/g, (match) => {
+// Ne maskiraj ako je dio većeg broja (npr. iznos)
+return "[JMBG-REDACTED]";
+});
 
-  return redacted;
+return redacted;
 }
 
 function isLuhnValid(num: string): boolean {
-  let sum = 0;
-  let alt = false;
-  for (let i = num.length - 1; i >= 0; i--) {
-    let n = parseInt(num[i], 10);
-    if (alt) {
-      n *= 2;
-      if (n > 9) n -= 9;
-    }
-    sum += n;
-    alt = !alt;
-  }
-  return sum % 10 === 0;
+let sum = 0;
+let alt = false;
+for (let i = num.length - 1; i >= 0; i--) {
+let n = parseInt(num[i], 10);
+if (alt) {
+n \*= 2;
+if (n > 9) n -= 9;
+}
+sum += n;
+alt = !alt;
+}
+return sum % 10 === 0;
 }
 
 Testovi u `__tests__/redact-pii.test.ts`:
+
 - IBAN "BA39 1290 0794 0102 8494" → redactovan
-- PAN "4111 1111 1111 1111" → "****1111"
+- PAN "4111 1111 1111 1111" → "\*\*\*\*1111"
 - Non-Luhn 16 cifara → netaknuto
 - JMBG 13 cifara → redactovan
 - Običan tekst netaknut
+
 ```
 
 **Acceptance:**
@@ -2123,6 +2351,7 @@ Testovi u `__tests__/redact-pii.test.ts`:
 **Cursor prompt:**
 
 ```
+
 Instaliraj: pnpm add @google/generative-ai
 
 Dodaj `GEMINI_API_KEY` u `.env.local` i u Vercel env. U `.env.example` dodaj placeholder.
@@ -2137,6 +2366,7 @@ const SYSTEM_PROMPT = `
 Ti si asistent koji ekstraktuje transakcije iz bankarskih izvoda.
 
 Pravila:
+
 1. Svaka transakcija MORA imati: datum (YYYY-MM-DD), iznos (negativan za odliv, pozitivan za priliv), valutu (ISO 4217), opis (raw text).
 2. Koristi valutu navedenu u zaglavlju izvoda; ako nije eksplicitno, pretpostavi BAM za Bosnu i Hercegovinu.
 3. Ignoriši: saldo linije, provizije zasebno (ako su u transakciji, ne izdvajaj), pregled stanja.
@@ -2146,92 +2376,94 @@ Pravila:
 
 Format odgovora:
 {
-  "transactions": [
-    {
-      "date": "2026-04-15",
-      "amountMinor": -12550,
-      "currency": "BAM",
-      "description": "BINGO MARKET SARAJEVO",
-      "reference": "optional string"
-    }
-  ],
-  "statementPeriodStart": "2026-04-01",
-  "statementPeriodEnd": "2026-04-30",
-  "confidence": "high" | "medium" | "low",
-  "warnings": ["..."]
+"transactions": [
+{
+"date": "2026-04-15",
+"amountMinor": -12550,
+"currency": "BAM",
+"description": "BINGO MARKET SARAJEVO",
+"reference": "optional string"
+}
+],
+"statementPeriodStart": "2026-04-01",
+"statementPeriodEnd": "2026-04-30",
+"confidence": "high" | "medium" | "low",
+"warnings": ["..."]
 }
 `.trim();
 
 export type ParsedTransaction = {
-  date: string; // ISO YYYY-MM-DD
-  amountMinor: number; // signed integer in minor units
-  currency: string;
-  description: string;
-  reference?: string;
+date: string; // ISO YYYY-MM-DD
+amountMinor: number; // signed integer in minor units
+currency: string;
+description: string;
+reference?: string;
 };
 
 export type ParseResult = {
-  transactions: ParsedTransaction[];
-  statementPeriodStart?: string;
-  statementPeriodEnd?: string;
-  confidence: "high" | "medium" | "low";
-  warnings: string[];
+transactions: ParsedTransaction[];
+statementPeriodStart?: string;
+statementPeriodEnd?: string;
+confidence: "high" | "medium" | "low";
+warnings: string[];
 };
 
 export async function parseStatementWithLLM(
-  redactedText: string,
-  bankHint?: string
+redactedText: string,
+bankHint?: string
 ): Promise<ParseResult> {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash-lite",
-    systemInstruction: SYSTEM_PROMPT,
-    generationConfig: {
-      temperature: 0,
-      responseMimeType: "application/json",
-      // Schema-guided decoding za pouzdanost
-      responseSchema: {
-        type: SchemaType.OBJECT,
-        properties: {
-          transactions: {
-            type: SchemaType.ARRAY,
-            items: {
-              type: SchemaType.OBJECT,
-              properties: {
-                date: { type: SchemaType.STRING },
-                amountMinor: { type: SchemaType.INTEGER },
-                currency: { type: SchemaType.STRING },
-                description: { type: SchemaType.STRING },
-                reference: { type: SchemaType.STRING, nullable: true },
-              },
-              required: ["date", "amountMinor", "currency", "description"],
-            },
-          },
-          statementPeriodStart: { type: SchemaType.STRING, nullable: true },
-          statementPeriodEnd: { type: SchemaType.STRING, nullable: true },
-          confidence: { type: SchemaType.STRING },
-          warnings: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-        },
-        required: ["transactions", "confidence", "warnings"],
-      },
-    },
-  });
+const model = genAI.getGenerativeModel({
+model: "gemini-2.5-flash-lite",
+systemInstruction: SYSTEM_PROMPT,
+generationConfig: {
+temperature: 0,
+responseMimeType: "application/json",
+// Schema-guided decoding za pouzdanost
+responseSchema: {
+type: SchemaType.OBJECT,
+properties: {
+transactions: {
+type: SchemaType.ARRAY,
+items: {
+type: SchemaType.OBJECT,
+properties: {
+date: { type: SchemaType.STRING },
+amountMinor: { type: SchemaType.INTEGER },
+currency: { type: SchemaType.STRING },
+description: { type: SchemaType.STRING },
+reference: { type: SchemaType.STRING, nullable: true },
+},
+required: ["date", "amountMinor", "currency", "description"],
+},
+},
+statementPeriodStart: { type: SchemaType.STRING, nullable: true },
+statementPeriodEnd: { type: SchemaType.STRING, nullable: true },
+confidence: { type: SchemaType.STRING },
+warnings: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+},
+required: ["transactions", "confidence", "warnings"],
+},
+},
+});
 
-  const userMessage = bankHint
-    ? `Banka: ${bankHint}\n\nIzvod:\n${redactedText}`
-    : `Izvod:\n${redactedText}`;
+const userMessage = bankHint
+? `Banka: ${bankHint}\n\nIzvod:\n${redactedText}`
+: `Izvod:\n${redactedText}`;
 
-  const result = await model.generateContent(userMessage);
-  const json = JSON.parse(result.response.text());
-  return json as ParseResult;
+const result = await model.generateContent(userMessage);
+const json = JSON.parse(result.response.text());
+return json as ParseResult;
 }
 
 Testovi u `__tests__/llm-parse.test.ts`:
+
 - Mock Gemini odgovor (nemoj zvati pravi API u testovima)
 - Test: validira Zod schema nakon parsovanja
 - Test: prazan izvod vraća transactions=[], confidence="low"
 - E2E test (skip by default, manual only): poziva pravi API sa fixture PDF-om
 
 VAŽNO: E2E test s pravim API-jem stavi pod `describe.skipIf(!process.env.RUN_LLM_TESTS)` da ne troši kredite na svakom CI run-u.
+
 ```
 
 **Acceptance:**
@@ -2250,6 +2482,7 @@ VAŽNO: E2E test s pravim API-jem stavi pod `describe.skipIf(!process.env.RUN_LL
 **Cursor prompt:**
 
 ```
+
 Kreiraj `lib/parser/ocr-fallback.ts`:
 
 - Koristi Mistral OCR API (`mistral-ocr-2503` ili najnoviji model koji preporučuju)
@@ -2259,26 +2492,26 @@ Kreiraj `lib/parser/ocr-fallback.ts`:
 - Output: ekstraktovan tekst
 
 export async function ocrFallback(pdfBuffer: ArrayBuffer): Promise<string> {
-  const base64 = Buffer.from(pdfBuffer).toString("base64");
-  
-  const response = await fetch("https://api.mistral.ai/v1/ocr", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${process.env.MISTRAL_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "mistral-ocr-latest",
-      document: { type: "document_base64", document_base64: base64 },
-    }),
-  });
+const base64 = Buffer.from(pdfBuffer).toString("base64");
 
-  if (!response.ok) {
-    throw new Error(`OCR failed: ${response.status}`);
-  }
+const response = await fetch("https://api.mistral.ai/v1/ocr", {
+method: "POST",
+headers: {
+"Authorization": `Bearer ${process.env.MISTRAL_API_KEY}`,
+"Content-Type": "application/json",
+},
+body: JSON.stringify({
+model: "mistral-ocr-latest",
+document: { type: "document_base64", document_base64: base64 },
+}),
+});
 
-  const data = await response.json();
-  return data.pages.map((p: any) => p.markdown).join("\n\n");
+if (!response.ok) {
+throw new Error(`OCR failed: ${response.status}`);
+}
+
+const data = await response.json();
+return data.pages.map((p: any) => p.markdown).join("\n\n");
 }
 
 Integracija:
@@ -2288,6 +2521,7 @@ Budget guard:
 OCR je skuplji od Gemini-ja. Dodaj check: ako user već ima X failed imports u 24h, blokiraj dalje da se izbjegne zloupotreba (Faza 4+, za sada trust).
 
 Test: mock fetch i validiraj da se poziva samo za scanned PDF-ove.
+
 ```
 
 **Acceptance:**
@@ -2305,6 +2539,7 @@ Test: mock fetch i validiraj da se poziva samo za scanned PDF-ove.
 **Cursor prompt:**
 
 ```
+
 Pošto nemamo dedicated queue u Fazi 2, koristićemo Next.js Route Handler koji se poziva iz klijenta (after upload) ili serverless background function.
 
 Pristup: Klijent, nakon uspješnog uploada, poziva `/api/imports/[batchId]/parse` endpoint (POST). Endpoint je `export const runtime = "nodejs"` i ima 60s timeout. Unutar, radi cijeli pipeline sinhronno.
@@ -2322,34 +2557,34 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(
-  req: NextRequest,
-  { params }: { params: { batchId: string } }
+req: NextRequest,
+{ params }: { params: { batchId: string } }
 ) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "unauth" }, { status: 401 });
+const supabase = createClient();
+const { data: { user } } = await supabase.auth.getUser();
+if (!user) return NextResponse.json({ error: "unauth" }, { status: 401 });
 
-  // Load batch (RLS će blokirati tuđe)
-  const { data: batch } = await supabase
-    .from("import_batches")
-    .select("id, account_id, storage_path, status, accounts(bank_name)")
-    .eq("id", params.batchId)
-    .single();
-  if (!batch) return NextResponse.json({ error: "not_found" }, { status: 404 });
-  if (batch.status !== "uploaded") {
-    return NextResponse.json({ error: "already_processed" }, { status: 409 });
-  }
+// Load batch (RLS će blokirati tuđe)
+const { data: batch } = await supabase
+.from("import_batches")
+.select("id, account_id, storage_path, status, accounts(bank_name)")
+.eq("id", params.batchId)
+.single();
+if (!batch) return NextResponse.json({ error: "not_found" }, { status: 404 });
+if (batch.status !== "uploaded") {
+return NextResponse.json({ error: "already_processed" }, { status: 409 });
+}
 
-  // Označi kao "parsing"
-  await supabase.from("import_batches").update({ status: "parsing" }).eq("id", batch.id);
+// Označi kao "parsing"
+await supabase.from("import_batches").update({ status: "parsing" }).eq("id", batch.id);
 
-  try {
-    // 1. Download PDF iz Storage
-    const { data: fileData } = await supabase.storage
-      .from("bank-statements")
-      .download(batch.storage_path);
-    if (!fileData) throw new Error("pdf_not_found");
-    const buffer = await fileData.arrayBuffer();
+try {
+// 1. Download PDF iz Storage
+const { data: fileData } = await supabase.storage
+.from("bank-statements")
+.download(batch.storage_path);
+if (!fileData) throw new Error("pdf_not_found");
+const buffer = await fileData.arrayBuffer();
 
     // 2. Ekstraktuj tekst (OCR fallback ako treba)
     let { text, hasText } = await extractPdfText(buffer);
@@ -2392,28 +2627,31 @@ export async function POST(
       .eq("id", batch.id);
 
     return NextResponse.json({ success: true, count: parsed.transactions.length });
-  } catch (err) {
-    console.error("Parse error:", err);
-    await supabase
-      .from("import_batches")
-      .update({
-        status: "failed",
-        error_message: err instanceof Error ? err.message : "unknown",
-      })
-      .eq("id", batch.id);
-    return NextResponse.json({ error: "parse_failed" }, { status: 500 });
-  }
+
+} catch (err) {
+console.error("Parse error:", err);
+await supabase
+.from("import_batches")
+.update({
+status: "failed",
+error_message: err instanceof Error ? err.message : "unknown",
+})
+.eq("id", batch.id);
+return NextResponse.json({ error: "parse_failed" }, { status: 500 });
+}
 }
 
 Dodaj migration za staging tabelu `parsed_transactions` (slična transactions ali sa batch_id i status="pending_review" | "accepted" | "rejected").
 
 Testovi (integration):
+
 - Mock LLM i OCR
 - Kreiraj fiktivan batch
 - Pozovi endpoint
 - Assert da su redovi ubačeni u parsed_transactions
 - Assert da je batch status promijenjen u "ready"
 - Error case: LLM throw → batch status "failed", error_message set
+
 ```
 
 **Acceptance:**
@@ -2432,10 +2670,11 @@ Testovi (integration):
 **Cursor prompt:**
 
 ```
+
 Kreiraj `tests/parser/golden/` folder sa strukturom:
 
 tests/parser/golden/
-├── raiffeisen-bih-01.pdf           (anonimiziran)
+├── raiffeisen-bih-01.pdf (anonimiziran)
 ├── raiffeisen-bih-01.expected.json (ručno validiran ground truth)
 ├── unicredit-bih-01.pdf
 ├── unicredit-bih-01.expected.json
@@ -2464,9 +2703,11 @@ Kreiraj `tests/parser/benchmark.test.ts`:
 Izvještaj (markdown) u `tests/parser/REPORT.md` — generisan skriptom, pokazuje accuracy per bank.
 
 Ovi testovi idu pod tag @slow i pokreću se:
+
 - Lokalno prije svake major promjene parsera
 - Na CI samo na glavnoj grani (daily cron)
 - Ne na svakom PR-u (skupi su)
+
 ```
 
 **Acceptance:**
@@ -2487,15 +2728,18 @@ Ovi testovi idu pod tag @slow i pokreću se:
 **Cursor prompt:**
 
 ```
+
 Kreiraj `app/(app)/import/[batchId]/page.tsx`:
 
 Layout:
+
 - Header: "Pregled uvoza" · Banka · Period izvoda · Confidence bedž
 - Ako confidence="low": upozorenje "AI nije siguran. Pažljivo provjeri sve stavke."
 - Sekcija "Warnings": lista upozorenja iz parse-a (ako postoje)
 
 Glavna tabela transakcija (sortirane po datumu, najnovije prve):
 Kolone:
+
 - Checkbox (inicijalno svi označeni)
 - Datum (editable inline)
 - Opis (raw + autocomplete za merchant)
@@ -2505,22 +2749,26 @@ Kolone:
 - Akcije: × (isključi iz importa)
 
 UX detalji:
+
 - Prvi hit kategorizacije: auto-primjena ako postoji merchant alias match (vidi Epic 2.4)
 - Red s confidence="low" je žuto-bordered
 - Red s unknown merchant: placeholder u description polju "Novi merchant — dodaj"
 - Bulk akcije: "Označi sve istom kategorijom" (multi-select mode)
 
 Footer sticky bar:
+
 - "X od Y označeno za import"
 - Dugme "Potvrdi i importuj" (primary, veliki)
 - Dugme "Odustani" (secondary) — vraća na /import, briše batch
 
 Mobile pattern:
+
 - Tabela postaje kartice
 - Svaka kartica: Datum · Opis · Iznos (veliko) · Kategorija dropdown · Checkbox u gornjem uglu
 - Sticky footer na dnu
 
 Inline edit: koristi native `<input>` u ćeliji, onBlur trigger update preko Server Action-a (debounced).
+
 ```
 
 **Acceptance:**
@@ -2537,6 +2785,7 @@ Inline edit: koristi native `<input>` u ćeliji, onBlur trigger update preko Ser
 **Cursor prompt:**
 
 ```
+
 Kreiraj u `lib/server/actions/imports.ts`:
 
 1. updateParsedTransaction(id, patch)
@@ -2563,10 +2812,12 @@ Kreiraj u `lib/server/actions/imports.ts`:
    - Batch status = "rejected"
 
 Testovi:
+
 - finalizeImport kreira transactions
 - FX se ispravno računa za ne-default valutu
 - rejectImport briše PDF i parsed_transactions
 - Svi su RLS-safe
+
 ```
 
 **Acceptance:**
@@ -2582,14 +2833,17 @@ Testovi:
 **Cursor prompt:**
 
 ```
+
 Na review stranici:
 
 Ako batch.status === "parsing":
+
 - Prikaži animaciju "Parsiram izvod... (to traje 10-30 sekundi)"
 - Poll svake 3 sekunde da vidiš da li je gotovo
 - Timeout nakon 90s → "Parsiranje traje duže od očekivanog. Osvježi stranicu za par minuta."
 
 Ako batch.status === "failed":
+
 - Prikaži error poruku (user-friendly, ne tehnički stack trace)
 - Dugmad:
   - "Pokušaj ponovo" (restart parse)
@@ -2597,13 +2851,16 @@ Ako batch.status === "failed":
   - "Obriši import" (cleanup)
 
 Ako je transactions.length === 0 (ready ali prazno):
+
 - "AI nije pronašao transakcije u ovom izvodu."
 - Dugmad: "Pokušaj ponovo s drugim PDF-om" ili "Ručno unesi transakcije"
 
 Sve error poruke su na bosanskom, bez tehničkog žargona. Error mapping tabela:
+
 - "parse_failed" → "Nismo uspjeli pročitati izvod. Da li je PDF iz banke?"
 - "ocr_failed" → "PDF je skeniran i ne možemo ga pročitati automatski."
 - "duplicate_batch" → "Ovaj izvod si već uvezao."
+
 ```
 
 **Acceptance:**
@@ -2623,19 +2880,20 @@ Sve error poruke su na bosanskom, bez tehničkog žargona. Error mapping tabela:
 **Cursor prompt:**
 
 ```
+
 Kreiraj `lib/categorization/cascade.ts`:
 
 export type CategorizationInput = {
-  description: string;
-  userId: string;
-  amountMinor: number;
+description: string;
+userId: string;
+amountMinor: number;
 };
 
 export type CategorizationResult = {
-  merchantId?: string;
-  categoryId?: string;
-  source: "rule" | "alias_exact" | "alias_fuzzy" | "history" | "llm" | "none";
-  confidence: number; // 0-1
+merchantId?: string;
+categoryId?: string;
+source: "rule" | "alias_exact" | "alias_fuzzy" | "history" | "llm" | "none";
+confidence: number; // 0-1
 };
 
 Kaskada:
@@ -2670,6 +2928,7 @@ Kaskada:
 6. None: vrati source="none", confidence=0
 
 Testovi:
+
 - Rule match → confidence=1
 - Alias exact → confidence=1
 - Fuzzy score > 0.75 → primjenjuje se
@@ -2678,6 +2937,7 @@ Testovi:
 - Prazan slučaj → source="none"
 
 Napomena: Postgres pg_trgm extension mora biti uključen (`create extension if not exists pg_trgm;`).
+
 ```
 
 **Acceptance:**
@@ -2693,30 +2953,33 @@ Napomena: Postgres pg_trgm extension mora biti uključen (`create extension if n
 **Cursor prompt:**
 
 ```
+
 U `/api/imports/[batchId]/parse/route.ts`, nakon LLM parse-a (korak 4), a prije inserta u parsed_transactions:
 
 for (const t of parsed.transactions) {
-  const categorization = await runCategorizationCascade({
-    description: t.description,
-    userId: user.id,
-    amountMinor: t.amountMinor,
-  });
-  
-  t.merchant_id = categorization.merchantId;
-  t.category_id = categorization.categoryId;
-  t.categorization_source = categorization.source;
-  t.categorization_confidence = categorization.confidence;
+const categorization = await runCategorizationCascade({
+description: t.description,
+userId: user.id,
+amountMinor: t.amountMinor,
+});
+
+t.merchant_id = categorization.merchantId;
+t.category_id = categorization.categoryId;
+t.categorization_source = categorization.source;
+t.categorization_confidence = categorization.confidence;
 }
 
 // Zatim insert
 
 Onda u review UI-ju:
+
 - Ako categorization_source === "rule" ili "alias_exact" → zelena tačka "Auto"
 - Ako === "alias_fuzzy" || "history" → žuta tačka "Provjeri"
 - Ako === "llm" → narandžasta "AI predlog"
 - Ako === "none" → crvena "Nije kategorisano"
 
 Korisnik može override-ovati bilo šta.
+
 ```
 
 **Acceptance:**
@@ -2733,6 +2996,7 @@ Korisnik može override-ovati bilo šta.
 **Cursor prompt:**
 
 ```
+
 U `updateParsedTransaction` Server Action-u, kad se kategorija promijeni:
 
 - Ako je original categorization_source !== "rule" && !== "alias_exact":
@@ -2742,14 +3006,17 @@ U `updateParsedTransaction` Server Action-u, kad se kategorija promijeni:
     - Notify u UI: "Naučio sam — sljedeći put ću ovo automatski kategorisati."
 
 Implementiraj:
+
 - `lib/categorization/learn.ts`:
   - recordCorrection(userId, originalDescription, newCategoryId)
   - maybeCreateAlias(userId, description, categoryId) — provjera 3+ puta
 
 Testovi:
+
 - Jedna korekcija → ne kreira alias
 - 3 korekcije iste desc + kategorije → kreira alias
 - 3 korekcije različitih kategorija → NE kreira alias (dvosmisleno)
+
 ```
 
 **Acceptance:**
@@ -2769,9 +3036,11 @@ Testovi:
 **Cursor prompt:**
 
 ```
+
 U finalizeImport:
 
 Prije nego što insert-uješ u transactions, za svaku:
+
 - Check da li postoji transakcija sa:
   - isti account_id
   - isti datum (±1 dan tolerance)
@@ -2779,6 +3048,7 @@ Prije nego što insert-uješ u transactions, za svaku:
   - sličan opis (trigram > 0.8)
 
 Ako da:
+
 - Preskoči insert
 - Zabilježi u batch.dedup_skipped counter
 
@@ -2786,10 +3056,12 @@ Na kraju, u notifikaciji ili success stranici:
 "Importovano 42 transakcije. 3 preskočene kao duplikati."
 
 Testovi:
+
 - 2 identične transakcije → druga preskočena
 - Različit datum → nije duplikat
 - Različit iznos → nije duplikat
 - Sličan ali ne isti opis (npr. "BINGO" vs "BINGO MARKET") → mjeri trigram
+
 ```
 
 **Acceptance:**
@@ -2804,7 +3076,9 @@ Testovi:
 **Cursor prompt:**
 
 ```
+
 Dodaj rate limit na `/api/imports/[batchId]/parse`:
+
 - Max 5 parse poziva po user-u u 10 minuta
 - Max 20 uploada po user-u dnevno
 
@@ -2812,34 +3086,35 @@ Implementacija: Upstash Redis ili Supabase rate_limits tabela (jednostavnija).
 
 Kreiraj tabelu:
 create table rate_limits (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users,
-  action text not null, -- "parse" | "upload"
-  created_at timestamptz default now()
+id uuid primary key default gen_random_uuid(),
+user_id uuid references auth.users,
+action text not null, -- "parse" | "upload"
+created_at timestamptz default now()
 );
 create index on rate_limits(user_id, action, created_at);
 
 Helper:
 export async function checkRateLimit(
-  userId: string,
-  action: string,
-  limit: number,
-  windowSec: number
+userId: string,
+action: string,
+limit: number,
+windowSec: number
 ): Promise<boolean> {
-  const { count } = await supabase
-    .from("rate_limits")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("action", action)
-    .gt("created_at", new Date(Date.now() - windowSec * 1000).toISOString());
-  
-  if (count >= limit) return false;
-  
-  await supabase.from("rate_limits").insert({ user_id: userId, action });
-  return true;
+const { count } = await supabase
+.from("rate_limits")
+.select("_", { count: "exact", head: true })
+.eq("user_id", userId)
+.eq("action", action)
+.gt("created_at", new Date(Date.now() - windowSec _ 1000).toISOString());
+
+if (count >= limit) return false;
+
+await supabase.from("rate_limits").insert({ user_id: userId, action });
+return true;
 }
 
 Cleanup: pg_cron briše stare unose (> 24h) svaki sat.
+
 ```
 
 **Acceptance:**
@@ -2856,7 +3131,9 @@ Cleanup: pg_cron briše stare unose (> 24h) svaki sat.
 **Cursor prompt:**
 
 ```
+
 Playwright test:
+
 1. Signin
 2. Idi na /import
 3. Izaberi account
@@ -2872,10 +3149,12 @@ Playwright test:
 13. Cleanup: delete test batch
 
 Fixture:
+
 - Koristi jedan od golden dataset PDF-ova
 - Mock LLM? U CI-ju DA (deterministički response), lokalno može pravi
 
 Markiraj kao @slow, pokreni samo na main branch.
+
 ```
 
 **Acceptance:**
@@ -2890,6 +3169,7 @@ Markiraj kao @slow, pokreni samo na main branch.
 **Cursor prompt:**
 
 ```
+
 1. U /sigurnost stranicu dodaj sekciju:
    "Uvoz PDF izvoda"
    - Kako obrađujemo tvoj PDF
@@ -2908,6 +3188,7 @@ Markiraj kao @slow, pokreni samo na main branch.
    - "Kako se učiti kategorije?"
 
 4. README.md u repo-u: dodaj sekciju "Faza 2 features"
+
 ```
 
 **Acceptance:**
@@ -2933,19 +3214,20 @@ Markiraj kao @slow, pokreni samo na main branch.
 **Cursor prompt:**
 
 ```
+
 Migration `XXXX_budgets.sql`:
 
 create table budgets (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users on delete cascade,
-  category_id uuid not null references categories on delete cascade,
-  amount_minor bigint not null check (amount_minor > 0),
-  currency text not null default 'BAM',
-  period text not null check (period in ('monthly', 'weekly')),
-  active boolean not null default true,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now(),
-  unique (user_id, category_id, period)
+id uuid primary key default gen_random_uuid(),
+user_id uuid not null references auth.users on delete cascade,
+category_id uuid not null references categories on delete cascade,
+amount_minor bigint not null check (amount_minor > 0),
+currency text not null default 'BAM',
+period text not null check (period in ('monthly', 'weekly')),
+active boolean not null default true,
+created_at timestamptz default now(),
+updated_at timestamptz default now(),
+unique (user_id, category_id, period)
 );
 
 create index on budgets(user_id, active);
@@ -2961,9 +3243,11 @@ with check (user_id = auth.uid());
 -- Trigger za updated_at (koristi postojeći tg funkcija iz 01-architecture)
 
 Testovi:
+
 - User ne može kreirati budžet za tuđu kategoriju
 - Unique constraint na (user, category, period)
 - Negative amount se odbija
+
 ```
 
 **Acceptance:**
@@ -2978,6 +3262,7 @@ Testovi:
 **Cursor prompt:**
 
 ```
+
 `lib/server/actions/budgets.ts`:
 
 - createBudget({ categoryId, amount, currency, period })
@@ -2986,15 +3271,18 @@ Testovi:
 - toggleActive(id, active)
 
 Validacija:
+
 - Zod schema
 - amount u BAM se konvertuje u minor units (bigint)
 - categoryId mora biti user-ov
 
 Helper: getCurrentPeriodSpent(userId, budgetId): bigint
+
 - Sumira transakcije u toj kategoriji za tekući period (mjesec ili sedmica)
 - Koristi base_amount_minor (jer budžet je u BAM, transakcije mogu biti u drugoj valuti)
 
 Testovi: sve CRUD operacije + RLS.
+
 ```
 
 ---
@@ -3004,9 +3292,11 @@ Testovi: sve CRUD operacije + RLS.
 **Cursor prompt:**
 
 ```
+
 `app/(app)/budzeti/page.tsx`:
 
 Layout:
+
 - Header: "Budžeti" · CTA "Novi budžet"
 - Grid kartica: jedna po budžetu
   - Naziv kategorije + ikona
@@ -3020,12 +3310,14 @@ Layout:
 - Ako nema budžeta: empty state s CTA "Postavi prvi budžet"
 
 Modal/drawer "Novi budžet":
+
 - Select kategorija (samo one koje još nemaju budžet za period)
 - Input iznos
 - Select period (mjesečno/sedmično)
 - Preview: "Prošli mjesec si potrošio 312 KM u ovoj kategoriji"
 
 Mobile: lista umjesto grida, svaka stavka full-width kartica.
+
 ```
 
 ---
@@ -3035,13 +3327,16 @@ Mobile: lista umjesto grida, svaka stavka full-width kartica.
 **Cursor prompt:**
 
 ```
+
 Na home dashboardu, dodaj widget:
+
 - Top 3 najbliža prekoračenju (sortirani po % iskorištenosti)
 - Link "Vidi sve budžete" → /budzeti
 
 Ako user nema budžete: suggest card "Postavi prvi budžet" s CTA.
 
 Koristi cached RPC funkciju za sumiranje (vidi 01-architecture sekciju 12).
+
 ```
 
 ---
@@ -3055,40 +3350,43 @@ Koristi cached RPC funkciju za sumiranje (vidi 01-architecture sekciju 12).
 **Cursor prompt:**
 
 ```
+
 Kreiraj `lib/analytics/recurring-detection.ts`:
 
 export async function detectRecurring(userId: string): Promise<RecurringCandidate[]> {
-  // 1. Uzmi sve user-ove transakcije zadnjih 6 mjeseci
-  // 2. Grupiraj po (merchant_id ili normalized description)
-  // 3. Za svaku grupu gdje ima ≥ 3 transakcije:
-  //    - Izračunaj intervale između datuma (dani)
-  //    - Ako je std dev intervala < 30% srednje vrijednosti → recurring
-  //    - Klasifikuj period:
-  //      - Srednji interval 27-33 dana → "monthly"
-  //      - 13-15 dana → "bi-weekly"
-  //      - 6-8 dana → "weekly"
-  //      - 85-95 dana → "quarterly"
-  //      - 360-370 → "yearly"
-  //    - Izračunaj prosječan iznos (median robusnost)
-  //    - Vrati: merchant_name, period, average_amount, last_seen, next_expected
+// 1. Uzmi sve user-ove transakcije zadnjih 6 mjeseci
+// 2. Grupiraj po (merchant_id ili normalized description)
+// 3. Za svaku grupu gdje ima ≥ 3 transakcije:
+// - Izračunaj intervale između datuma (dani)
+// - Ako je std dev intervala < 30% srednje vrijednosti → recurring
+// - Klasifikuj period:
+// - Srednji interval 27-33 dana → "monthly"
+// - 13-15 dana → "bi-weekly"
+// - 6-8 dana → "weekly"
+// - 85-95 dana → "quarterly"
+// - 360-370 → "yearly"
+// - Izračunaj prosječan iznos (median robusnost)
+// - Vrati: merchant_name, period, average_amount, last_seen, next_expected
 }
 
 export type RecurringCandidate = {
-  merchantId?: string;
-  description: string;
-  period: "weekly" | "bi-weekly" | "monthly" | "quarterly" | "yearly";
-  averageAmountMinor: number;
-  currency: string;
-  lastSeen: string;
-  nextExpected: string;
-  confidence: number; // 0-1
-  occurrences: number;
+merchantId?: string;
+description: string;
+period: "weekly" | "bi-weekly" | "monthly" | "quarterly" | "yearly";
+averageAmountMinor: number;
+currency: string;
+lastSeen: string;
+nextExpected: string;
+confidence: number; // 0-1
+occurrences: number;
 };
 
 Testovi:
+
 - 6 mjesečnih transakcija istog iznosa → detected monthly
 - 3 transakcije različitih datuma → confidence nizak
 - Jedna transakcija → nije recurring
+
 ```
 
 ---
@@ -3098,9 +3396,11 @@ Testovi:
 **Cursor prompt:**
 
 ```
+
 (Tabela već definisana u 01-architecture.md sekciji 7.)
 
 Server Actions:
+
 - detectAndSuggest() — pokrene algoritam, vrati kandidate
 - confirmRecurring(candidate) — user potvrdi, snima se u tabelu
 - editRecurring(id, patch)
@@ -3108,18 +3408,21 @@ Server Actions:
 - bindToTransaction(recurringId, transactionId) — veže postojeću transakciju
 
 Automatski trigger: svaki put kad se importuje batch, pokreni detectAndSuggest za usera. Ako nađe novih kandidata (koji nisu već u recurring_transactions), dodaj notification.
+
 ```
 
 ---
 
-### [F3-E2-T3] 🎨 Stranica "Pretplate" 
+### [F3-E2-T3] 🎨 Stranica "Pretplate"
 
 **Cursor prompt:**
 
 ```
+
 `app/(app)/pretplate/page.tsx`:
 
 Sekcije:
+
 1. Aktivne pretplate (potvrđene)
    - Lista kartica: ime · period · sljedeći datum · iznos
    - Mjesečni ekvivalent: sve pretplate preračunate na mjesečni nivo (yearly / 12, itd.)
@@ -3129,13 +3432,16 @@ Sekcije:
 3. Historija "Ukinuto"
 
 Detalj pretplate (drawer):
+
 - Graf: iznosi kroz vrijeme
 - Lista transakcija vezanih za ovu pretplatu
 - Next expected date
 - Akcije: Edit, Pauziraj, Otkaži
 
 Insighti na vrhu:
+
 - "Nađoš si 3 pretplate koje nisi otkazao a ne koristiš?" (na osnovu frekvencije upotrebe — ostavi za kasnije, suggestion only)
+
 ```
 
 ---
@@ -3147,40 +3453,43 @@ Insighti na vrhu:
 **Cursor prompt:**
 
 ```
+
 `lib/analytics/forecast.ts`:
 
 export async function forecastCashflow(
-  userId: string,
-  daysAhead: number
+userId: string,
+daysAhead: number
 ): Promise<ForecastResult> {
-  // 1. Start balance = trenutni saldo svih accountsa (u BAM)
-  // 2. Predict odliva:
-  //    - Za svaku recurring_transaction: next_expected u periodu → minus amount
-  //    - Prosjek dnevne potrošnje (zadnjih 90 dana) kao baseline za ne-recurring
-  // 3. Predict priliva:
-  //    - Recurring plus (plata)
-  //    - Prosjek dnevnog priliva (vjerovatno samo plata)
-  // 4. Vrati day-by-day projekciju: array of {date, balance, events}
+// 1. Start balance = trenutni saldo svih accountsa (u BAM)
+// 2. Predict odliva:
+// - Za svaku recurring_transaction: next_expected u periodu → minus amount
+// - Prosjek dnevne potrošnje (zadnjih 90 dana) kao baseline za ne-recurring
+// 3. Predict priliva:
+// - Recurring plus (plata)
+// - Prosjek dnevnog priliva (vjerovatno samo plata)
+// 4. Vrati day-by-day projekciju: array of {date, balance, events}
 
-  // Algoritam je jednostavan — ne ML. U Fazi 5 može se zamijeniti.
+// Algoritam je jednostavan — ne ML. U Fazi 5 može se zamijeniti.
 }
 
 export type ForecastResult = {
-  currentBalance: number; // minor units BAM
-  projections: Array<{
-    date: string;
-    balance: number;
-    inflow: number;
-    outflow: number;
-    events: Array<{ type: "recurring" | "baseline"; description: string; amount: number }>;
-  }>;
-  lowestPoint: { date: string; balance: number };
-  runway: number | null; // dana do negativnog salda, ili null ako nikad
+currentBalance: number; // minor units BAM
+projections: Array<{
+date: string;
+balance: number;
+inflow: number;
+outflow: number;
+events: Array<{ type: "recurring" | "baseline"; description: string; amount: number }>;
+}>;
+lowestPoint: { date: string; balance: number };
+runway: number | null; // dana do negativnog salda, ili null ako nikad
 };
 
 Testovi:
+
 - User sa stable plate + recurring pretplatama → runway = null (neće propasti)
 - User sa deficitom → runway vraća tačan broj dana
+
 ```
 
 ---
@@ -3190,7 +3499,9 @@ Testovi:
 **Cursor prompt:**
 
 ```
+
 Na dashboardu dodaj novi widget:
+
 - Line chart: balance u narednih 30 dana (recharts ili chart.js)
 - Pokaži trenutni balance kao polaznu tačku
 - Označi "events" na grafu (pretplate itd.) kao dots
@@ -3198,6 +3509,7 @@ Na dashboardu dodaj novi widget:
 - Ako je runway definisan: "Novac će istrajati sljedećih X dana bez novih priliva"
 
 Mobile: jednostavan chart, scroll horizontalno ako treba.
+
 ```
 
 ---
@@ -3209,27 +3521,29 @@ Mobile: jednostavan chart, scroll horizontalno ako treba.
 **Cursor prompt:**
 
 ```
+
 Migration `XXXX_goals.sql`:
 
 create table goals (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users on delete cascade,
-  name text not null check (length(name) between 1 and 200),
-  target_amount_minor bigint not null check (target_amount_minor > 0),
-  currency text not null default 'BAM',
-  target_date date, -- nullable
-  current_amount_minor bigint default 0 check (current_amount_minor >= 0),
-  account_id uuid references accounts, -- optional, ako je cilj vezan za specifičan štedni račun
-  icon text,
-  color text,
-  active boolean default true,
-  achieved_at timestamptz,
-  created_at timestamptz default now()
+id uuid primary key default gen_random_uuid(),
+user_id uuid not null references auth.users on delete cascade,
+name text not null check (length(name) between 1 and 200),
+target_amount_minor bigint not null check (target_amount_minor > 0),
+currency text not null default 'BAM',
+target_date date, -- nullable
+current_amount_minor bigint default 0 check (current_amount_minor >= 0),
+account_id uuid references accounts, -- optional, ako je cilj vezan za specifičan štedni račun
+icon text,
+color text,
+active boolean default true,
+achieved_at timestamptz,
+created_at timestamptz default now()
 );
 
 RLS policies (identično kao budgets).
 
 Trigger: kad current_amount_minor >= target → set achieved_at = now(), aktiviraj notifikaciju.
+
 ```
 
 ---
@@ -3239,6 +3553,7 @@ Trigger: kad current_amount_minor >= target → set achieved_at = now(), aktivir
 **Cursor prompt:**
 
 ```
+
 `app/(app)/ciljevi/page.tsx`:
 
 - Grid kartica po cilju:
@@ -3252,6 +3567,7 @@ Trigger: kad current_amount_minor >= target → set achieved_at = now(), aktivir
 Ako cilj vezan za account: automatski računaj current = account.current_balance (minus debts ako ima).
 
 Celebrate modal kad se postigne cilj: konfeti animacija, "Čestitam! Dostigao si cilj: 'Ljetovanje 2026'."
+
 ```
 
 ---
@@ -3265,18 +3581,20 @@ Celebrate modal kad se postigne cilj: konfeti animacija, "Čestitam! Dostigao si
 **Cursor prompt:**
 
 ```
+
 Kreiraj `lib/analytics/insights-engine.ts` sa kolekcijom detektora:
 
 const DETECTORS = [
-  categoryAnomalyDetector,   // MoM skok u kategoriji
-  subscriptionPriceChangeDetector, // pretplata skočila u cijeni
-  unusualTransactionDetector,  // iznos > 2σ od prosjeka
-  dormantSubscriptionDetector, // pretplata plaćena ali ne korištena (Faza 4+)
-  savingsOpportunityDetector,  // "Ovog mjeseca si potrošio manje na X, razmisli o cilju"
-  budgetBreachPredictor,       // "Po trenutnom tempu, probićeš budžet X prije kraja mjeseca"
+categoryAnomalyDetector, // MoM skok u kategoriji
+subscriptionPriceChangeDetector, // pretplata skočila u cijeni
+unusualTransactionDetector, // iznos > 2σ od prosjeka
+dormantSubscriptionDetector, // pretplata plaćena ali ne korištena (Faza 4+)
+savingsOpportunityDetector, // "Ovog mjeseca si potrošio manje na X, razmisli o cilju"
+budgetBreachPredictor, // "Po trenutnom tempu, probićeš budžet X prije kraja mjeseca"
 ];
 
 Svaki detector vraća: Insight[] sa fields:
+
 - type: string
 - severity: "info" | "warning" | "alert"
 - title: string (user-facing, bosanski)
@@ -3288,11 +3606,13 @@ Svaki detector vraća: Insight[] sa fields:
 Insights idu u `insights` tabelu (već definisana u 01-architecture.md).
 
 Scheduled job (Supabase cron ili Vercel cron):
+
 - Pokreni svaku noć u 03:00 lokalnog vremena
 - Za svakog aktivnog usera: generiši insights
 - Dedup: ako isti tip insighta postoji u zadnjih 7 dana, ne dupliraj
 
 Testovi: svaki detektor zasebno.
+
 ```
 
 ---
@@ -3302,7 +3622,9 @@ Testovi: svaki detektor zasebno.
 **Cursor prompt:**
 
 ```
+
 Na dashboardu, top sekcija: "Uvidi za tebe"
+
 - Horizontal scroll kartice (mobile)
 - Grid (desktop)
 - Svaka kartica: ikona · title · body · CTA (ako ima)
@@ -3310,15 +3632,18 @@ Na dashboardu, top sekcija: "Uvidi za tebe"
 - Empty state: "Nema novih uvida. Sve je u redu."
 
 Dedicated stranica `/uvidi`:
+
 - Lista svih insighta, sortirana po datumu
 - Filter: severity, type
 - Mogućnost arhiviranja (ne dismiss-a)
 
 Notifikacija sistem (in-app, bez emaila u Fazi 3):
+
 - Badge na bell ikoni sa brojem novih
 - Dropdown pokazuje zadnjih 10
 
 Email digest — Faza 4+, ne sada.
+
 ```
 
 ---
@@ -3330,7 +3655,9 @@ Email digest — Faza 4+, ne sada.
 **Cursor prompt:**
 
 ```
+
 Kad user prvi put dođe na dashboard (bez podataka):
+
 - Wizard u 4 koraka:
   1. "Dodaj svoj prvi račun"
   2. "Uvezi izvod ILI dodaj transakciju ručno"
@@ -3342,6 +3669,7 @@ Kad user prvi put dođe na dashboard (bez podataka):
 Nakon completion: confetti, "Spreman si!"
 
 Podatke čuvaj u profiles.onboarding_completed (JSONB: koje korake je prešao).
+
 ```
 
 ---
@@ -3351,10 +3679,13 @@ Podatke čuvaj u profiles.onboarding_completed (JSONB: koje korake je prešao).
 **Cursor prompt:**
 
 ```
+
 Ažuriraj docs:
+
 - README s features Faze 3
 - Help stranica: dodaj pitanja o budžetima, ciljevima, pretplatama, forecast-u
 - /sigurnost: dodaj šta radi insights engine (server-side, bez slanja podataka trećim)
+
 ```
 
 
@@ -3379,9 +3710,11 @@ Ažuriraj docs:
 **Cursor prompt:**
 
 ```
+
 Kreiraj `tests/security/rls-audit.test.ts`:
 
 Za svaku tabelu u bazi koja ima user_id ili je povezana s user-om:
+
 - profiles, accounts, categories, merchants (user-created), merchant_aliases (user), import_batches, parsed_transactions, transactions, user_corrections, categorization_rules, budgets, goals, recurring_transactions, insights, audit_log
 
 Test matrix (za svaku tabelu):
@@ -3401,6 +3734,7 @@ Test matrix (za svaku tabelu):
 Assert pri svakoj tvrdnji + cleanup na kraju.
 
 Generiši HTML izvještaj: `tests/security/RLS_REPORT.html` sa checkmarkom po tabeli.
+
 ```
 
 **Acceptance:**
@@ -3416,6 +3750,7 @@ Generiši HTML izvještaj: `tests/security/RLS_REPORT.html` sa checkmarkom po ta
 **Cursor prompt:**
 
 ```
+
 Dodaj per-user limits (soft, ne hard refuse-uj, samo upozori):
 
 - Max 10,000 transakcija (after that, advise export/archive)
@@ -3425,16 +3760,20 @@ Dodaj per-user limits (soft, ne hard refuse-uj, samo upozori):
 - Max 50 goals
 
 Implementacija:
+
 - Check u Server Actionu prije insert-a
 - Ako pređeno: user-friendly message "Dostigao si maksimum X. Kontaktiraj nas za povećanje."
 
 Global rate limits (koristi pattern iz F2-E5-T2):
+
 - Import: 20/dan per user
 - LLM kategorizacija: 100/dan per user
 - API endpoint any: 300/min per user
 
 Monitoring alert (Sentry):
+
 - Ako neki user prelazi limite učestalo → abuse signal, provjeri ručno
+
 ```
 
 ---
@@ -3444,9 +3783,11 @@ Monitoring alert (Sentry):
 **Cursor prompt:**
 
 ```
+
 Koristi k6 ili Artillery za load test (free, lokalno):
 
 Scenario:
+
 - 50 simulated users, svaki:
   - Login
   - Load dashboard
@@ -3455,20 +3796,24 @@ Scenario:
 - Ramp up: 0 → 50 za 2 min, držati 5 min, ramp down 1 min
 
 Meri:
+
 - p50, p95, p99 response times
 - Error rate
 - Database CPU (Supabase dashboard)
 
 Pass kriterij:
+
 - p95 < 500ms za sve endpoint-ove
 - Error rate < 0.1%
 - DB CPU < 70% peak
 
 Ako ne prolazi:
+
 - Identifikuj bottleneck (najčešće N+1 queries ili missing index)
 - Fix i ponovi
 
 Document rezultate u `docs/load-test-results.md`.
+
 ```
 
 ---
@@ -3482,26 +3827,29 @@ Document rezultate u `docs/load-test-results.md`.
 **Cursor prompt:**
 
 ```
+
 Migration:
 create table invite_codes (
-  id uuid primary key default gen_random_uuid(),
-  code text unique not null,
-  created_by uuid references auth.users,
-  used_by uuid references auth.users,
-  used_at timestamptz,
-  expires_at timestamptz default (now() + interval '30 days'),
-  created_at timestamptz default now()
+id uuid primary key default gen_random_uuid(),
+code text unique not null,
+created_by uuid references auth.users,
+used_by uuid references auth.users,
+used_at timestamptz,
+expires_at timestamptz default (now() + interval '30 days'),
+created_at timestamptz default now()
 );
 
 Pre-populate: 20 kodova za beta listu (ručno insert).
 
 Sign-up flow:
+
 - Na /prijava landing, dodaj "Imam invite kod" toggle
 - Ako nema: "Trenutno smo u zatvorenom beta testu. Prijavi se na čekanje ovdje." (waiting list form)
 - Ako ima: unos koda, validacija, zatim magic link
 - Na potvrdi invite_codes: set used_by, used_at
 
 Feature flag `ENABLE_INVITES` (env var): ako je off, svi mogu (za dev).
+
 ```
 
 ---
@@ -3511,6 +3859,7 @@ Feature flag `ENABLE_INVITES` (env var): ako je off, svi mogu (za dev).
 **Cursor prompt:**
 
 ```
+
 Kreiraj `app/cekanje/page.tsx`:
 
 - Hero: "Konto je trenutno u zatvorenom beta testu"
@@ -3520,17 +3869,18 @@ Kreiraj `app/cekanje/page.tsx`:
 
 Migration:
 create table waiting_list (
-  id uuid primary key default gen_random_uuid(),
-  email text not null,
-  reason text,
-  referrer text,
-  created_at timestamptz default now()
+id uuid primary key default gen_random_uuid(),
+email text not null,
+reason text,
+referrer text,
+created_at timestamptz default now()
 );
 
 create index on waiting_list(email);
 -- Unique ne, ali deduplicate prilikom inserta (check postoji ili upsert)
 
 Admin view (osnovno, za foundera): `/admin/cekanje` — lista, eksport CSV.
+
 ```
 
 ---
@@ -3542,7 +3892,9 @@ Admin view (osnovno, za foundera): `/admin/cekanje` — lista, eksport CSV.
 **Cursor prompt:**
 
 ```
+
 Komponenta `FeedbackFab` (floating action button) u donjem desnom uglu:
+
 - Ikona "chat bubble" ili "💬"
 - Klik otvara drawer:
   - Kratka forma: "Šta misliš?"
@@ -3553,19 +3905,20 @@ Komponenta `FeedbackFab` (floating action button) u donjem desnom uglu:
 
 Migration:
 create table feedback (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users,
-  type text check (type in ('bug', 'idea', 'general')),
-  body text not null,
-  screenshot_path text, -- ako je upload
-  page_url text, -- window.location.pathname
-  user_agent text,
-  app_version text,
-  status text default 'new' check (status in ('new', 'triaged', 'closed')),
-  created_at timestamptz default now()
+id uuid primary key default gen_random_uuid(),
+user_id uuid references auth.users,
+type text check (type in ('bug', 'idea', 'general')),
+body text not null,
+screenshot_path text, -- ako je upload
+page_url text, -- window.location.pathname
+user_agent text,
+app_version text,
+status text default 'new' check (status in ('new', 'triaged', 'closed')),
+created_at timestamptz default now()
 );
 
 Reply loop (iz admin view-a): ne u app-u za Fazu 4, samo email reply ručno.
+
 ```
 
 ---
@@ -3575,6 +3928,7 @@ Reply loop (iz admin view-a): ne u app-u za Fazu 4, samo email reply ručno.
 **Cursor prompt:**
 
 ```
+
 Setup PostHog EU cluster (https://eu.i.posthog.com).
 
 env:
@@ -3582,18 +3936,21 @@ NEXT_PUBLIC_POSTHOG_KEY=...
 NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
 
 Kreiraj `lib/analytics/posthog.ts`:
+
 - Inicijalizacija na klijentu (useEffect u root layoutu)
 - Opt-in samo: ne automatski track, pitaj user-a na prvom logu in
 - Consent modal: "Pomozi nam da unaprijedimo Konto" — Pristajem / Ne želim
 - Čuvaj izbor u localStorage + profiles.analytics_consent
 
 Eventi koje track-ujemo:
+
 - page_view (automatic ali bez query params)
 - feature_used: { feature: "import" | "budget_create" | ... }
 - onboarding_step_completed
 - error_boundary_triggered
 
 NE track-ujemo:
+
 - Iznose
 - Imena
 - Merchant-e
@@ -3602,6 +3959,7 @@ NE track-ujemo:
 Nikad ne šaljemo PII u PostHog. Validacija u wrapper funkciji (assert da keys nisu u blacklist-i).
 
 Error tracking: Sentry EU (vidi 02-security-privacy, koristi PII redaction).
+
 ```
 
 ---
@@ -3611,6 +3969,7 @@ Error tracking: Sentry EU (vidi 02-security-privacy, koristi PII redaction).
 **Cursor prompt:**
 
 ```
+
 `app/(app)/o-testu/page.tsx`:
 
 - "Dobrodošao u Konto beta"
@@ -3621,6 +3980,7 @@ Error tracking: Sentry EU (vidi 02-security-privacy, koristi PII redaction).
 - Contact info foundera (email)
 
 Link na ovo u navigaciji (footer ili settings).
+
 ```
 
 ---
@@ -3632,6 +3992,7 @@ Link na ovo u navigaciji (footer ili settings).
 **Cursor prompt:**
 
 ```
+
 NE KODIRAJ. Umjesto, kreiraj istraživački dokument `docs/research/shared-accounts.md` sa:
 
 - Use cases: šta korisnici traže?
@@ -3646,6 +4007,7 @@ NE KODIRAJ. Umjesto, kreiraj istraživački dokument `docs/research/shared-accou
 - Monetizacijska strategija (shared = Pro?)
 
 Odluka se ne donosi u Fazi 4. Samo prikupljanje signala iz beta feedbacka.
+
 ```
 
 ---
@@ -3657,6 +4019,7 @@ Odluka se ne donosi u Fazi 4. Samo prikupljanje signala iz beta feedbacka.
 **Cursor prompt:**
 
 ```
+
 Prije nego što pošalješ invite-ove, prođi kroz:
 
 1. Svi E2E testovi zelen
@@ -3671,6 +4034,7 @@ Prije nego što pošalješ invite-ove, prođi kroz:
    - Edge case: prazan user na svim stranama
 
 Ne pošalji invite-ove dok ovo nije PASS.
+
 ```
 
 ---
@@ -3680,11 +4044,13 @@ Ne pošalji invite-ove dok ovo nije PASS.
 **Cursor prompt:**
 
 ```
+
 Kreiraj template emaila (plain text + HTML):
 
 Subject: Dobro došao u Konto beta
 
 Poruka:
+
 - Personalizirana: "Hej [ime]"
 - Kratak pozdrav od foundera (personal, ne corporate)
 - Link na aplikaciju + invite kod
@@ -3700,6 +4066,7 @@ RESEND_API_KEY=...
 lib/email/send.ts sa wrapperom.
 
 Testiraj na sebi prvo.
+
 ```
 
 ---
@@ -3709,9 +4076,11 @@ Testiraj na sebi prvo.
 **Cursor prompt:**
 
 ```
+
 Ne kod — proces. Dokument `docs/beta-process.md`:
 
 Svake nedjelje (kao founder):
+
 1. Pregledaj feedback tabelu
 2. Pregledaj Sentry errore
 3. Pregledaj PostHog funnels (koji koraci imaju drop-off?)
@@ -3723,10 +4092,12 @@ Svake nedjelje (kao founder):
 6. Napiši kratak update beta korisnicima (opciono, mjesečno)
 
 Metrike koje pratiš (lightweight):
+
 - DAU / WAU
 - Retention: D1, D7, D30
 - Core action: import uspjeh rate
 - Time to first insight (kad korisnik vidi vrijednost)
+
 ```
 
 ---
@@ -3736,6 +4107,7 @@ Metrike koje pratiš (lightweight):
 **Cursor prompt:**
 
 ```
+
 `app/status/page.tsx` (javno dostupno, bez auth):
 
 - Header "Status Konta"
@@ -3746,6 +4118,7 @@ Metrike koje pratiš (lightweight):
   - Broj users (opciono, ako se osjećaš confident)
 
 Ovo je profesionalizam move. Pokazuje da držiš ozbiljno.
+
 ```
 
 ---
@@ -3781,11 +4154,13 @@ Prije prelaska na Fazu 5 (public launch, monetizacija):
 ## ID konvencija
 
 ```
+
 F<phase>-E<epic>-T<task>
 
 Primjeri:
-F0-E1-T1  → Faza 0, Epic 1, Task 1
-F2-E3-T5  → Faza 2, Epic 3, Task 5
+F0-E1-T1 → Faza 0, Epic 1, Task 1
+F2-E3-T5 → Faza 2, Epic 3, Task 5
+
 ```
 
 Ako treba dodati sub-task u budućnosti: `F2-E3-T5a`, `F2-E3-T5b`.
@@ -3819,3 +4194,4 @@ Ukupno: 18–25 sedmica do javnog launch-a. Ovo je optimistična procjena za sol
 | Datum | Verzija | Promjena |
 |---|---|---|
 | 2026-04-21 | 1.0 | Inicijalna verzija — Faze 0–4 kompletno |
+```

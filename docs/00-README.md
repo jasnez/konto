@@ -128,6 +128,7 @@ Saradnja s AI agentima (prvenstveno Cursor). Pokriva:
 **Najduži dokument. Operativni srž.**
 
 Struktura:
+
 - Faza 0 (fondacija) — 7 epica, ~20 taskova
 - Faza 1 (manual MVP) — 7 epica, ~20 taskova
 - Faza 2 (PDF parser) — 6 epica, ~20 taskova
@@ -135,6 +136,7 @@ Struktura:
 - Faza 4 (beta users) — 5 epica, ~15 taskova
 
 Svaki task ima:
+
 - Jedinstveni ID (npr. `F2-E3-T1`)
 - Oznake (🔒 🧪 🎨 ⚡ 📚 📋)
 - Kontekst / referencu na druge dokumente
@@ -184,7 +186,7 @@ Eksplicitno nije pokriveno:
 
 Ako nešto fali, krije istinu, ili je kontraditkcija između dokumenata:
 
-1. Označi direktno u fajlu (komentar ` <!-- TODO: ... --> `)
+1. Označi direktno u fajlu (komentar `<!-- TODO: ... -->`)
 2. Dodaj u "Otvorena pitanja" sekciju relevantnog dokumenta
 3. Rezolviraj prije početka nove faze
 
@@ -196,6 +198,6 @@ Dokumentacija nikad nije "gotova" dok traje razvoj. Ali u ovoj tački, sadrži d
 
 ## Change Log
 
-| Datum | Verzija | Promjena |
-|---|---|---|
-| 2026-04-21 | 1.0 | Inicijalna verzija — svih 6 dokumenata kompletirana |
+| Datum      | Verzija | Promjena                                            |
+| ---------- | ------- | --------------------------------------------------- |
+| 2026-04-21 | 1.0     | Inicijalna verzija — svih 6 dokumenata kompletirana |

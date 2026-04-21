@@ -46,76 +46,76 @@
 @layer base {
   :root {
     /* Light mode */
-    --background: 0 0% 100%;          /* #FFFFFF */
-    --foreground: 240 10% 4%;         /* #0A0A0B */
-    
+    --background: 0 0% 100%; /* #FFFFFF */
+    --foreground: 240 10% 4%; /* #0A0A0B */
+
     --card: 0 0% 100%;
     --card-foreground: 240 10% 4%;
-    
+
     --muted: 240 5% 96%;
     --muted-foreground: 240 4% 46%;
-    
+
     --border: 240 6% 90%;
     --input: 240 6% 90%;
-    --ring: 142 71% 45%;              /* brand green */
-    
+    --ring: 142 71% 45%; /* brand green */
+
     /* Brand */
-    --primary: 142 71% 45%;           /* #22C55E — green */
+    --primary: 142 71% 45%; /* #22C55E — green */
     --primary-foreground: 0 0% 100%;
-    
+
     --secondary: 240 5% 96%;
     --secondary-foreground: 240 10% 4%;
-    
+
     --accent: 240 5% 96%;
     --accent-foreground: 240 10% 4%;
-    
+
     /* Financial semantics */
-    --income: 142 71% 45%;            /* green, isti kao primary */
+    --income: 142 71% 45%; /* green, isti kao primary */
     --income-foreground: 0 0% 100%;
-    
-    --expense: 0 72% 51%;             /* #DC2626 — red */
+
+    --expense: 0 72% 51%; /* #DC2626 — red */
     --expense-foreground: 0 0% 100%;
-    
-    --transfer: 217 91% 60%;          /* #3B82F6 — blue */
+
+    --transfer: 217 91% 60%; /* #3B82F6 — blue */
     --transfer-foreground: 0 0% 100%;
-    
+
     /* States */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    
-    --warning: 38 92% 50%;            /* amber */
+
+    --warning: 38 92% 50%; /* amber */
     --warning-foreground: 0 0% 100%;
-    
+
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
-    
-    --radius: 0.75rem;                /* 12px, većina komponenti */
+
+    --radius: 0.75rem; /* 12px, većina komponenti */
   }
-  
+
   .dark {
-    --background: 240 10% 4%;         /* #0A0A0B */
+    --background: 240 10% 4%; /* #0A0A0B */
     --foreground: 0 0% 98%;
-    
-    --card: 240 10% 7%;               /* elevated surface */
+
+    --card: 240 10% 7%; /* elevated surface */
     --card-foreground: 0 0% 98%;
-    
+
     --muted: 240 4% 12%;
     --muted-foreground: 240 5% 65%;
-    
+
     --border: 240 4% 16%;
     --input: 240 4% 16%;
     --ring: 142 71% 45%;
-    
+
     --primary: 142 71% 45%;
     --primary-foreground: 0 0% 100%;
-    
+
     --secondary: 240 4% 12%;
     --secondary-foreground: 0 0% 98%;
-    
+
     --income: 142 71% 45%;
-    --expense: 0 72% 55%;             /* malo svjetlije u dark */
+    --expense: 0 72% 55%; /* malo svjetlije u dark */
     --transfer: 217 91% 65%;
-    
+
     --destructive: 0 72% 55%;
     --warning: 38 92% 55%;
     --success: 142 71% 50%;
@@ -124,6 +124,7 @@
 ```
 
 **Pravila upotrebe:**
+
 - Zeleno = prihod, pozitivno, success
 - Crveno = trošak, negativno, destructive
 - Plavo = transfer, informacija, neutral akcija
@@ -134,12 +135,13 @@
 ### 2.2 Typography
 
 **Fontovi:**
+
 ```typescript
 // app/layout.tsx
 import { Inter, JetBrains_Mono } from 'next/font/google';
 
 const inter = Inter({
-  subsets: ['latin', 'latin-ext'],   // latin-ext za bs/sr/hr dijakritike
+  subsets: ['latin', 'latin-ext'], // latin-ext za bs/sr/hr dijakritike
   variable: '--font-sans',
   display: 'swap',
 });
@@ -153,18 +155,19 @@ const mono = JetBrains_Mono({
 
 **Skala (Tailwind default je dobra, ali koristi konzistentno):**
 
-| Token | Size | Upotreba |
-|---|---|---|
-| `text-xs` | 12px | Secondary meta (timestamps, labels u tabeli) |
-| `text-sm` | 14px | Body text u dense lists |
+| Token       | Size | Upotreba                                        |
+| ----------- | ---- | ----------------------------------------------- |
+| `text-xs`   | 12px | Secondary meta (timestamps, labels u tabeli)    |
+| `text-sm`   | 14px | Body text u dense lists                         |
 | `text-base` | 16px | Default body text **(nikad manji na mobilnom)** |
-| `text-lg` | 18px | Subheadings |
-| `text-xl` | 20px | Section headings |
-| `text-2xl` | 24px | Page titles |
-| `text-3xl` | 30px | Hero amounts (dashboard total) |
-| `text-5xl` | 48px | Onboarding h1, welcome screens |
+| `text-lg`   | 18px | Subheadings                                     |
+| `text-xl`   | 20px | Section headings                                |
+| `text-2xl`  | 24px | Page titles                                     |
+| `text-3xl`  | 30px | Hero amounts (dashboard total)                  |
+| `text-5xl`  | 48px | Onboarding h1, welcome screens                  |
 
 **Novčani iznosi — posebno pravilo:**
+
 - Koristi `tabular-nums` utility klasu da brojevi budu monoširoki (poravnati)
 - Glavni iznos na dashboardu: `text-3xl font-semibold tabular-nums`
 - Iznos u listi transakcija: `text-base font-medium tabular-nums`
@@ -179,6 +182,7 @@ const mono = JetBrains_Mono({
 ### 2.3 Spacing
 
 Koristi Tailwind scale. Nepisana pravila:
+
 - **4px (space-1):** minimalan razmak između povezanih elemenata
 - **8px (space-2):** standardni inline razmak
 - **16px (space-4):** izvan komponenti, između sekcija
@@ -194,17 +198,27 @@ U dark mode-u koristimo **bolje kontrast kroz boju pozadine**, ne sjene (sjene n
 
 ```css
 /* Background hijerarhija u dark mode */
-body          { background: hsl(var(--background)); }      /* #0A0A0B */
-.card         { background: hsl(var(--card)); }            /* #121214 */
-.card-nested  { background: hsl(var(--muted)); }           /* #1A1A1E */
+body {
+  background: hsl(var(--background));
+} /* #0A0A0B */
+.card {
+  background: hsl(var(--card));
+} /* #121214 */
+.card-nested {
+  background: hsl(var(--muted));
+} /* #1A1A1E */
 ```
 
 U light mode-u, dodaj **suptilnu border** umjesto sjene:
+
 ```css
-.card { border: 1px solid hsl(var(--border)); }
+.card {
+  border: 1px solid hsl(var(--border));
+}
 ```
 
 Radius:
+
 - Buttons, inputs: `rounded-md` (6px)
 - Cards, dialogs, popovers: `rounded-xl` (12px)
 - Avatars, chips: `rounded-full`
@@ -221,6 +235,7 @@ Radius:
 - Stroke width: default (2), za fine touch `stroke-[1.5]`
 
 Semantic icons:
+
 - `Wallet` → accounts
 - `ArrowLeftRight` → transfers
 - `Receipt` → transactions
@@ -256,19 +271,19 @@ pnpm dlx shadcn@latest add alert alert-dialog
 
 ### 3.2 Component inventory
 
-| Komponenta | Korišten od | Custom? | Zašto custom |
-|---|---|---|---|
-| Button | svuda | Ne | Default OK |
-| Input | forme | Minor | Veći touch target na mobilnom (h-11) |
-| Card | svuda | Minor | Border umjesto shadow u light |
-| Dialog (desktop) / Sheet (mobile) | modal | Ne | Standardni |
-| Toast (Sonner) | notifikacije | Yes | Bosanska defaults |
-| MoneyDisplay | amount display | **Da** | Složena logika, formatiranje |
-| MoneyInput | amount input | **Da** | Cents handling, currency selector |
-| CategoryIcon | inline kategorije | **Da** | Emoji + color chip |
-| MerchantCell | lista transakcija | **Da** | Avatar + name + fallback |
-| DateRangePicker | filter | Minor | Srpski labeli, week starts Mon |
-| CurrencySelect | forms | **Da** | BAM first, smart default |
+| Komponenta                        | Korišten od       | Custom? | Zašto custom                         |
+| --------------------------------- | ----------------- | ------- | ------------------------------------ |
+| Button                            | svuda             | Ne      | Default OK                           |
+| Input                             | forme             | Minor   | Veći touch target na mobilnom (h-11) |
+| Card                              | svuda             | Minor   | Border umjesto shadow u light        |
+| Dialog (desktop) / Sheet (mobile) | modal             | Ne      | Standardni                           |
+| Toast (Sonner)                    | notifikacije      | Yes     | Bosanska defaults                    |
+| MoneyDisplay                      | amount display    | **Da**  | Složena logika, formatiranje         |
+| MoneyInput                        | amount input      | **Da**  | Cents handling, currency selector    |
+| CategoryIcon                      | inline kategorije | **Da**  | Emoji + color chip                   |
+| MerchantCell                      | lista transakcija | **Da**  | Avatar + name + fallback             |
+| DateRangePicker                   | filter            | Minor   | Srpski labeli, week starts Mon       |
+| CurrencySelect                    | forms             | **Da**  | BAM first, smart default             |
 
 ### 3.3 Custom komponente — spec
 
@@ -281,13 +296,14 @@ type MoneyDisplayProps = {
   currency: string;
   locale?: string;
   variant?: 'default' | 'large' | 'compact';
-  showSign?: boolean;             // + prefix za pozitivne
-  signFromAmount?: boolean;        // boja se određuje iz znaka
+  showSign?: boolean; // + prefix za pozitivne
+  signFromAmount?: boolean; // boja se određuje iz znaka
   className?: string;
 };
 ```
 
 Pravila rendera:
+
 - `cents = 0n` → "0,00 KM" u muted boji
 - Negative → "−123,45 KM" u expense boji (ne "-", nego pravi minus Unicode `−`)
 - Positive sa `showSign=true` → "+123,45 KM" u income boji
@@ -298,7 +314,7 @@ Pravila rendera:
 
 ```typescript
 type MoneyInputProps = {
-  value: bigint;                   // cents, controlled
+  value: bigint; // cents, controlled
   onChange: (cents: bigint) => void;
   currency: string;
   onCurrencyChange?: (c: string) => void;
@@ -309,6 +325,7 @@ type MoneyInputProps = {
 ```
 
 Ponašanje:
+
 - User tipka `12,50` → interno postane `1250n`
 - Auto-formatiranje na blur: `12,50` (BAM), `1,250.50` (USD)
 - Decimalni separator prati locale, thousands separator tek na blur
@@ -321,6 +338,7 @@ Ponašanje:
 Primarna mobilna komponenta za dodavanje transakcije — FAB style, dostupan na svim ekranima.
 
 Layout:
+
 ```
 ┌──────────────────────────────────┐
 │ [Iznos: 12,50 KM] [🛒 Namirnice] │
@@ -329,6 +347,7 @@ Layout:
 ```
 
 Ponašanje:
+
 - Focus se automatski stavlja na Amount field
 - Ako user zapiše amount i pritisne Enter → fokus se pomjera na Merchant
 - Ako user odabere merchant iz istorije → kategorija se auto-predlaže
@@ -361,6 +380,7 @@ type CategoryIconProps = {
 ```
 
 Render:
+
 - Circle sa background color-om iz kategorije (default: `bg-muted`)
 - Emoji ili Lucide icon centriran
 - Fallback: prvo slovo kategorije ako nema icon
@@ -372,6 +392,7 @@ Render:
 ### 4.1 App shell (responsive)
 
 **Mobilni (< 768px):**
+
 ```
 ┌────────────────────────┐
 │ Header (account switch)│  ← 56px
@@ -393,6 +414,7 @@ Render:
 - **Top header:** account/profil switcher + kontekstualne akcije
 
 **Desktop (≥ 768px):**
+
 ```
 ┌─────────┬──────────────────────────┐
 │         │ Header                   │
@@ -452,6 +474,7 @@ app/
 ```
 
 **Pravilo ruta 🔒:**
+
 - Bosanske rute (`/pocetna`, `/racuni`, `/transakcije`), ne engleske
 - Slug-ovi uvijek latinica bez dijakritike (`budzet`, ne `budžet`)
 - Nikad mijenjaj rutu kad je već u produkciji (bookmark-i, share links)
@@ -461,6 +484,7 @@ app/
 Svaka stranica ima jedan od sljedeća 4 obrasca:
 
 **A. List page** (transakcije, računi)
+
 ```
 Header (title + primary action)
 Filters bar (sticky)
@@ -469,6 +493,7 @@ Pagination
 ```
 
 **B. Detail page** (transakcija, račun)
+
 ```
 Back button + title + actions
 Key fact hero (amount, status)
@@ -477,6 +502,7 @@ Activity / history
 ```
 
 **C. Dashboard** (početna, uvidi)
+
 ```
 Greeting / context banner
 Primary metric card
@@ -486,6 +512,7 @@ CTA bar
 ```
 
 **D. Form page** (novi/edit)
+
 ```
 Back + title
 Form sections (max 3)
@@ -499,26 +526,31 @@ Sticky bottom action bar (mobilni) / Buttons inline (desktop)
 ### 5.1 Loading states
 
 Pravilo prioriteta (brzo → sporo):
+
 1. **Optimistic update** — UI se ažurira odmah, pretpostavljamo success
 2. **Skeleton screen** — ako nemamo podatke za optimistic
 3. **Spinner** — samo ako ni skeleton nije moguć, i akcija traje >500ms
 
 **Skeleton pattern:**
+
 ```tsx
-{isLoading ? (
-  <div className="space-y-2">
-    {Array.from({ length: 5 }).map((_, i) => (
-      <Skeleton key={i} className="h-16 rounded-xl" />
-    ))}
-  </div>
-) : (
-  <TransactionList items={data} />
-)}
+{
+  isLoading ? (
+    <div className="space-y-2">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Skeleton key={i} className="h-16 rounded-xl" />
+      ))}
+    </div>
+  ) : (
+    <TransactionList items={data} />
+  );
+}
 ```
 
 ### 5.2 Empty states
 
 Svaki prazan ekran ima:
+
 1. **Ikonu ili ilustraciju** (jednostavna, single color)
 2. **Naslov** (1 linija, ljudski ton)
 3. **Objasnjenje** (1-2 linije, zašto je prazno)
@@ -527,18 +559,21 @@ Svaki prazan ekran ima:
 Primjeri:
 
 **Prazna lista transakcija (neregistrovan korisnik):**
+
 > 📝
 > **Još nema transakcija**
 > Počni tako što ćeš dodati račun ili uvesti izvod iz banke.
 > [+ Dodaj račun] [Uvezi izvod]
 
 **Prazan dashboard (novi korisnik):**
+
 > 👋
 > **Dobro došao u Konto**
 > Tvoja privatnost je prva. Da bismo počeli, dodaj svoj prvi račun.
 > [Dodaj račun]
 
 **Prazan rezultat pretrage:**
+
 > 🔍
 > **Nema rezultata za "konzum"**
 > Provjeri kucanje ili pokušaj drugi pojam.
@@ -547,22 +582,24 @@ Primjeri:
 ### 5.3 Error states
 
 Hijerarhija:
+
 1. **Inline field errors** — validacija ispod polja, crveno, ikona alert
 2. **Toast errors** — za async ops (save failed, import failed)
 3. **Alert banners** — za persistent issues (FX stale, storage full)
 4. **Full page errors** — 404, 500, auth required
 
 Copy za greške:
+
 - Nikad "Error 500" ili tehnički ID bez objasnjenja
 - Uvijek: šta se desilo + šta korisnik može uraditi
 - Ako nije user fault: ponudi retry ili support link
 
 ```tsx
 // Primjeri
-"Nešto je krenulo naopako. Pokušaj ponovo za par sekundi." + [Retry]
-"Iznos mora biti veći od 0."
-"Nismo mogli učitati izvod. Provjeri da li je PDF validan."
-"Nemaš pristup ovom resursu."
+'Nešto je krenulo naopako. Pokušaj ponovo za par sekundi.' + [Retry];
+('Iznos mora biti veći od 0.');
+('Nismo mogli učitati izvod. Provjeri da li je PDF validan.');
+('Nemaš pristup ovom resursu.');
 ```
 
 ### 5.4 Feedback patterns
@@ -600,13 +637,13 @@ Delete budget       → Dialog sa "Obriši" + warnings ako su transakcije poveza
 
 ### 6.2 Gestures
 
-| Gesture | Akcija | Gdje |
-|---|---|---|
-| Tap | Navigate / primary action | Svuda |
-| Long press | Select / context menu | Lista transakcija |
-| Swipe left | Edit / Delete quick actions | Lista transakcija |
-| Swipe right | Back navigation | Detail screens |
-| Pull to refresh | Refresh data | Dashboard, lista |
+| Gesture         | Akcija                      | Gdje              |
+| --------------- | --------------------------- | ----------------- |
+| Tap             | Navigate / primary action   | Svuda             |
+| Long press      | Select / context menu       | Lista transakcija |
+| Swipe left      | Edit / Delete quick actions | Lista transakcija |
+| Swipe right     | Back navigation             | Detail screens    |
+| Pull to refresh | Refresh data                | Dashboard, lista  |
 
 **Pravilo:** nikad ne koristi gesture kao JEDINI način za akciju. Uvijek mora postojati i tap-based alternativa.
 
@@ -636,8 +673,12 @@ Delete budget       → Dialog sa "Obriši" + warnings ako su transakcije poveza
 
 ```css
 /* globals.css */
-.safe-top { padding-top: env(safe-area-inset-top); }
-.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
 ```
 
 Bottom nav uvijek ima `pb-[env(safe-area-inset-bottom)]` da se ne seče sa Android home indicator-om ili iOS home bar-om.
@@ -651,6 +692,7 @@ Bottom nav uvijek ima `pb-[env(safe-area-inset-bottom)]` da se ne seče sa Andro
 **Ton:** prijateljski, jasan, nikad patroniziranje. Nikad slang. Nikad službeni ("poštovani korisniče"). "Ti" umjesto "Vi".
 
 **Pravila:**
+
 - Uvijek pišemo `Konto` (capitalized), brand name
 - Iznose pišemo evropski: `1.234,56 KM`, ne `1,234.56 KM`
 - Datume: `15.4.2026.` kratko, `15. april 2026.` dugo (bosanski sa tačkom iza godine)
@@ -659,19 +701,19 @@ Bottom nav uvijek ima `pb-[env(safe-area-inset-bottom)]` da se ne seče sa Andro
 
 **Copy library (referenca):**
 
-| Scenarij | Copy |
-|---|---|
-| Welcome (novi korisnik) | "Dobro došli u Konto." |
-| Signin CTA | "Prijavi se" |
-| Signup CTA | "Napravi nalog" |
-| Magic link sent | "Poslali smo ti link na email. Klikni da se prijaviš." |
-| Save success | "Sačuvano." |
-| Save error | "Nije uspjelo. Pokušaj ponovo." |
-| Delete confirm | "Jesi siguran? Ova akcija se ne može poništiti." |
-| Empty state | varira po ekranu — vidi 5.2 |
-| Loading | Nikad "Loading..." — koristi skeleton ili ništa |
-| Success toast | "Transakcija je dodata." (prošlo vrijeme, jer se već desilo) |
-| Generic error | "Nešto nije u redu. Pokušaj opet za par sekundi." |
+| Scenarij                | Copy                                                         |
+| ----------------------- | ------------------------------------------------------------ |
+| Welcome (novi korisnik) | "Dobro došli u Konto."                                       |
+| Signin CTA              | "Prijavi se"                                                 |
+| Signup CTA              | "Napravi nalog"                                              |
+| Magic link sent         | "Poslali smo ti link na email. Klikni da se prijaviš."       |
+| Save success            | "Sačuvano."                                                  |
+| Save error              | "Nije uspjelo. Pokušaj ponovo."                              |
+| Delete confirm          | "Jesi siguran? Ova akcija se ne može poništiti."             |
+| Empty state             | varira po ekranu — vidi 5.2                                  |
+| Loading                 | Nikad "Loading..." — koristi skeleton ili ništa              |
+| Success toast           | "Transakcija je dodata." (prošlo vrijeme, jer se već desilo) |
+| Generic error           | "Nešto nije u redu. Pokušaj opet za par sekundi."            |
 
 ### 7.2 Forme
 
@@ -682,6 +724,7 @@ Bottom nav uvijek ima `pb-[env(safe-area-inset-bottom)]` da se ne seče sa Andro
 - **Error message:** ispod polja, crveno, sa Alert icon-om
 
 Primjer:
+
 ```
 Iznos *                             ← label, bold
 ┌─────────────────────────┐
@@ -694,12 +737,12 @@ Može biti negativan za trošak.      ← helper text, muted
 
 **Prikazivanje po kontekstu:**
 
-| Kontekst | Format | Primjer |
-|---|---|---|
-| Dashboard hero | `{amount} {currency}` large | `2.450,00 KM` |
-| Transaction row | `{sign}{amount} {currency}` | `−43,50 KM` |
-| Chart label | `{amount}k` ako > 10k | `12,3k KM` |
-| Compact list | `{amount}` (valuta iz konteksta) | `−43,50` |
+| Kontekst        | Format                           | Primjer       |
+| --------------- | -------------------------------- | ------------- |
+| Dashboard hero  | `{amount} {currency}` large      | `2.450,00 KM` |
+| Transaction row | `{sign}{amount} {currency}`      | `−43,50 KM`   |
+| Chart label     | `{amount}k` ako > 10k            | `12,3k KM`    |
+| Compact list    | `{amount}` (valuta iz konteksta) | `−43,50`      |
 
 **Minus znak:** koristi Unicode minus `−` (U+2212), ne hyphen `-`. U tipografiji izgleda bolje i čitljivije je.
 
@@ -707,30 +750,32 @@ Može biti negativan za trošak.      ← helper text, muted
 **Decimal separator:** zarez za bs/sr/hr, tačka za en/us.
 
 Koristi uvijek `Intl.NumberFormat` iz standardne lib, ne ručno:
+
 ```typescript
-new Intl.NumberFormat('bs-BA', { 
-  style: 'currency', 
+new Intl.NumberFormat('bs-BA', {
+  style: 'currency',
   currency: 'BAM',
-  currencyDisplay: 'code'  // "KM" umjesto "BAM"
+  currencyDisplay: 'code', // "KM" umjesto "BAM"
 }).format(amount);
 ```
 
 ### 7.4 Datumi
 
-| Kontekst | Format | Primjer |
-|---|---|---|
-| Today / yesterday | "Danas" / "Juče" | `Danas, 14:35` |
-| Ova sedmica | weekday | `Pon, 14:35` |
-| Ova godina | d. mmm. | `15. apr.` |
-| Starije | d.m.yyyy. | `15.4.2025.` |
-| Full datetime | d. mmm yyyy. u HH:mm | `15. apr. 2026. u 14:35` |
+| Kontekst          | Format               | Primjer                  |
+| ----------------- | -------------------- | ------------------------ |
+| Today / yesterday | "Danas" / "Juče"     | `Danas, 14:35`           |
+| Ova sedmica       | weekday              | `Pon, 14:35`             |
+| Ova godina        | d. mmm.              | `15. apr.`               |
+| Starije           | d.m.yyyy.            | `15.4.2025.`             |
+| Full datetime     | d. mmm yyyy. u HH:mm | `15. apr. 2026. u 14:35` |
 
 Koristi **date-fns** sa `bs` lokalom:
+
 ```typescript
 import { format, formatDistanceToNow } from 'date-fns';
 import { bs } from 'date-fns/locale';
 
-format(new Date(), "d. MMM yyyy.", { locale: bs }); // "15. apr. 2026."
+format(new Date(), 'd. MMM yyyy.', { locale: bs }); // "15. apr. 2026."
 ```
 
 ---
@@ -776,15 +821,15 @@ format(new Date(), "d. MMM yyyy.", { locale: bs }); // "15. apr. 2026."
 
 ### 9.3 Standardne animacije
 
-| Akcija | Animacija | Trajanje |
-|---|---|---|
-| Toast enter | Slide from top-right + fade | 200ms |
-| Dialog open | Fade + scale (0.95 → 1) | 200ms |
-| Sheet open (mobile) | Slide from bottom | 250ms |
-| Tab change | Crossfade | 150ms |
-| List item delete | Slide out + collapse | 300ms |
-| Amount update | Number roll (framer-motion) | 400ms |
-| Skeleton | Shimmer | 1500ms loop |
+| Akcija              | Animacija                   | Trajanje    |
+| ------------------- | --------------------------- | ----------- |
+| Toast enter         | Slide from top-right + fade | 200ms       |
+| Dialog open         | Fade + scale (0.95 → 1)     | 200ms       |
+| Sheet open (mobile) | Slide from bottom           | 250ms       |
+| Tab change          | Crossfade                   | 150ms       |
+| List item delete    | Slide out + collapse        | 300ms       |
+| Amount update       | Number roll (framer-motion) | 400ms       |
+| Skeleton            | Shimmer                     | 1500ms loop |
 
 ---
 
@@ -797,11 +842,7 @@ format(new Date(), "d. MMM yyyy.", { locale: bs }); // "15. apr. 2026."
   <div className="flex items-start justify-between">
     <div className="space-y-1">
       <p className="text-sm text-muted-foreground">Ukupno stanje</p>
-      <MoneyDisplay 
-        cents={totalBalance} 
-        currency="BAM" 
-        variant="large" 
-      />
+      <MoneyDisplay cents={totalBalance} currency="BAM" variant="large" />
     </div>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -812,9 +853,9 @@ format(new Date(), "d. MMM yyyy.", { locale: bs }); // "15. apr. 2026."
       {/* ... */}
     </DropdownMenu>
   </div>
-  
+
   <div className="mt-4 flex items-center gap-2 text-sm">
-    <Badge variant={monthlyChange > 0 ? "success" : "destructive"}>
+    <Badge variant={monthlyChange > 0 ? 'success' : 'destructive'}>
       {monthlyChange > 0 ? '↑' : '↓'} {Math.abs(monthlyChange)}%
     </Badge>
     <span className="text-muted-foreground">ovaj mjesec</span>
@@ -825,12 +866,12 @@ format(new Date(), "d. MMM yyyy.", { locale: bs }); // "15. apr. 2026."
 ### 10.2 Primjer: Transaction list row
 
 ```tsx
-<button 
+<button
   className="flex w-full items-center gap-3 rounded-lg p-3 hover:bg-muted/50 transition-colors"
   onClick={() => router.push(`/transakcije/${tx.id}`)}
 >
   <CategoryIcon category={tx.category} size="md" />
-  
+
   <div className="flex-1 min-w-0 text-left">
     <p className="font-medium truncate">
       {tx.merchant?.display_name ?? tx.merchant_raw ?? 'Nepoznato'}
@@ -839,12 +880,8 @@ format(new Date(), "d. MMM yyyy.", { locale: bs }); // "15. apr. 2026."
       {tx.category?.name ?? 'Nerazvrstano'} · {formatDate(tx.transaction_date)}
     </p>
   </div>
-  
-  <MoneyDisplay 
-    cents={tx.original_amount_cents}
-    currency={tx.original_currency}
-    signFromAmount
-  />
+
+  <MoneyDisplay cents={tx.original_amount_cents} currency={tx.original_currency} signFromAmount />
 </button>
 ```
 
@@ -863,15 +900,15 @@ export const tokens = {
     },
   },
   radius: {
-    sm: '0.375rem',     // 6px — buttons, inputs
-    md: '0.5rem',       // 8px
-    lg: '0.75rem',      // 12px — cards
-    full: '9999px',     // avatars, chips
+    sm: '0.375rem', // 6px — buttons, inputs
+    md: '0.5rem', // 8px
+    lg: '0.75rem', // 12px — cards
+    full: '9999px', // avatars, chips
   },
   spacing: {
-    mobileGutter: '1rem',   // 16px
+    mobileGutter: '1rem', // 16px
     desktopGutter: '1.5rem', // 24px
-    sectionGap: '2rem',      // 32px
+    sectionGap: '2rem', // 32px
   },
   timing: {
     micro: 150,
@@ -891,6 +928,6 @@ export const tokens = {
 
 ## 12. Change Log
 
-| Datum | Verzija | Promjena |
-|---|---|---|
-| 2026-04-21 | 1.0 | Inicijalna verzija |
+| Datum      | Verzija | Promjena           |
+| ---------- | ------- | ------------------ |
+| 2026-04-21 | 1.0     | Inicijalna verzija |
