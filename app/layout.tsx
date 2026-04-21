@@ -11,14 +11,14 @@ const inter = Inter({
 });
 
 const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext'],
   variable: '--font-mono',
   display: 'swap',
 });
 
 export const metadata: Metadata = {
   title: 'Konto',
-  description: 'Lični finansijski menadžment za Zapadni Balkan.',
+  description: 'Lične finansije, lokalno i privatno.',
 };
 
 export default function RootLayout({
