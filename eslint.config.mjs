@@ -18,6 +18,8 @@ export default tseslint.config(
       'next-env.d.ts',
       '*.config.mjs',
       '*.config.ts',
+      'components/ui/**',
+      'supabase/types.ts',
     ],
   },
   ...tseslint.configs.strictTypeChecked,
