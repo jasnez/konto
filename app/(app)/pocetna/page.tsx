@@ -33,7 +33,7 @@ export default async function PocetnaPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Empty state</CardTitle>
+          <CardTitle>Prazno za sada</CardTitle>
           <CardDescription>
             Još nema transakcija. Kad dodaš prvi račun i unesti transakciju, dashboard će zaživjeti.
           </CardDescription>
