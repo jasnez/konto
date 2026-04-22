@@ -377,6 +377,8 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: undefined;
       };
+      user_owns_account: { Args: { p_account_id: string }; Returns: boolean };
+      user_owns_transaction: { Args: { p_tx_id: string }; Returns: boolean };
     };
     Enums: {
       [_ in never]: never;

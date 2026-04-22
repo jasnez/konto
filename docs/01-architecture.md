@@ -276,6 +276,36 @@ begin
 end;
 $$ language plpgsql;
 
+-- RLS helperi za defense-in-depth: provjeravaju da referenced row pripada
+-- trenutnom user-u. Koriste se u WITH CHECK izrazima policy-ja na tabelama
+-- čiji insert/update referencira druge korisnikove resurse (account_id,
+-- split_parent_id, transfer_pair_id, itd.).
+create or replace function public.user_owns_account(p_account_id uuid)
+returns boolean
+language sql stable security invoker
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1 from public.accounts a
+    where a.id = p_account_id
+      and a.user_id = (select auth.uid())
+      and a.deleted_at is null
+  );
+$$;
+
+create or replace function public.user_owns_transaction(p_tx_id uuid)
+returns boolean
+language sql stable security invoker
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1 from public.transactions t
+    where t.id = p_tx_id
+      and t.user_id = (select auth.uid())
+      and t.deleted_at is null
+  );
+$$;
+
 -- ==========================================
 -- PROFILES (extends auth.users)
 -- ==========================================
@@ -555,8 +585,33 @@ create trigger tx_updated_at before update on public.transactions
   for each row execute function public.trigger_set_updated_at();
 
 alter table public.transactions enable row level security;
-create policy "users manage own transactions" on public.transactions
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Ownership of account_id, split_parent_id i transfer_pair_id se eksplicitno
+-- provjerava u WITH CHECK-u (defense-in-depth) — `auth.uid() = user_id`
+-- sam nije dovoljan, jer napadač može znati tuđi account_id (leak, insider,
+-- screenshots) i upisati transakciju koja bi pomjerila tuđi balance trigger.
+create policy "users read own transactions" on public.transactions
+  for select using ((select auth.uid()) = user_id);
+
+create policy "users insert own transactions" on public.transactions
+  for insert with check (
+    (select auth.uid()) = user_id
+    and public.user_owns_account(account_id)
+    and (split_parent_id is null or public.user_owns_transaction(split_parent_id))
+    and (transfer_pair_id is null or public.user_owns_transaction(transfer_pair_id))
+  );
+
+create policy "users update own transactions" on public.transactions
+  for update using ((select auth.uid()) = user_id)
+  with check (
+    (select auth.uid()) = user_id
+    and public.user_owns_account(account_id)
+    and (split_parent_id is null or public.user_owns_transaction(split_parent_id))
+    and (transfer_pair_id is null or public.user_owns_transaction(transfer_pair_id))
+  );
+
+create policy "users delete own transactions" on public.transactions
+  for delete using ((select auth.uid()) = user_id);
 
 -- ==========================================
 -- USER CORRECTIONS (training signal)
