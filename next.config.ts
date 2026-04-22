@@ -8,8 +8,12 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // We rely on `pnpm build` / Vercel build-step ESLint as the last gate before
+  // production because we don't run separate CI on PRs. The pre-commit hook
+  // only lints staged files, so a `--no-verify` bypass or a missed file would
+  // otherwise reach prod silently.
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
 };
 
