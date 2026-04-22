@@ -20,6 +20,7 @@ export default tseslint.config(
       '*.config.ts',
       'components/ui/**',
       'supabase/types.ts',
+      'scripts/**',
     ],
   },
   ...tseslint.configs.strictTypeChecked,
