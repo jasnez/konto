@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { ThemeToggle } from '@/components/shell/theme-toggle';
 import { createClient } from '@/lib/supabase/server';
 import { ProfileForm } from './profile-form';
 import { SignOutButton } from './signout-button';
@@ -44,18 +45,14 @@ export default async function PodesavanjaPage() {
   };
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-12">
-      <header className="space-y-1">
-        <p className="text-sm font-mono text-muted-foreground">Podešavanja</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Profil</h1>
-        <p className="text-muted-foreground">
-          Prijavljen si kao <span className="text-foreground">{user.email}</span>.
-        </p>
-      </header>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
+      <p className="text-sm text-muted-foreground">
+        Prijavljen si kao <span className="text-foreground">{user.email}</span>.
+      </p>
 
       <Card>
         <CardHeader>
-          <CardTitle>Lični podaci</CardTitle>
+          <CardTitle>Profil</CardTitle>
           <CardDescription>
             Osnovno o tebi i preferencije za valutu i jezik. Ovo nikad ne dijelimo sa trećim
             stranama.
@@ -63,6 +60,16 @@ export default async function PodesavanjaPage() {
         </CardHeader>
         <CardContent>
           <ProfileForm defaultValues={defaultValues} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Izgled</CardTitle>
+          <CardDescription>Prebacivanje između svijetle, tamne i sistemske teme.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ThemeToggle />
         </CardContent>
       </Card>
 
@@ -77,7 +84,7 @@ export default async function PodesavanjaPage() {
         </div>
         <SignOutButton />
       </section>
-    </main>
+    </div>
   );
 }
 
