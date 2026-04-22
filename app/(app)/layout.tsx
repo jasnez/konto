@@ -27,7 +27,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar />
-          <main className="flex-1 pb-24 md:pb-0">{children}</main>
+          {/*
+           * Bottom padding = 64px bottom nav + ~56px FAB overshoot + safe area.
+           * `md:!pb-0` drops the reserve on desktop where the sidebar takes over.
+           */}
+          <main className="flex-1 pb-[calc(7.5rem+env(safe-area-inset-bottom))] md:!pb-0">
+            {children}
+          </main>
         </div>
       </div>
       <BottomNav />
