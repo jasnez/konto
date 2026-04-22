@@ -313,9 +313,9 @@ create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
   base_currency text not null default 'BAM'
-    check (base_currency in ('BAM','EUR','RSD','USD','GBP','CHF','MKD','HRK')),
+    check (base_currency in ('BAM','EUR','USD')),
   locale text not null default 'bs-BA'
-    check (locale in ('bs-BA','sr-RS-Latn','sr-RS-Cyrl','hr-HR','mk-MK','en-US')),
+    check (locale in ('bs-BA','en-US')),
   timezone text not null default 'Europe/Sarajevo',
   week_start smallint not null default 1 check (week_start in (0,1)),   -- 1=pon
   onboarding_completed_at timestamptz,
