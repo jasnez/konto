@@ -13,9 +13,14 @@ export default function LandingPage() {
         <p className="text-pretty text-lg text-muted-foreground sm:text-xl">
           Lična financije koje žive na tvom kontu — bez povezivanja banke.
         </p>
-        <Button asChild size="lg" className="h-11">
-          <Link href="/prijava">Napravi nalog besplatno</Link>
-        </Button>
+        <div className="flex flex-col items-center gap-3 sm:flex-row">
+          <Button asChild size="lg" className="h-11">
+            <Link href="/registracija">Napravi nalog besplatno</Link>
+          </Button>
+          <Button asChild size="lg" variant="ghost" className="h-11">
+            <Link href="/prijava">Već imam nalog</Link>
+          </Button>
+        </div>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-3">
