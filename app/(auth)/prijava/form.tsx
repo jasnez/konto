@@ -16,20 +16,20 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { sendMagicLink } from './actions';
-import { SigninSchema, type SigninInput } from './schema';
+import { sendOtp } from '../shared/actions';
+import { SendOtpSchema, type SendOtpInput } from '../shared/schema';
 
 export function PrijavaForm({ callbackErrored }: { callbackErrored: boolean }) {
   const [sentTo, setSentTo] = useState<string | null>(null);
 
-  const form = useForm<SigninInput>({
-    resolver: zodResolver(SigninSchema),
+  const form = useForm<SendOtpInput>({
+    resolver: zodResolver(SendOtpSchema),
     defaultValues: { email: '' },
     mode: 'onSubmit',
   });
 
-  async function onSubmit(values: SigninInput) {
-    const result = await sendMagicLink(values);
+  async function onSubmit(values: SendOtpInput) {
+    const result = await sendOtp(values);
 
     if (result.success) {
       setSentTo(values.email);
