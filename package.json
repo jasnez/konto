@@ -17,7 +17,14 @@
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",
     "supabase:types": "node scripts/supabase-gen-types.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "node scripts/supabase-gen-types.mjs --local --tolerant"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "msw",
+      "supabase"
+    ]
   },
   "lint-staged": {
     "*.{ts,tsx}": [

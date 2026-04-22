@@ -27,8 +27,19 @@ if (process.env.SUPABASE_GEN_SKIP === '1') {
   process.exit(0);
 }
 
-const extraArgs = process.argv.slice(2);
+const rawArgs = process.argv.slice(2);
+const tolerant = rawArgs.includes('--tolerant');
+const extraArgs = rawArgs.filter((arg) => arg !== '--tolerant');
 const args = ['gen', 'types', 'typescript', ...(extraArgs.length ? extraArgs : ['--local'])];
+
+function toleratedExit(message, code) {
+  if (tolerant) {
+    console.log(`supabase-gen-types: ${message} (tolerated, no file written).`);
+    process.exit(0);
+  }
+  console.error(message);
+  process.exit(code);
+}
 
 const child = spawn('supabase', args, {
   shell: process.platform === 'win32',
@@ -46,20 +57,24 @@ child.stderr.on('data', (chunk) => {
 });
 
 child.on('error', (err) => {
-  console.error(`Failed to spawn supabase CLI: ${err.message}`);
-  process.exit(1);
+  toleratedExit(`Failed to spawn supabase CLI: ${err.message}`, 1);
 });
 
 child.on('close', async (code) => {
   if (code !== 0) {
+    if (tolerant) {
+      console.log(
+        `supabase-gen-types: CLI exited ${String(code ?? 1)} (tolerated, no file written).`,
+      );
+      process.exit(0);
+    }
     process.stderr.write(stderr);
     process.exit(code ?? 1);
   }
   if (!stdout.includes('export type Database')) {
-    console.error('supabase gen types produced unexpected output. Aborting write.');
-    process.stderr.write(stderr);
-    process.exit(1);
+    toleratedExit('supabase gen types produced unexpected output. Aborting write.', 1);
+    return;
   }
   await writeFile(outFile, stdout, 'utf8');
-  console.log(`Wrote ${path.relative(projectRoot, outFile)} (${stdout.length} bytes).`);
+  console.log(`Wrote ${path.relative(projectRoot, outFile)} (${String(stdout.length)} bytes).`);
 });
