@@ -15,17 +15,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
-      include: [
-        'app/**/*.{ts,tsx}',
-        'lib/**/*.{ts,tsx}',
-        'components/**/*.{ts,tsx}',
-      ],
-      exclude: [
-        '**/*.test.{ts,tsx}',
-        '**/*.spec.{ts,tsx}',
-        '**/node_modules/**',
-        '**/types.ts',
-      ],
+      include: ['app/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}'],
+      exclude: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', '**/node_modules/**', '**/types.ts'],
       thresholds: {
         'lib/fx/**': {
           statements: 100,

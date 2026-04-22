@@ -3101,11 +3101,11 @@ limit: number,
 windowSec: number
 ): Promise<boolean> {
 const { count } = await supabase
-.from("rate_limits")
-.select("_", { count: "exact", head: true })
-.eq("user_id", userId)
+.from("rate*limits")
+.select("*", { count: "exact", head: true })
+.eq("user*id", userId)
 .eq("action", action)
-.gt("created_at", new Date(Date.now() - windowSec _ 1000).toISOString());
+.gt("created_at", new Date(Date.now() - windowSec * 1000).toISOString());
 
 if (count >= limit) return false;
 

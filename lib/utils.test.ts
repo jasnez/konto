@@ -7,9 +7,7 @@ describe('cn', () => {
   });
 
   it('ignores falsy values', () => {
-    expect(cn('text-sm', false, null, undefined, '', 'font-medium')).toBe(
-      'text-sm font-medium',
-    );
+    expect(cn('text-sm', false, null, undefined, '', 'font-medium')).toBe('text-sm font-medium');
   });
 
   it('supports conditional objects (clsx)', () => {
