@@ -16,7 +16,7 @@
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",
-    "supabase:types": "supabase gen types typescript --local > supabase/types.ts",
+    "supabase:types": "node scripts/supabase-gen-types.mjs",
     "prepare": "husky"
   },
   "lint-staged": {
