@@ -15,6 +15,7 @@
     "test:e2e": "playwright test",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
+    "supabase:reset": "supabase db reset",
     "supabase:types": "supabase gen types typescript --local > supabase/types.ts",
     "prepare": "husky"
   },
