@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { PrijavaForm } from './form';
+import { EmailOtpForm } from '@/components/auth/email-otp-form';
 
 export const metadata: Metadata = {
   title: 'Prijava — Konto',
@@ -13,5 +13,5 @@ export default async function PrijavaPage({
   const params = await searchParams;
   const callbackErrored = params.error === 'true';
 
-  return <PrijavaForm callbackErrored={callbackErrored} />;
+  return <EmailOtpForm variant="signin" callbackErrored={callbackErrored} />;
 }
