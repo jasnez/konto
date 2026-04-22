@@ -75,6 +75,26 @@ child.on('close', async (code) => {
     toleratedExit('supabase gen types produced unexpected output. Aborting write.', 1);
     return;
   }
-  await writeFile(outFile, stdout, 'utf8');
-  console.log(`Wrote ${path.relative(projectRoot, outFile)} (${String(stdout.length)} bytes).`);
+
+  // Run the generated source through Prettier so repeat runs produce a
+  // deterministic file. The Supabase CLI emits its own style (no semicolons,
+  // multi-line Json type, etc.), which otherwise leaves `git status` dirty
+  // after every `pnpm install` triggered postinstall.
+  let formatted = stdout;
+  try {
+    const prettier = await import('prettier');
+    const config = (await prettier.resolveConfig(outFile)) ?? {};
+    formatted = await prettier.format(stdout, {
+      ...config,
+      parser: 'typescript',
+      filepath: outFile,
+    });
+  } catch (err) {
+    console.warn(
+      `supabase-gen-types: prettier format skipped (${err instanceof Error ? err.message : String(err)}).`,
+    );
+  }
+
+  await writeFile(outFile, formatted, 'utf8');
+  console.log(`Wrote ${path.relative(projectRoot, outFile)} (${String(formatted.length)} bytes).`);
 });
