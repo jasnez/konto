@@ -3,95 +3,23 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import {
+  AccountIdParamSchema,
+  CreateAccountSchema,
+  ReorderAccountsSchema,
+  UpdateAccountSchema,
+} from '@/lib/accounts/validation';
 import type { Database } from '@/supabase/types';
 
 type AccountUpdate = Database['public']['Tables']['accounts']['Update'];
 
-const accountTypes = z.enum([
-  'checking',
-  'savings',
-  'cash',
-  'credit_card',
-  'revolut',
-  'wise',
-  'investment',
-  'loan',
-  'other',
-]);
-const baseCurrencies = z.enum(['BAM', 'EUR', 'USD']);
-
-const initialBalanceCentsString = z
-  .string()
-  .default('0')
-  .refine(
-    (s) => {
-      const t = s.trim() === '' ? '0' : s.trim();
-      try {
-        BigInt(t);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    { message: 'Iznos nije ispravan cijeli broj' },
-  )
-  .transform((s) => BigInt(s.trim() === '' ? '0' : s.trim()));
-
-/**
- * Zod (colocated) — client šalje `initial_balance_cents` kao string (JSON nema bigint).
- * @public exported for use in RHF + tests
- */
-export const CreateAccountSchema = z.object({
-  name: z.string().min(1, 'Naziv je obavezan').max(100),
-  type: accountTypes,
-  institution: z.string().max(100).optional().nullable(),
-  currency: baseCurrencies,
-  initial_balance_cents: initialBalanceCentsString,
-  icon: z.string().max(10).optional().nullable(),
-  color: z.preprocess(
-    (v) => (v === '' ? null : v),
-    z.union([z.string().regex(/^#[0-9A-Fa-f]{6}$/), z.null()]).optional(),
-  ),
-});
-
-/**
- * @public exported for form sharing + tests
- */
-export const UpdateAccountSchema = z
-  .object({
-    name: z.string().min(1, 'Naziv je obavezan').max(100).optional(),
-    type: accountTypes.optional(),
-    institution: z.string().max(100).optional().nullable(),
-    currency: baseCurrencies.optional(),
-    icon: z.string().max(10).optional().nullable(),
-    color: z.preprocess(
-      (v) => (v === '' ? null : v),
-      z.union([z.string().regex(/^#[0-9A-Fa-f]{6}$/), z.null()]).optional(),
-    ),
-    is_active: z.boolean().optional(),
-    include_in_net_worth: z.boolean().optional(),
-    sort_order: z.number().int().optional(),
-  })
-  .refine(
-    (d) =>
-      [
-        d.name,
-        d.type,
-        d.institution,
-        d.currency,
-        d.icon,
-        d.color,
-        d.is_active,
-        d.include_in_net_worth,
-        d.sort_order,
-      ].some((v) => v !== undefined),
-    { message: 'Mora postojati barem jedno polje' },
-  );
-
-const uuidError = { error: () => 'Nevažeći id' } as const;
-const ReorderAccountsSchema = z.array(z.uuid(uuidError));
-
-const AccountIdParamSchema = z.uuid(uuidError);
+export {
+  CreateAccountFormSchema,
+  type CreateAccountFormValues,
+  type CreateAccountInput,
+  CreateAccountSchema,
+  UpdateAccountSchema,
+} from '@/lib/accounts/validation';
 
 /** Narrow shape from `z.treeifyError` for form field / array item messages */
 interface ZodErrorTree {
@@ -334,6 +262,7 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
   }
 
   revalidatePath('/racuni');
+  revalidatePath(`/racuni/${newId}`);
   return { success: true, data: { id: newId } };
 }
 
@@ -389,7 +318,7 @@ export async function updateAccount(id: unknown, input: unknown): Promise<Update
   if (p.institution !== undefined) patch.institution = p.institution;
   if (p.currency !== undefined) patch.currency = p.currency;
   if (p.icon !== undefined) patch.icon = p.icon;
-  if (p.color !== undefined) patch.color = p.color;
+  if (Object.hasOwn(p, 'color')) patch.color = p.color;
   if (p.is_active !== undefined) patch.is_active = p.is_active;
   if (p.include_in_net_worth !== undefined) patch.include_in_net_worth = p.include_in_net_worth;
   if (p.sort_order !== undefined) patch.sort_order = p.sort_order;
@@ -406,6 +335,8 @@ export async function updateAccount(id: unknown, input: unknown): Promise<Update
   }
 
   revalidatePath('/racuni');
+  revalidatePath(`/racuni/${idParse.data}`);
+  revalidatePath(`/racuni/${idParse.data}/uredi`);
   return { success: true };
 }
 
@@ -458,6 +389,7 @@ export async function deleteAccount(id: unknown): Promise<DeleteAccountResult> {
   }
 
   revalidatePath('/racuni');
+  revalidatePath(`/racuni/${idParse.data}`);
   return { success: true };
 }
 

@@ -1,4 +1,12 @@
-import { Home, Receipt, PieChart, MoreHorizontal, Settings, type LucideIcon } from 'lucide-react';
+import {
+  Home,
+  Receipt,
+  PieChart,
+  MoreHorizontal,
+  Settings,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react';
 
 export interface NavItem {
   href: string;
@@ -16,17 +24,18 @@ export interface NavItem {
  */
 export const NAV_ITEMS: NavItem[] = [
   { href: '/pocetna', label: 'Početna', mobileLabel: 'Početna', icon: Home },
+  { href: '/racuni', label: 'Računi', mobileLabel: 'Računi', icon: Wallet },
   { href: '/transakcije', label: 'Transakcije', mobileLabel: 'Transakcije', icon: Receipt },
-  { href: '/uvidi', label: 'Uvidi', mobileLabel: 'Uvidi', icon: PieChart },
+  { href: '/uvidi', label: 'Uvidi', mobileLabel: 'Uvidi', icon: PieChart, desktopOnly: true },
   { href: '/podesavanja', label: 'Podešavanja', mobileLabel: 'Više', icon: Settings },
 ];
 
 /** On mobile, the bottom nav reshuffles around the FAB. Desktop uses the full list. */
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
   { href: '/pocetna', label: 'Početna', mobileLabel: 'Početna', icon: Home },
+  { href: '/racuni', label: 'Računi', mobileLabel: 'Računi', icon: Wallet },
   { href: '/transakcije', label: 'Transakcije', mobileLabel: 'Tx', icon: Receipt },
   // FAB sits here in the middle — rendered by <BottomNav/> itself.
-  { href: '/uvidi', label: 'Uvidi', mobileLabel: 'Uvidi', icon: PieChart },
   { href: '/podesavanja', label: 'Više', mobileLabel: 'Više', icon: MoreHorizontal },
 ];
 
