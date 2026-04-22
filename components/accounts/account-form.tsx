@@ -20,7 +20,7 @@ import { formatMinorUnits } from '@/lib/format/amount';
 import { Button } from '@/components/ui/button';
 import { InstitutionCombobox } from '@/components/accounts/institution-combobox';
 import { AccountColorField, AccountIconField } from '@/components/accounts/icon-color-fields';
-import { MoneyInputPlaceholder } from '@/components/money/money-input-placeholder';
+import { MoneyInput } from '@/components/money-input';
 import {
   Form,
   FormControl,
@@ -125,11 +125,12 @@ function CreateAccountForm() {
           name="initial_balance_cents"
           render={({ field, fieldState }) => (
             <FormItem>
+              <FormLabel>Početno stanje (opciono)</FormLabel>
               <FormControl>
-                <MoneyInputWithCurrency
+                <InitialBalanceMoney
                   formControl={form.control}
                   fieldValue={field.value}
-                  onCentsChange={field.onChange}
+                  onCentsStringChange={field.onChange}
                   error={fieldState.error?.message}
                 />
               </FormControl>
@@ -219,24 +220,32 @@ function EditAccountForm({
   );
 }
 
-function MoneyInputWithCurrency({
+function InitialBalanceMoney({
   formControl,
   fieldValue,
-  onCentsChange,
+  onCentsStringChange,
   error,
 }: {
   formControl: Control<CreateAccountFormValues>;
   fieldValue: string | undefined;
-  onCentsChange: (v: string) => void;
+  onCentsStringChange: (v: string) => void;
   error?: string;
 }) {
   const currencyCode = useWatch({ control: formControl, name: 'currency', defaultValue: 'BAM' });
+  let cents: bigint;
+  try {
+    cents = BigInt(fieldValue ?? '0');
+  } catch {
+    cents = 0n;
+  }
   return (
-    <MoneyInputPlaceholder
+    <MoneyInput
       id="initial_balance"
-      label="Početno stanje (opciono)"
-      value={fieldValue ?? '0'}
-      onChange={onCentsChange}
+      aria-label="Početno stanje"
+      value={cents}
+      onChange={(c) => {
+        onCentsStringChange(c.toString());
+      }}
       currency={currencyCode}
       error={error}
     />

@@ -1,5 +1,8 @@
 import { CURRENCIES, type CurrencyCode, getCurrencyLabel } from '@/lib/accounts/constants';
 
+export { formatMoney } from './format-money';
+export { parseMoneyString } from './parse-money';
+
 const currencySet = new Set<string>(CURRENCIES);
 
 /**
