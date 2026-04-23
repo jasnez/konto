@@ -14,6 +14,7 @@ import { MobileFab } from './fab';
 export function BottomNav() {
   const pathname = usePathname();
 
+  /** 2 items left of FAB, 3 right (Kategorije, Transakcije, Više). */
   const [leftItems, rightItems] = [BOTTOM_NAV_ITEMS.slice(0, 2), BOTTOM_NAV_ITEMS.slice(2)];
 
   return (

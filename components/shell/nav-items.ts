@@ -4,6 +4,7 @@ import {
   PieChart,
   MoreHorizontal,
   Settings,
+  Tags,
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { href: '/pocetna', label: 'Početna', mobileLabel: 'Početna', icon: Home },
   { href: '/racuni', label: 'Računi', mobileLabel: 'Računi', icon: Wallet },
+  { href: '/kategorije', label: 'Kategorije', mobileLabel: 'Kat.', icon: Tags },
   { href: '/transakcije', label: 'Transakcije', mobileLabel: 'Transakcije', icon: Receipt },
   { href: '/uvidi', label: 'Uvidi', mobileLabel: 'Uvidi', icon: PieChart, desktopOnly: true },
   { href: '/podesavanja', label: 'Podešavanja', mobileLabel: 'Više', icon: Settings },
@@ -34,8 +36,9 @@ export const NAV_ITEMS: NavItem[] = [
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
   { href: '/pocetna', label: 'Početna', mobileLabel: 'Početna', icon: Home },
   { href: '/racuni', label: 'Računi', mobileLabel: 'Računi', icon: Wallet },
-  { href: '/transakcije', label: 'Transakcije', mobileLabel: 'Tx', icon: Receipt },
   // FAB sits here in the middle — rendered by <BottomNav/> itself.
+  { href: '/kategorije', label: 'Kategorije', mobileLabel: 'Kat.', icon: Tags },
+  { href: '/transakcije', label: 'Transakcije', mobileLabel: 'Tx', icon: Receipt },
   { href: '/podesavanja', label: 'Više', mobileLabel: 'Više', icon: MoreHorizontal },
 ];
 
