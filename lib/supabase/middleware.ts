@@ -46,6 +46,29 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (user) {
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('deleted_at')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('middleware_profile_deleted_check_error', { error: profileError.message });
+    } else if (profile?.deleted_at) {
+      const path = request.nextUrl.pathname;
+      const allowedWhenDeleted =
+        path.startsWith('/obrisan') ||
+        path.startsWith('/auth/otkazi-brisanje') ||
+        path.startsWith('/auth/callback');
+      if (!allowedWhenDeleted) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/obrisan';
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
   const isProtected = PROTECTED_PATHS.some((path) => request.nextUrl.pathname.startsWith(path));
 
   if (isProtected && !user) {

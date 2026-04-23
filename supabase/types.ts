@@ -269,6 +269,7 @@ export type Database = {
         Row: {
           base_currency: string;
           created_at: string;
+          deleted_at: string | null;
           display_name: string | null;
           id: string;
           locale: string;
@@ -280,6 +281,7 @@ export type Database = {
         Insert: {
           base_currency?: string;
           created_at?: string;
+          deleted_at?: string | null;
           display_name?: string | null;
           id: string;
           locale?: string;
@@ -291,6 +293,7 @@ export type Database = {
         Update: {
           base_currency?: string;
           created_at?: string;
+          deleted_at?: string | null;
           display_name?: string | null;
           id?: string;
           locale?: string;

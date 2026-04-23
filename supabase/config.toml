@@ -407,3 +407,8 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 [functions.fx-refresh]
 enabled = true
 verify_jwt = true
+
+[functions.hard-delete-accounts]
+enabled = true
+# Custom Authorization: Bearer CRON_SECRET (not Supabase JWT).
+verify_jwt = false

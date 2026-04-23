@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -72,6 +73,23 @@ export default async function PodesavanjaPage() {
           <ThemeToggle />
         </CardContent>
       </Card>
+
+      <Separator />
+
+      <section className="space-y-3">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold tracking-tight">Zona rizika</h2>
+          <p className="text-sm text-muted-foreground">
+            Trajno uklanjanje naloga i svih podataka nakon 30 dana.
+          </p>
+        </div>
+        <Link
+          href="/podesavanja/obrisi"
+          className="inline-flex text-sm font-medium text-destructive underline-offset-4 hover:underline"
+        >
+          Obriši nalog
+        </Link>
+      </section>
 
       <Separator />
 

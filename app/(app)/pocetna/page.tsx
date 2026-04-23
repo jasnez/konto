@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { DeletionCanceledToast } from '@/components/auth/deletion-canceled-toast';
 import { BalanceHero } from '@/components/dashboard/balance-hero';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import {
@@ -166,6 +167,10 @@ export default async function PocetnaPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+      <Suspense fallback={null}>
+        <DeletionCanceledToast />
+      </Suspense>
+
       <section className="space-y-1">
         <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
           {greeting}, {firstName}
