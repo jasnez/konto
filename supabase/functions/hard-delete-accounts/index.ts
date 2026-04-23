@@ -83,7 +83,6 @@ export async function handleHardDeleteAccounts(request: Request): Promise<Respon
 }
 
 declare global {
-  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface DenoLike {
     serve?: (handler: (request: Request) => Response | Promise<Response>) => void;
   }

@@ -20,7 +20,6 @@ export default tseslint.config(
       '*.config.ts',
       'components/ui/**',
       'supabase/types.ts',
-      'supabase/functions/**',
       'scripts/**',
     ],
   },
@@ -47,6 +46,12 @@ export default tseslint.config(
     rules: {
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
+  },
+  // Deno Edge functions: not part of the Next.js tsconfig (remote https imports).
+  // Disable type-aware linting here so ESLint still runs syntax / non-type rules.
+  {
+    files: ['supabase/functions/**/*.ts'],
+    ...tseslint.configs.disableTypeChecked,
   },
   eslintConfigPrettier,
 );
