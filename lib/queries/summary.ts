@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { BAM_EUR_RATE } from '@/lib/fx/constants';
 import type { Database } from '@/supabase/types';
 
 interface MonthlySummaryRpcResult {
@@ -21,7 +22,8 @@ export interface MonthlySummary {
   avgDailySpend: bigint;
 }
 
-export type SummarySupabaseClient = Pick<SupabaseClient<Database>, 'rpc'>;
+/** RPC + moguć upit na `accounts` (fallback zbroj stanja) */
+export type SummarySupabaseClient = Pick<SupabaseClient<Database>, 'rpc' | 'from'>;
 
 function toBigInt(value: number | string | null | undefined): bigint {
   if (typeof value === 'number') {
@@ -55,6 +57,10 @@ function toNumber(value: number | string | null | undefined): number {
   return 0;
 }
 
+function isRpcJsonObject(d: unknown): d is Record<string, unknown> {
+  return d !== null && typeof d === 'object' && !Array.isArray(d);
+}
+
 const EMPTY_MONTHLY_SUMMARY: MonthlySummary = {
   totalBalance: 0n,
   monthIncome: 0n,
@@ -64,6 +70,84 @@ const EMPTY_MONTHLY_SUMMARY: MonthlySummary = {
   netChangePercent: 0,
   avgDailySpend: 0n,
 };
+
+function parseRpcPayload(data: unknown): Partial<MonthlySummaryRpcResult> | null {
+  if (data == null) return null;
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data) as Partial<MonthlySummaryRpcResult>;
+    } catch {
+      return null;
+    }
+  }
+  if (isRpcJsonObject(data)) {
+    return data;
+  }
+  return null;
+}
+
+/**
+ * Ista logika BAM↔EUR kao u `get_monthly_summary` (dovoljno za BiH domaću valutu);
+ * za ostale parove drži stvarni iznos (ograničen fallback).
+ */
+function convertCentsToBase(cents: bigint, from: string, base: string): bigint {
+  if (from === base) return cents;
+  if (from === 'BAM' && base === 'EUR') {
+    return BigInt(Math.round(Number(cents) / BAM_EUR_RATE));
+  }
+  if (from === 'EUR' && base === 'BAM') {
+    return BigInt(Math.round(Number(cents) * BAM_EUR_RATE));
+  }
+  if (from !== 'BAM' && from !== 'EUR' && (base === 'BAM' || base === 'EUR')) {
+    console.warn('[getMonthlySummary] fallback: nepoznat par valuta, koristim 1:1', {
+      from,
+      base,
+    });
+  }
+  return cents;
+}
+
+/** Zbroj stanja s računa, pretvoreno u baznu valutu (kao u RPC, uklj. u net worth) */
+async function sumNetWorthFromAccounts(
+  supabase: Pick<SupabaseClient<Database>, 'from'>,
+  userId: string,
+  baseCurrency: string,
+): Promise<bigint> {
+  const { data, error } = await supabase
+    .from('accounts')
+    .select('current_balance_cents, currency, include_in_net_worth')
+    .eq('user_id', userId)
+    .is('deleted_at', null);
+
+  if (error) {
+    console.error('[getMonthlySummary] sumNetWorthFromAccounts:', error.message);
+    return 0n;
+  }
+
+  const base = baseCurrency.trim().toUpperCase();
+  let total = 0n;
+  for (const row of data) {
+    if (!row.include_in_net_worth) {
+      continue;
+    }
+    const cur = row.currency.toUpperCase();
+    const cents = BigInt(Math.trunc(row.current_balance_cents));
+    total += convertCentsToBase(cents, cur, base);
+  }
+  return total;
+}
+
+function fromRpcRow(payload: Partial<MonthlySummaryRpcResult>): MonthlySummary {
+  return {
+    totalBalance: toBigInt(payload.total_balance),
+    monthIncome: toBigInt(payload.month_income),
+    monthExpense: toBigInt(payload.month_expense),
+    monthNet: toBigInt(payload.month_net),
+    prevMonthNet: toBigInt(payload.prev_month_net),
+    netChangePercent: toNumber(payload.net_change_percent),
+    avgDailySpend: toBigInt(payload.avg_daily_spend),
+  };
+}
 
 export async function getMonthlySummary(
   supabase: SummarySupabaseClient,
@@ -82,20 +166,27 @@ export async function getMonthlySummary(
   });
 
   if (error) {
-    // Ne ruši cijeli shell — npr. migracija RPC-a još nije na produkcijskom Supabaseu.
     console.error('[getMonthlySummary] get_monthly_summary:', error.message);
-    return { ...EMPTY_MONTHLY_SUMMARY };
+    const total = await sumNetWorthFromAccounts(supabase, userId, baseCurrency);
+    return { ...EMPTY_MONTHLY_SUMMARY, totalBalance: total };
   }
 
-  const payload = data as unknown as Partial<MonthlySummaryRpcResult>;
+  const payload = parseRpcPayload(data);
+  if (payload == null) {
+    console.error('[getMonthlySummary] nevažeći odgovor od RPC (data null ili JSON).');
+    const total = await sumNetWorthFromAccounts(supabase, userId, baseCurrency);
+    return { ...EMPTY_MONTHLY_SUMMARY, totalBalance: total };
+  }
 
-  return {
-    totalBalance: toBigInt(payload.total_balance),
-    monthIncome: toBigInt(payload.month_income),
-    monthExpense: toBigInt(payload.month_expense),
-    monthNet: toBigInt(payload.month_net),
-    prevMonthNet: toBigInt(payload.prev_month_net),
-    netChangePercent: toNumber(payload.net_change_percent),
-    avgDailySpend: toBigInt(payload.avg_daily_spend),
-  };
+  let out = fromRpcRow(payload);
+  if (out.totalBalance === 0n) {
+    const fromAccounts = await sumNetWorthFromAccounts(supabase, userId, baseCurrency);
+    if (fromAccounts !== 0n) {
+      console.warn('[getMonthlySummary] RPC vraća ukupno 0, koristim zbroj s računa (fallback).', {
+        fromAccounts: fromAccounts.toString(),
+      });
+      out = { ...out, totalBalance: fromAccounts };
+    }
+  }
+  return out;
 }
