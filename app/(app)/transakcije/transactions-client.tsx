@@ -8,6 +8,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { bulkDeleteTransactions, deleteTransaction } from '@/app/(app)/transakcije/actions';
 import type { AccountOption } from '@/components/account-select';
+import { cn } from '@/lib/utils';
 import type { CategoryOption } from '@/components/category-select';
 import { DatePicker } from '@/components/date-picker';
 import { QuickAddTrigger } from '@/components/shell/fab';
@@ -338,7 +339,14 @@ export function TransactionsClient({
       ) : null}
 
       {selectionMode ? (
-        <div className="sticky bottom-0 z-30 mb-3 flex items-center justify-between rounded-xl border bg-background/95 p-3 backdrop-blur-sm">
+        <div
+          className={cn(
+            'z-40 flex items-center justify-between rounded-xl border bg-background/95 p-3 shadow-md backdrop-blur-sm',
+            'md:sticky md:bottom-0 md:mb-3',
+            'max-md:fixed max-md:left-3 max-md:right-3 max-md:mb-0',
+            'max-md:bottom-[calc(4.75rem+env(safe-area-inset-bottom))]',
+          )}
+        >
           <p className="text-sm">{selectedIds.size} odabrano</p>
           <div className="flex gap-2">
             <Button
@@ -364,8 +372,21 @@ export function TransactionsClient({
       ) : null}
 
       {transactions.length === 0 ? (
-        <div className="flex min-h-[35vh] items-center justify-center rounded-2xl border border-dashed p-8 text-center text-muted-foreground">
-          Još nema transakcija za ove filtere.
+        <div className="flex min-h-[35vh] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-8 text-center">
+          <p className="text-muted-foreground">
+            {hasActiveFilters
+              ? 'Nema transakcija za ove filtere. Pokušaj smanjiti filtere ili ih očistiti.'
+              : 'Još nema transakcija. Koristi brzi unos (ili + Dodaj) da dodaš prvu — pojaviće se ovdje.'}
+          </p>
+          {hasActiveFilters ? null : (
+            <QuickAddTrigger
+              className="h-11 min-h-[44px] w-full max-w-xs"
+              variant="default"
+              size="default"
+            >
+              Otvori brzi unos
+            </QuickAddTrigger>
+          )}
         </div>
       ) : (
         <ul className="space-y-3">
@@ -407,37 +428,39 @@ export function TransactionsClient({
         </ul>
       )}
 
-      <div className="mt-6 flex items-center justify-between border-t pt-4">
-        <p className="text-sm text-muted-foreground">
-          Stranica {filters.page} od {totalPages} · Ukupno {totalCount}
-        </p>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={filters.page <= 1}
-            onClick={() => {
-              updateUrl({ page: String(Math.max(1, filters.page - 1)) });
-            }}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Nazad
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={filters.page >= totalPages}
-            onClick={() => {
-              updateUrl({ page: String(Math.min(totalPages, filters.page + 1)) });
-            }}
-          >
-            Dalje
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+      {totalCount > 0 ? (
+        <div className="mt-6 flex items-center justify-between border-t pt-4">
+          <p className="text-sm text-muted-foreground">
+            Stranica {filters.page} od {totalPages} · Ukupno {totalCount}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={filters.page <= 1}
+              onClick={() => {
+                updateUrl({ page: String(Math.max(1, filters.page - 1)) });
+              }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Nazad
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={filters.page >= totalPages}
+              onClick={() => {
+                updateUrl({ page: String(Math.min(totalPages, filters.page + 1)) });
+              }}
+            >
+              Dalje
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

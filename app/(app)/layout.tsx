@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { AuthSessionListener } from '@/components/app/auth-session-listener';
 import type { AccountOption } from '@/components/account-select';
 import type { CategoryOption } from '@/components/category-select';
 import { BottomNav } from '@/components/shell/bottom-nav';
@@ -72,6 +73,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <QuickAddProvider accounts={quickAddAccounts} categories={quickAddCategories}>
+      <AuthSessionListener />
       <QuickAddHotkeys />
       <div className="flex min-h-screen">
         <Sidebar />
@@ -81,7 +83,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
            * Bottom padding = 64px bottom nav + ~56px FAB overshoot + safe area.
            * `md:!pb-0` drops the reserve on desktop where the sidebar takes over.
            */}
-          <main className="flex-1 pb-[calc(7.5rem+env(safe-area-inset-bottom))] md:!pb-0">
+          <main className="flex-1 pb-[calc(8.5rem+env(safe-area-inset-bottom))] md:!pb-0">
             {children}
           </main>
         </div>

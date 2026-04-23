@@ -12,6 +12,13 @@ export default async function PrijavaPage({
 }) {
   const params = await searchParams;
   const callbackErrored = params.error === 'true';
+  const sessionExpired = params.session === 'istekao';
 
-  return <EmailOtpForm variant="signin" callbackErrored={callbackErrored} />;
+  return (
+    <EmailOtpForm
+      variant="signin"
+      callbackErrored={callbackErrored}
+      sessionExpired={sessionExpired}
+    />
+  );
 }

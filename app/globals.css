@@ -4,6 +4,15 @@
 @custom-variant dark (&:is(.dark *));
 
 @layer base {
+  /* iOS: minimalno 16px u poljima smanjuje auto-zoom na fokus */
+  @supports (-webkit-touch-callout: none) {
+    input,
+    textarea,
+    select {
+      font-size: 1rem;
+    }
+  }
+
   :root {
     /* Base surfaces */
     --background: 0 0% 100%;
@@ -67,7 +76,8 @@
     --popover-foreground: 0 0% 98%;
 
     --muted: 240 4% 12%;
-    --muted-foreground: 240 5% 65%;
+    /* Povećan kontrast u odnosu na background (a11y u dark modu) */
+    --muted-foreground: 240 5% 72%;
 
     --border: 240 4% 16%;
     --input: 240 4% 16%;

@@ -21,8 +21,7 @@ export function BottomNav() {
     <>
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center md:hidden"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden"
       >
         <div className="mb-4">
           <MobileFab />
@@ -31,8 +30,7 @@ export function BottomNav() {
 
       <nav
         aria-label="Glavna navigacija"
-        className="fixed inset-x-0 bottom-0 z-30 flex h-16 items-stretch border-t bg-background md:hidden"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        className="fixed inset-x-0 bottom-0 z-30 flex min-h-16 items-stretch border-t border-border/80 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md supports-[backdrop-filter]:bg-background/80 md:hidden"
       >
         {leftItems.map((item) => (
           <NavSlot key={item.href} item={item} active={isActive(pathname, item.href)} />

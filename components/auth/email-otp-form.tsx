@@ -32,6 +32,8 @@ interface EmailOtpFormProps {
   variant: Variant;
   /** True if the /auth/callback route bounced us here with ?error=true. */
   callbackErrored?: boolean;
+  /** True when middleware ili klijent pošalju ovdje nakon istekle sesije. */
+  sessionExpired?: boolean;
 }
 
 const COPY: Record<
@@ -69,7 +71,11 @@ const COPY: Record<
   },
 };
 
-export function EmailOtpForm({ variant, callbackErrored = false }: EmailOtpFormProps) {
+export function EmailOtpForm({
+  variant,
+  callbackErrored = false,
+  sessionExpired = false,
+}: EmailOtpFormProps) {
   const copy = COPY[variant];
   const [sentTo, setSentTo] = useState<string | null>(null);
 
@@ -86,6 +92,7 @@ export function EmailOtpForm({ variant, callbackErrored = false }: EmailOtpFormP
         <EmailStep
           copy={copy}
           callbackErrored={callbackErrored}
+          sessionExpired={sessionExpired}
           onSent={(email) => {
             setSentTo(email);
           }}
@@ -98,10 +105,12 @@ export function EmailOtpForm({ variant, callbackErrored = false }: EmailOtpFormP
 function EmailStep({
   copy,
   callbackErrored,
+  sessionExpired,
   onSent,
 }: {
   copy: (typeof COPY)[Variant];
   callbackErrored: boolean;
+  sessionExpired: boolean;
   onSent: (email: string) => void;
 }) {
   const form = useForm<SendOtpInput>({
@@ -136,6 +145,15 @@ function EmailStep({
         <CardDescription>{copy.description}</CardDescription>
       </CardHeader>
       <CardContent>
+        {sessionExpired ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100"
+          >
+            Sesija je istekla. Prijavi se ponovo — nakon prijave nastavljaš gdje si stao.
+          </p>
+        ) : null}
         {callbackErrored ? (
           <p
             role="alert"
