@@ -11,7 +11,8 @@
  * Usage:
  *   node scripts/supabase-gen-types.mjs            # --local (default)
  *   node scripts/supabase-gen-types.mjs --linked
- *   SUPABASE_GEN_SKIP=1 node scripts/supabase-gen-types.mjs   # no-op (CI)
+ *   SUPABASE_GEN_SKIP=1 node scripts/supabase-gen-types.mjs   # no-op
+ *   (On Vercel, `VERCEL=1` skips automatically — same as committed types.)
  */
 import { spawn } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
@@ -24,6 +25,12 @@ const outFile = path.join(projectRoot, 'supabase', 'types.ts');
 
 if (process.env.SUPABASE_GEN_SKIP === '1') {
   console.log('SUPABASE_GEN_SKIP=1 — skipping type generation.');
+  process.exit(0);
+}
+
+/** Vercel has no local Supabase; types come from the committed `supabase/types.ts`. */
+if (process.env.VERCEL === '1') {
+  console.log('supabase-gen-types: skipping on Vercel (committed types).');
   process.exit(0);
 }
 
