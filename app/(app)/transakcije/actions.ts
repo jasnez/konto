@@ -513,6 +513,11 @@ export async function deleteTransaction(id: unknown): Promise<DeleteTransactionR
     .is('deleted_at', null);
 
   if (deleteError) {
+    console.error('delete_transaction', {
+      code: deleteError.code,
+      message: deleteError.message,
+      details: deleteError.details,
+    });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 

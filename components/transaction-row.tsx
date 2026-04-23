@@ -69,7 +69,9 @@ export function TransactionRow({
     <li className="relative list-none overflow-hidden rounded-xl border bg-card">
       <div
         className={cn(
-          'pointer-events-none absolute inset-y-0 right-0 z-0 flex w-28 items-center justify-end gap-1 pr-2 md:hidden',
+          'absolute inset-y-0 right-0 z-20 flex w-28 items-center justify-end gap-1 pr-2 md:hidden',
+          // Kad nije otkriveno swipom, gumbi su ispod retka; kad jeste, moraju primiti klik.
+          swipeOffset < -20 ? 'pointer-events-auto' : 'pointer-events-none',
         )}
       >
         <Button
