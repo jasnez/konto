@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
+import { buildUserExportJsonForRequest } from '@/lib/export/build-user-export-json';
 import { createClient } from '@/lib/supabase/server';
 import { UpdateProfileSchema } from './schema';
 
@@ -15,6 +16,32 @@ export type UpdateProfileResult =
     }
   | { success: false; error: 'UNAUTHORIZED' }
   | { success: false; error: 'DATABASE_ERROR' };
+
+export type ExportAllDataResult =
+  | { success: true; json: string }
+  | {
+      success: false;
+      error: 'UNAUTHORIZED' | 'RATE_LIMITED' | 'DATABASE_ERROR';
+    };
+
+/**
+ * Builds a full JSON export for the signed-in user (backup / portability).
+ * Prefer downloading via GET `/api/export/data` from the browser so the response is streamable.
+ */
+export async function exportAllData(): Promise<ExportAllDataResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'UNAUTHORIZED' };
+
+  const result = await buildUserExportJsonForRequest(supabase, user.id);
+  if (!result.ok) {
+    return { success: false, error: result.error };
+  }
+
+  return { success: true, json: result.json };
+}
 
 export async function updateProfile(input: unknown): Promise<UpdateProfileResult> {
   const parsed = UpdateProfileSchema.safeParse(input);
