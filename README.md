@@ -1,104 +1,87 @@
 # Konto
 
-Next.js 15 (App Router) aplikacija — PFM / osobne financije (vidi `docs/`).
+**Konto** je web aplikacija za lične finansije (PFM) fokusirana na Zapadni Balkan: ručno vođenje transakcija, računi, kategorije, izvoz podataka i brisanje naloga — bez direktne bankarske integracije u ranim fazama. Korisnički interfejs i rute su na **bosanskom**; podaci u bazi i API koriste uobičajene engleske identifikatore.
+
+## Tech stack
+
+- **Framework:** [Next.js](https://nextjs.org/) 15 (App Router) · React 19 · TypeScript (strict)
+- **Stil & UI:** Tailwind CSS · [shadcn/ui](https://ui.shadcn.com/) + Radix · [Lucide](https://lucide.dev/) ikone
+- **Backend / podaci:** [Supabase](https://supabase.com/) (PostgreSQL, Auth, RLS) · server actions + Zod
+- **Testiranje:** [Vitest](https://vitest.dev/) · [Playwright](https://playwright.dev/) (E2E)
+- **Alat:** pnpm · ESLint · Prettier · Husky
+
+Detaljna arhitektura i odluke: [dokumentacija u `/docs/`](./docs/00-README.md) i [ADRs u `docs/decisions/`](./docs/decisions/).
 
 ## Zahtjevi
 
-- Node.js (LTS preporučen)
+- [Node.js](https://nodejs.org/) (LTS)
 - [pnpm](https://pnpm.io/)
-- [Docker](https://www.docker.com/) (za lokalni Supabase stack)
-- [Supabase CLI](https://supabase.com/docs/guides/cli) — automatski se instalira kroz `pnpm install`
+- [Docker](https://www.docker.com/) (lokalni Supabase)
+- [Supabase CLI](https://supabase.com/docs/guides/cli) (dolazi s `pnpm` dependency-em)
 
-## Lokalno pokretanje
+## Getting started
 
 ```bash
+git clone https://github.com/jasnez/konto.git
+cd konto
 pnpm install
-pnpm supabase:start         # diže lokalni Postgres + Auth + Studio
-pnpm supabase:reset         # primjenjuje migracije iz supabase/migrations/
-cp .env.example .env.development.local
-# otvori .env.development.local i popuni ga iz `pnpm exec supabase status`
+```
+
+### Supabase lokalno
+
+Pokreće lokalni Postgres, Auth, Studio, Mailpit:
+
+```bash
+pnpm supabase:start
+pnpm supabase:reset   # primijeni migracije iz supabase/migrations/ + seed
+```
+
+Ako `supabase start` pukne, vidi [docs/runbooks/local-setup.md](./docs/runbooks/local-setup.md).
+
+### Env fajl
+
+- Kreiraj **`.env.development.local`** (preporučeno za `pnpm dev`) i/ili **`.env.local`**.
+- Za lokalni stack, iskopiraj ključeve iz `pnpm exec supabase status` (ili Supabase Studio): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (samo server-only), `NEXT_PUBLIC_SITE_URL` tipično `http://localhost:3000`.
+- Kompletan popis i red env varijabli: [01-architecture.md — sekcija 9.4](./docs/01-architecture.md).
+
+Zatim:
+
+```bash
 pnpm dev
 ```
 
-Aplikacija je na [http://localhost:3000](http://localhost:3000). Supabase Studio
-(DB UI) na [http://localhost:54323](http://localhost:54323). Mailpit (za hvatanje
-magic link email-ova lokalno) na [http://localhost:54324](http://localhost:54324).
-
-## Env fajlovi
-
-Next.js učita env fajlove ovim redoslijedom (raniji pobjeđuje):
-
-| Skripta      | Redoslijed                                                            |
-| ------------ | --------------------------------------------------------------------- |
-| `pnpm dev`   | `.env.development.local` → `.env.local` → `.env.development` → `.env` |
-| `pnpm build` | `.env.production.local` → `.env.local` → `.env.production` → `.env`   |
-
-Zato konvencija u ovom repu:
-
-- **`.env.development.local`** — lokalni Supabase stack (`http://127.0.0.1:54321`).
-  Koristi se automatski u `pnpm dev` da radni Datum ne ide protiv produkcije.
-- **`.env.local`** — cloud/produkcijski keys (fallback za `pnpm build` lokalno ili
-  preview deploy-ove bez Vercel env-a). Opcionalno.
-- **Vercel** — koristi svoje "Environment Variables" u UI-u, ne dira `.env*` fajlove.
-
-`.env.example` je uvijek u sinku sa listom potrebnih ključeva i commit-ovan je.
-
-## Auth flow i Supabase Dashboard konfiguracija
-
-App koristi Supabase magic link + OTP kod preko `signInWithOtp`. Email koji
-korisnik dobije sadrži i klikabilan link (PKCE, `/auth/callback?code=...`) i
-6-cifreni kod (unosi ga u formu, koristi `verifyOtp`). OTP kod je robustniji
-jer ne trpi link-prefetch (Gmail, Outlook antivirus), ni cross-browser klik.
-
-### Supabase Dashboard — URL Configuration
-
-U **Auth → URL Configuration**:
-
-- **Site URL**: `http://localhost:3000` za dev; `https://<vercel-domain>` za prod.
-- **Redirect URLs** (svi sa `/**` wildcard-om):
-  - `http://localhost:3000/**`
-  - `https://<prod-domain>/**`
-  - `https://*-<team>.vercel.app/**` za preview deploy-eve
-
-Bez `/**` na kraju, Supabase dozvoljava redirect samo na taj tačan URL, ne na
-`/auth/callback` — rezultat su redirect-ovi na Site URL sa error-om.
-
-### Supabase Dashboard — Email Templates
-
-Default "Magic Link" template sadrži i `{{ .ConfirmationURL }}` (link) i
-`{{ .Token }}` (6-cifreni kod). Ne mijenjaj ga osim ako ne želiš refresh
-branding — obje varijante su potrebne da OTP forma radi.
-
-### Custom SMTP (Resend) — preporučeno za prod
-
-Supabase built-in SMTP je ograničen na ~2 email/sat i namijenjen samo testu.
-Za prod (i agresivnije lokalno testiranje) postavi custom SMTP:
-
-1. Resend nalog → API key sa "Sending access".
-2. Supabase Dashboard → **Auth → SMTP Settings** → enable Custom SMTP:
-   - Host `smtp.resend.com`, Port `465` (SSL), Username `resend`,
-     Password = Resend API key.
-   - Sender email: `hello@<tvoj-domain>` (domena mora biti verifikovana u
-     Resend-u sa DKIM/SPF), ili `onboarding@resend.dev` za brzi test.
-3. Supabase Dashboard → **Auth → Rate Limits** → povećaj "Emails sent per hour"
-   sa 2 na 100 (Resend free tier: 3000/mesec).
-
-Lokalni stack (`pnpm supabase:start`) ne koristi SMTP — šalje u Mailpit na
-`http://localhost:54324`, bez rate limita i bez pravih email-ova.
+Aplikacija: [http://localhost:3000](http://localhost:3000) · **Supabase Studio:** [http://127.0.0.1:54323](http://127.0.0.1:54323) · **Mailpit (email lokalno):** [http://127.0.0.1:54324](http://127.0.0.1:54324)
 
 ## Scripts
 
-| Skripta               | Opis                                     |
-| --------------------- | ---------------------------------------- |
-| `pnpm dev`            | Next.js dev server sa Turbopack-om       |
-| `pnpm build`          | Produkcijski build                       |
-| `pnpm start`          | Pokretanje builda                        |
-| `pnpm lint`           | ESLint                                   |
-| `pnpm format`         | Prettier (write)                         |
-| `pnpm typecheck`      | `tsc --noEmit`                           |
-| `pnpm test`           | Vitest (unit + component)                |
-| `pnpm test:e2e`       | Playwright                               |
-| `pnpm supabase:start` | Pokreće lokalni Supabase stack           |
-| `pnpm supabase:stop`  | Zaustavlja lokalni stack                 |
-| `pnpm supabase:reset` | Reset lokalne baze + primjena migracija  |
-| `pnpm supabase:types` | Regeneracija `supabase/types.ts` (UTF-8) |
+| Skripta                                 | Opis                                                                                    |
+| --------------------------------------- | --------------------------------------------------------------------------------------- |
+| `pnpm dev`                              | Next.js dev (Turbopack)                                                                 |
+| `pnpm build` / `pnpm start`             | Produkcijski build i start                                                              |
+| `pnpm lint`                             | ESLint                                                                                  |
+| `pnpm format`                           | Prettier (write)                                                                        |
+| `pnpm typecheck`                        | `tsc --noEmit`                                                                          |
+| `pnpm test`                             | Vitest                                                                                  |
+| `pnpm test:e2e`                         | Playwright (E2E; očekuje lokalni Supabase — vidi [05-testing.md](./docs/05-testing.md)) |
+| `pnpm e2e:web`                          | `supabase start` + dev server na fiksnom portu (kao u Playwright config-u)              |
+| `pnpm supabase:start` / `supabase:stop` | Lokalni Supabase                                                                        |
+| `pnpm supabase:reset`                   | Baza + migracije + seed                                                                 |
+| `pnpm supabase:types`                   | Regeneracija `supabase/types` iz lokalne šeme                                           |
+
+## Dokumentacija (`/docs/`)
+
+| Dokument                                                     | Sadržaj                                              |
+| ------------------------------------------------------------ | ---------------------------------------------------- |
+| [docs/00-README.md](./docs/00-README.md)                     | Pregled cijele dokumentacije i redoslijed čitanja    |
+| [docs/01-architecture.md](./docs/01-architecture.md)         | Arhitektura, data model, novac (bigint), deployment  |
+| [docs/02-security-privacy.md](./docs/02-security-privacy.md) | Sigurnost, GDPR, RLS                                 |
+| [docs/03-design-system.md](./docs/03-design-system.md)       | UI, pristupačnost, copy                              |
+| [docs/04-cursorrules.md](./docs/04-cursorrules.md)           | Pravila za rad s Cursorom / AI                       |
+| [docs/05-testing.md](./docs/05-testing.md)                   | Test piramida, E2E, integracija                      |
+| [docs/06-backlog.md](./docs/06-backlog.md)                   | Faze, epics, taskovi                                 |
+| [docs/runbooks/](./docs/runbooks/)                           | Operativni vodiči (backup, migracije, lokalni setup) |
+| [docs/decisions/](./docs/decisions/)                         | **ADR** — zabilježene arhitektonske odluke           |
+
+## Licenca / vlasništvo
+
+Privatni repozitorij. Prava zadržava vlasnik projekta.

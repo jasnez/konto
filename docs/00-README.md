@@ -1,10 +1,10 @@
 # Konto — Projektna dokumentacija
 
-**Verzija:** 1.0 · **Datum:** april 2026.
+**Verzija:** 1.1 · **Datum:** april 2026.
 
 Ovo je kompletna projektna dokumentacija za **Konto** — PFM (personal finance management) aplikaciju za Zapadni Balkan, s primarnim fokusom na **BiH (BAM/EUR)** i sekundarno Srbija, Crna Gora, Makedonija.
 
-Dokumentacija je organizovana u 6 dokumenata — namijenjena **tebi kao foundera + Cursoru kao izvršnom agentu**. Svaki dokument ima jasnu svrhu; čitaj ih redom prvi put, referiraj se kasnije po potrebi.
+Dokumentacija u **glavnom indeksu** (ispod) obuhvata 6 središnjih dokumenata; uz to postoje **runbookovi** (operativni) i **ADR-ovi** (arhitektonske odluke). Sve je namijenjeno **tebi kao foundera + Cursoru kao izvršnom agentu**; prvi put čitaj u preporučenom redoslijedu, kasnije referiraj se po potrebi.
 
 ---
 
@@ -19,6 +19,19 @@ Dokumentacija je organizovana u 6 dokumenata — namijenjena **tebi kao foundera
 5. **[04-cursorrules.md](./04-cursorrules.md)** — pravila saradnje s Cursorom (20 minuta)
 6. **[05-testing.md](./05-testing.md)** — testing strategija (20 minuta)
 7. **[06-backlog.md](./06-backlog.md)** — backlog po fazama/epicima/taskovima (referiraj task-po-task)
+
+### Runbookovi (operativno)
+
+- **[runbooks/backup-restore.md](./runbooks/backup-restore.md)** — backup, dump, oporavak
+- **[runbooks/migration-guide.md](./runbooks/migration-guide.md)** — kako dodati i primijeniti SQL migracije
+- **[runbooks/local-setup.md](./runbooks/local-setup.md)** — tipični problemi lokalnog okruženja (Docker, env, E2E)
+
+### Architecture Decision Records (ADR)
+
+- **[decisions/0000-template.md](./decisions/0000-template.md)** — šablon za nove odluke
+- **[decisions/0001-next-supabase-stack.md](./decisions/0001-next-supabase-stack.md)** — Next + Supabase + Vercel
+- **[decisions/0002-bigint-for-money.md](./decisions/0002-bigint-for-money.md)** — novac kao `bigint` u minor units
+- **[decisions/0003-bosnian-routes.md](./decisions/0003-bosnian-routes.md)** — bosanski URL-ovi, engleski identifikatori u kodu
 
 **Ukupno:** ~3–4 sata za prvo čitanje. Preporučujem ne raditi to u jednom dahu — razdvoji na 2 sesije.
 
@@ -198,6 +211,7 @@ Dokumentacija nikad nije "gotova" dok traje razvoj. Ali u ovoj tački, sadrži d
 
 ## Change Log
 
-| Datum      | Verzija | Promjena                                            |
-| ---------- | ------- | --------------------------------------------------- |
-| 2026-04-21 | 1.0     | Inicijalna verzija — svih 6 dokumenata kompletirana |
+| Datum      | Verzija | Promjena                                                                                   |
+| ---------- | ------- | ------------------------------------------------------------------------------------------ |
+| 2026-04-23 | 1.1     | Dodati `docs/runbooks/*`, `docs/decisions/*` (ADR) i ažuriran root `README.md` onboarding. |
+| 2026-04-21 | 1.0     | Inicijalna verzija — svih 6 središnjih dokumenata kompletirana                             |

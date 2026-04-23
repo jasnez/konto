@@ -1,6 +1,6 @@
 # Konto — Arhitektura i Data Model
 
-**Verzija:** 1.0 · **Datum:** april 2026. · **Autor:** Solo founder (BiH)
+**Verzija:** 1.1 · **Datum:** april 2026. · **Autor:** Solo founder (BiH)
 **Status:** Live document — ažurirati s promjenama; ne pisati kod koji mu protivuriječi bez update-a.
 
 ---
@@ -1423,6 +1423,24 @@ Ova pitanja treba odlučiti prije kraja Faze 2:
 
 ## 14. Change Log
 
-| Datum      | Verzija | Promjena           |
-| ---------- | ------- | ------------------ |
-| 2026-04-21 | 1.0     | Inicijalna verzija |
+| Datum      | Verzija | Promjena                                                                                                                                                                                                                                                                              |
+| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-23 | 1.1     | Zabilježene odluke Faze 0–1 u Change Logu (isporuka F1-E7-T2); vidi [decisions/0001-next-supabase-stack.md](./decisions/0001-next-supabase-stack.md), [0002-bigint-for-money.md](./decisions/0002-bigint-for-money.md), [0003-bosnian-routes.md](./decisions/0003-bosnian-routes.md). |
+| 2026-04-21 | 1.0     | Inicijalna verzija                                                                                                                                                                                                                                                                    |
+
+### 14.1 Sažetak odluka Faze 0–1 (zapisano u ADR-ovima i ovom dokumentu)
+
+Navedeno je šta je **fiksirano** prije širenja u Fazu 2; detalj u listi [docs/decisions/](./decisions/).
+
+| Tema                     | Odluka (kratko)                                                                                                    | Gdje detaljno                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| Aplikacijski stack       | Next.js 15 (App Router) + TypeScript + Vercel; Supabase (Postgres, Auth, kasnije Storage)                          | [ADR 0001](./decisions/0001-next-supabase-stack.md), §3, §3.3 |
+| Novac u sistemu          | `bigint` u minor units; nikad float za domenske iznose; BAM↔EUR fiksni odbor                                       | [ADR 0002](./decisions/0002-bigint-for-money.md), §4          |
+| Lokalizacija URL-a       | Korisničke rute na bosanskom; shema i kod identifikatori engleski                                                  | [ADR 0003](./decisions/0003-bosnian-routes.md)                |
+| Sigurnost podataka       | RLS na svim user-owned tabelama; server actions s Zod; nema “tajnih” operacija iz browsera preko service role      | §5, §6, [02-security-privacy.md](./02-security-privacy.md)    |
+| Auth (Faza 0–1)          | Supabase email OTP + magic link; sesija kroz Supabase klijent / SSR; bez SMS MFA u ranoj fazi                      | §2 non-goals, 02                                              |
+| Regija hostinga          | EU (Supabase projekat + Vercel regije) kao default za PII ograničenja                                              | §3.2                                                          |
+| API obrazac              | Server Actions za mutacije; jedna error taksonomija; klijent ne zove osetljive stvari direktno s service role-om   | §6                                                            |
+| Testiranje               | Vitest za poslovnu logiku; integracija na RLS; Playwright za kritične tokove; lokalni Supabase u E2E               | [05-testing.md](./05-testing.md)                              |
+| Šema baze                | UUID ključevi; soft delete; `user_id` na vlasničkim redovima; triggeri za balance gdje je definisano u migracijama | §5                                                            |
+| Šta namjerno nije u F0–1 | Bank API, investicije, dijeljeni household nalog, PDF parser u produkciji (to je Faza 2+)                          | §2                                                            |
