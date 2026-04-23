@@ -301,6 +301,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      fx_rates: {
+        Row: {
+          base: string;
+          date: string;
+          fetched_at: string;
+          quote: string;
+          rate: number;
+          source: string;
+        };
+        Insert: {
+          base?: string;
+          date: string;
+          fetched_at?: string;
+          quote: string;
+          rate: number;
+          source?: string;
+        };
+        Update: {
+          base?: string;
+          date?: string;
+          fetched_at?: string;
+          quote?: string;
+          rate?: number;
+          source?: string;
+        };
+        Relationships: [];
+      };
       transactions: {
         Row: {
           account_id: string;

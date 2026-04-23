@@ -7,6 +7,14 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }));
 
+const { convertToBaseMock } = vi.hoisted(() => ({
+  convertToBaseMock: vi.fn(),
+}));
+
+vi.mock('@/lib/fx/convert', () => ({
+  convertToBase: convertToBaseMock,
+}));
+
 const getUser = vi.fn();
 const from = vi.fn();
 
@@ -55,6 +63,13 @@ describe('createAccount', () => {
     vi.clearAllMocks();
     getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
     from.mockReset();
+    convertToBaseMock.mockResolvedValue({
+      baseCents: 100n,
+      fxRate: 1,
+      fxRateDate: '2026-01-15',
+      fxSource: 'identity',
+      fxStale: false,
+    });
   });
 
   it('returns UNAUTHORIZED when not logged in (auth error)', async () => {
@@ -116,6 +131,73 @@ describe('createAccount', () => {
 
     expect(result).toEqual({ success: true, data: { id: 'acc-new-id' } });
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/racuni');
+  });
+
+  it('creates opening transaction with FX conversion when initial balance is non-zero', async () => {
+    const txInsert = vi.fn().mockResolvedValue({ data: null, error: null });
+    let fromAccounts = 0;
+    from.mockImplementation((table: string) => {
+      if (table === 'accounts') {
+        fromAccounts += 1;
+        if (fromAccounts === 1) {
+          return fluent({ data: null, error: null });
+        }
+        if (fromAccounts === 2) {
+          return {
+            ...fluent({ data: { id: 'acc-open-1' }, error: null }),
+            insert: () => ({
+              select: () => ({
+                single: () => Promise.resolve({ data: { id: 'acc-open-1' }, error: null }),
+              }),
+            }),
+          };
+        }
+      }
+      if (table === 'categories') {
+        return fluent({ data: { id: 'cat-ob' }, error: null });
+      }
+      if (table === 'profiles') {
+        return fluent({ data: { base_currency: 'EUR' }, error: null });
+      }
+      if (table === 'transactions') {
+        return { insert: txInsert };
+      }
+      throw new Error(`unexpected from(${table})`);
+    });
+
+    convertToBaseMock.mockResolvedValue({
+      baseCents: 5113n,
+      fxRate: 0.51129,
+      fxRateDate: '2026-01-15',
+      fxSource: 'currency_board',
+      fxStale: false,
+    });
+
+    const result = await createAccount({
+      name: 'Gotovina EUR',
+      type: 'cash',
+      institution: null,
+      currency: 'BAM',
+      initial_balance_cents: '10000',
+      icon: null,
+      color: null,
+    });
+
+    expect(result).toEqual({ success: true, data: { id: 'acc-open-1' } });
+    expect(convertToBaseMock).toHaveBeenCalledTimes(1);
+    expect(convertToBaseMock).toHaveBeenCalledWith(10000n, 'BAM', 'EUR', expect.any(String));
+    expect(txInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account_id: 'acc-open-1',
+        original_amount_cents: 10000,
+        original_currency: 'BAM',
+        base_amount_cents: 5113,
+        base_currency: 'EUR',
+        fx_rate: 0.51129,
+        fx_rate_date: '2026-01-15',
+        fx_stale: false,
+      }),
+    );
   });
 });
 

@@ -9,6 +9,7 @@ import {
   ReorderAccountsSchema,
   UpdateAccountSchema,
 } from '@/lib/accounts/validation';
+import { convertToBase } from '@/lib/fx/convert';
 import type { Database } from '@/supabase/types';
 
 type AccountUpdate = Database['public']['Tables']['accounts']['Update'];
@@ -78,6 +79,7 @@ export type CreateAccountResult =
   | { success: false; error: 'UNAUTHORIZED' }
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'OPENING_BALANCE_CATEGORY_MISSING' }
+  | { success: false; error: 'EXTERNAL_SERVICE_ERROR' }
   | { success: false; error: 'DATABASE_ERROR' };
 
 export type UpdateAccountResult =
@@ -114,23 +116,6 @@ function centsToDbInt(c: bigint): number {
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-function buildOpeningBase(
-  originalCents: bigint,
-  accountCurrency: string,
-  baseCurrency: string,
-  onDate: string,
-): {
-  base: bigint;
-  fx_rate: number | null;
-  fx_date: string | null;
-  fx_stale: boolean;
-} {
-  if (accountCurrency === baseCurrency) {
-    return { base: originalCents, fx_rate: 1, fx_date: onDate, fx_stale: false };
-  }
-  return { base: originalCents, fx_rate: null, fx_date: onDate, fx_stale: true };
 }
 
 /**
@@ -222,23 +207,28 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
       .maybeSingle();
     const baseCurrency = profile?.base_currency ?? 'BAM';
     const txDate = todayIsoDate();
-    const { base, fx_rate, fx_date, fx_stale } = buildOpeningBase(
-      initial,
-      currency,
-      baseCurrency,
-      txDate,
-    );
+    let fxConversion: Awaited<ReturnType<typeof convertToBase>>;
+    try {
+      fxConversion = await convertToBase(initial, currency, baseCurrency, txDate);
+    } catch (error) {
+      console.error('create_account_opening_fx_error', {
+        userId: user.id,
+        error: error instanceof Error ? error.message : 'unknown',
+      });
+      await supabase.from('accounts').delete().eq('id', newId);
+      return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+    }
 
     const { error: txError } = await supabase.from('transactions').insert({
       user_id: user.id,
       account_id: newId,
       original_amount_cents: centsToDbInt(initial),
       original_currency: currency,
-      base_amount_cents: centsToDbInt(base),
+      base_amount_cents: centsToDbInt(fxConversion.baseCents),
       base_currency: baseCurrency,
-      fx_rate,
-      fx_rate_date: fx_date,
-      fx_stale: fx_stale,
+      fx_rate: fxConversion.fxRate,
+      fx_rate_date: fxConversion.fxRateDate,
+      fx_stale: fxConversion.fxStale,
       transaction_date: txDate,
       source: 'manual',
       category_id: obCat.id,
