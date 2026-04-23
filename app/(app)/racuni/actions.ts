@@ -13,14 +13,6 @@ import type { Database } from '@/supabase/types';
 
 type AccountUpdate = Database['public']['Tables']['accounts']['Update'];
 
-export {
-  CreateAccountFormSchema,
-  type CreateAccountFormValues,
-  type CreateAccountInput,
-  CreateAccountSchema,
-  UpdateAccountSchema,
-} from '@/lib/accounts/validation';
-
 /** Narrow shape from `z.treeifyError` for form field / array item messages */
 interface ZodErrorTree {
   errors: string[];

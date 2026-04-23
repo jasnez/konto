@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createAccount, CreateAccountSchema, updateAccount } from './actions';
+import { createAccount, updateAccount } from './actions';
+import { CreateAccountSchema } from '@/lib/accounts/validation';
 import { revalidatePath } from 'next/cache';
 
 vi.mock('next/cache', () => ({
