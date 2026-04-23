@@ -51,6 +51,9 @@ export interface MoneyInputProps {
   'aria-describedby'?: string;
   /** @default "bs-BA" */
   locale?: string;
+  autoFocus?: boolean;
+  inputRef?: React.Ref<HTMLInputElement>;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
 }
 
 /**
@@ -72,6 +75,9 @@ export function MoneyInput({
   'aria-label': ariaLabel = 'Iznos',
   'aria-describedby': ariaDescribedBy,
   locale = 'bs-BA',
+  autoFocus = false,
+  inputRef,
+  onKeyDown,
 }: MoneyInputProps) {
   const [draft, setDraft] = React.useState(() => formatInputDisplay(value, currency, locale));
   const [focused, setFocused] = React.useState(false);
@@ -106,10 +112,12 @@ export function MoneyInput({
   return (
     <div className={cn('flex w-full max-w-full gap-2', className)}>
       <Input
+        ref={inputRef}
         id={id}
         type="text"
         inputMode="decimal"
         autoComplete="off"
+        autoFocus={autoFocus}
         disabled={disabled}
         placeholder={placeholder}
         value={draft}
@@ -139,6 +147,7 @@ export function MoneyInput({
           setFocused(false);
           commitBlur(draft);
         }}
+        onKeyDown={onKeyDown}
         className={cn(
           'shrink-1 min-w-0 max-w-full flex-1 text-right font-mono tabular-nums ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
           sizeClass,

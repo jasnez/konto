@@ -1,15 +1,11 @@
 'use client';
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { Plus } from 'lucide-react';
+import type { AccountOption } from '@/components/account-select';
+import type { CategoryOption } from '@/components/category-select';
+import { QuickAddTransaction } from '@/components/quick-add-transaction';
 import { Button, type buttonVariants } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import type { VariantProps } from 'class-variance-authority';
 
@@ -19,30 +15,44 @@ interface QuickAddContextValue {
 
 const QuickAddContext = createContext<QuickAddContextValue | null>(null);
 
-/**
- * Wraps the app shell so any descendant <QuickAddTrigger /> can open the
- * single quick-add dialog. The dialog body is intentionally empty for
- * Faza 0 — wiring up manual entry is Epic 1.3.
- */
-export function QuickAddProvider({ children }: { children: ReactNode }) {
+/** Provides a single quick-add entry point for FAB, sidebar button, and Cmd/Ctrl+K. */
+export function QuickAddProvider({
+  children,
+  accounts,
+  categories,
+}: {
+  children: ReactNode;
+  accounts: AccountOption[];
+  categories: CategoryOption[];
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const open = useCallback(() => {
     setIsOpen(true);
   }, []);
 
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key.toLowerCase() !== 'k') return;
+      if (!event.metaKey && !event.ctrlKey) return;
+      event.preventDefault();
+      setIsOpen(true);
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
   return (
     <QuickAddContext.Provider value={{ open }}>
       {children}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Brzi unos</DialogTitle>
-            <DialogDescription>
-              Ručni unos transakcija dolazi uskoro. Za sada ovaj dijalog samo potvrđuje da FAB radi.
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+      <QuickAddTransaction
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        accounts={accounts}
+        categories={categories}
+      />
     </QuickAddContext.Provider>
   );
 }

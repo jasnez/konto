@@ -4,6 +4,13 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { computeDedupHash } from '@/lib/dedup';
 import { convertToBase } from '@/lib/fx/convert';
+import {
+  BulkDeleteTransactionIdsSchema,
+  CreateTransactionSchema,
+  TransactionIdSchema,
+  UpdateTransactionSchema,
+  type CreateTransactionInputSchema,
+} from '@/lib/schemas/transaction';
 import { createClient } from '@/lib/supabase/server';
 import type { Database } from '@/supabase/types';
 
@@ -45,75 +52,6 @@ interface ValidationDetails {
   _root: string[];
 }
 
-const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/u;
-const MIN_UUID_LIST_SIZE = 1;
-const MAX_BULK_DELETE_SIZE = 500;
-
-const createTransactionSchema = z.object({
-  account_id: z.uuid(),
-  amount_cents: z.bigint().refine((value) => value !== 0n, 'Iznos ne može biti 0'),
-  currency: z
-    .string()
-    .length(3)
-    .transform((value) => value.toUpperCase()),
-  transaction_date: z.string().regex(ISO_DATE_REGEX),
-  merchant_raw: z
-    .string()
-    .max(200)
-    .optional()
-    .nullable()
-    .transform((value) => normalizeOptionalString(value)),
-  category_id: z
-    .union([z.uuid(), z.literal(''), z.null()])
-    .optional()
-    .transform((value) => normalizeOptionalUuid(value)),
-  notes: z
-    .string()
-    .max(500)
-    .optional()
-    .nullable()
-    .transform((value) => normalizeOptionalString(value)),
-});
-
-const updateTransactionSchema = z
-  .object({
-    account_id: z.uuid().optional(),
-    amount_cents: z
-      .bigint()
-      .refine((value) => value !== 0n, 'Iznos ne može biti 0')
-      .optional(),
-    currency: z
-      .string()
-      .length(3)
-      .transform((value) => value.toUpperCase())
-      .optional(),
-    transaction_date: z.string().regex(ISO_DATE_REGEX).optional(),
-    merchant_raw: z
-      .union([z.string().max(200), z.null()])
-      .optional()
-      .transform((value) => normalizeOptionalString(value)),
-    category_id: z
-      .union([z.uuid(), z.literal(''), z.null()])
-      .optional()
-      .transform((value) => normalizeOptionalUuid(value)),
-    notes: z
-      .union([z.string().max(500), z.null()])
-      .optional()
-      .transform((value) => normalizeOptionalString(value)),
-  })
-  .refine((value) => Object.keys(value).length > 0, {
-    message: 'Mora postojati barem jedno polje za izmjenu.',
-  });
-
-const transactionIdSchema = z.uuid();
-const bulkDeleteIdsSchema = z
-  .array(z.uuid())
-  .min(MIN_UUID_LIST_SIZE)
-  .max(MAX_BULK_DELETE_SIZE)
-  .refine((ids) => new Set(ids).size === ids.length, {
-    message: 'Duplirani ID-evi nisu dozvoljeni.',
-  });
-
 export type CreateTransactionResult =
   | { success: true; data: { id: string } }
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
@@ -148,21 +86,6 @@ export type BulkDeleteTransactionsResult =
   | { success: false; error: 'UNAUTHORIZED' }
   | { success: false; error: 'FORBIDDEN' }
   | { success: false; error: 'DATABASE_ERROR' };
-
-function normalizeOptionalString(value: string | null | undefined): string | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function normalizeOptionalUuid(value: string | null | undefined): string | null {
-  if (!value) {
-    return null;
-  }
-  return value;
-}
 
 function buildValidationDetails(error: z.ZodError): ValidationDetails {
   return { _root: error.issues.map((issue) => issue.message) };
@@ -306,7 +229,7 @@ function revalidateTransactionViews(accountIds: string[]): void {
 }
 
 export async function createTransaction(input: unknown): Promise<CreateTransactionResult> {
-  const parsed = createTransactionSchema.safeParse(input);
+  const parsed = CreateTransactionSchema.safeParse(input);
   if (!parsed.success) {
     return {
       success: false,
@@ -323,12 +246,13 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
     return { success: false, error: 'UNAUTHORIZED' };
   }
 
-  const ownedAccount = await ensureOwnedAccount(supabase, user.id, parsed.data.account_id);
+  const parsedData: CreateTransactionInputSchema = parsed.data;
+  const ownedAccount = await ensureOwnedAccount(supabase, user.id, parsedData.account_id);
   if (!ownedAccount.ok) {
     return { success: false, error: ownedAccount.error };
   }
 
-  const ownedCategory = await ensureOwnedCategory(supabase, user.id, parsed.data.category_id);
+  const ownedCategory = await ensureOwnedCategory(supabase, user.id, parsedData.category_id);
   if (!ownedCategory.ok) {
     return { success: false, error: ownedCategory.error };
   }
@@ -341,10 +265,10 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
   let fxResult: Awaited<ReturnType<typeof convertToBase>>;
   try {
     fxResult = await convertToBase(
-      parsed.data.amount_cents,
-      parsed.data.currency,
+      parsedData.amount_cents,
+      parsedData.currency,
       baseCurrencyResult.value,
-      parsed.data.transaction_date,
+      parsedData.transaction_date,
     );
   } catch (error) {
     console.error('create_transaction_fx_error', {
@@ -355,16 +279,16 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
   }
 
   const dedupHash = computeDedupHash({
-    account_id: parsed.data.account_id,
-    amount_cents: parsed.data.amount_cents,
-    date: parsed.data.transaction_date,
-    merchant: parsed.data.merchant_raw,
+    account_id: parsedData.account_id,
+    amount_cents: parsedData.amount_cents,
+    date: parsedData.transaction_date,
+    merchant: parsedData.merchant_raw,
   });
 
   const duplicate = await findDuplicateTransaction(supabase, {
     userId: user.id,
     dedupHash,
-    transactionDate: parsed.data.transaction_date,
+    transactionDate: parsedData.transaction_date,
   });
   if (duplicate) {
     return { success: false, error: 'DUPLICATE', duplicateId: duplicate.id };
@@ -374,19 +298,19 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
     .from('transactions')
     .insert({
       user_id: user.id,
-      account_id: parsed.data.account_id,
-      original_amount_cents: bigintToDbInt(parsed.data.amount_cents),
-      original_currency: parsed.data.currency,
+      account_id: parsedData.account_id,
+      original_amount_cents: bigintToDbInt(parsedData.amount_cents),
+      original_currency: parsedData.currency,
       base_amount_cents: bigintToDbInt(fxResult.baseCents),
       base_currency: baseCurrencyResult.value,
       fx_rate: fxResult.fxRate,
       fx_rate_date: fxResult.fxRateDate,
       fx_stale: fxResult.fxStale,
-      transaction_date: parsed.data.transaction_date,
-      merchant_raw: parsed.data.merchant_raw,
-      category_id: parsed.data.category_id,
-      category_source: parsed.data.category_id ? 'user' : null,
-      notes: parsed.data.notes,
+      transaction_date: parsedData.transaction_date,
+      merchant_raw: parsedData.merchant_raw,
+      category_id: parsedData.category_id,
+      category_source: parsedData.category_id ? 'user' : null,
+      notes: parsedData.notes,
       source: 'manual',
       dedup_hash: dedupHash,
     })
@@ -398,7 +322,7 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidateTransactionViews([parsed.data.account_id]);
+  revalidateTransactionViews([parsedData.account_id]);
   return { success: true, data: { id: tx.id } };
 }
 
@@ -406,7 +330,7 @@ export async function updateTransaction(
   id: unknown,
   input: unknown,
 ): Promise<UpdateTransactionResult> {
-  const idParsed = transactionIdSchema.safeParse(id);
+  const idParsed = TransactionIdSchema.safeParse(id);
   if (!idParsed.success) {
     return {
       success: false,
@@ -415,7 +339,7 @@ export async function updateTransaction(
     };
   }
 
-  const parsed = updateTransactionSchema.safeParse(input);
+  const parsed = UpdateTransactionSchema.safeParse(input);
   if (!parsed.success) {
     return {
       success: false,
@@ -546,7 +470,7 @@ export async function updateTransaction(
 }
 
 export async function deleteTransaction(id: unknown): Promise<DeleteTransactionResult> {
-  const parsed = transactionIdSchema.safeParse(id);
+  const parsed = TransactionIdSchema.safeParse(id);
   if (!parsed.success) {
     return {
       success: false,
@@ -597,7 +521,7 @@ export async function deleteTransaction(id: unknown): Promise<DeleteTransactionR
 }
 
 export async function restoreTransaction(id: unknown): Promise<RestoreTransactionResult> {
-  const parsed = transactionIdSchema.safeParse(id);
+  const parsed = TransactionIdSchema.safeParse(id);
   if (!parsed.success) {
     return {
       success: false,
@@ -646,7 +570,7 @@ export async function restoreTransaction(id: unknown): Promise<RestoreTransactio
 }
 
 export async function bulkDeleteTransactions(ids: unknown): Promise<BulkDeleteTransactionsResult> {
-  const parsed = bulkDeleteIdsSchema.safeParse(ids);
+  const parsed = BulkDeleteTransactionIdsSchema.safeParse(ids);
   if (!parsed.success) {
     return {
       success: false,

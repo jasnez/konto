@@ -14,6 +14,24 @@ if (typeof Element !== 'undefined') {
   }
 }
 
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class ResizeObserverMock implements ResizeObserver {
+    observe(target: Element, options?: ResizeObserverOptions) {
+      void target;
+      void options;
+      // no-op in jsdom
+    }
+    unobserve(target: Element) {
+      void target;
+      // no-op in jsdom
+    }
+    disconnect() {
+      // no-op in jsdom
+    }
+  }
+  globalThis.ResizeObserver = ResizeObserverMock;
+}
+
 afterEach(() => {
   cleanup();
 });
