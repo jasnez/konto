@@ -177,6 +177,94 @@ export type Database = {
           },
         ];
       };
+      merchant_aliases: {
+        Row: {
+          created_at: string;
+          id: string;
+          merchant_id: string;
+          pattern: string;
+          pattern_type: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          merchant_id: string;
+          pattern: string;
+          pattern_type?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          merchant_id?: string;
+          pattern?: string;
+          pattern_type?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'merchant_aliases_merchant_id_fkey';
+            columns: ['merchant_id'];
+            isOneToOne: false;
+            referencedRelation: 'merchants';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      merchants: {
+        Row: {
+          canonical_name: string;
+          color: string | null;
+          created_at: string;
+          default_category_id: string | null;
+          deleted_at: string | null;
+          display_name: string;
+          icon: string | null;
+          id: string;
+          notes: string | null;
+          transaction_count: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          canonical_name: string;
+          color?: string | null;
+          created_at?: string;
+          default_category_id?: string | null;
+          deleted_at?: string | null;
+          display_name: string;
+          icon?: string | null;
+          id?: string;
+          notes?: string | null;
+          transaction_count?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          canonical_name?: string;
+          color?: string | null;
+          created_at?: string;
+          default_category_id?: string | null;
+          deleted_at?: string | null;
+          display_name?: string;
+          icon?: string | null;
+          id?: string;
+          notes?: string | null;
+          transaction_count?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'merchants_default_category_id_fkey';
+            columns: ['default_category_id'];
+            isOneToOne: false;
+            referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       profiles: {
         Row: {
           base_currency: string;
@@ -378,6 +466,8 @@ export type Database = {
         Returns: undefined;
       };
       user_owns_account: { Args: { p_account_id: string }; Returns: boolean };
+      user_owns_category: { Args: { p_category_id: string }; Returns: boolean };
+      user_owns_merchant: { Args: { p_merchant_id: string }; Returns: boolean };
       user_owns_transaction: { Args: { p_tx_id: string }; Returns: boolean };
     };
     Enums: {
