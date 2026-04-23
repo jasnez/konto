@@ -16,7 +16,11 @@ function formatPercent(value: number): string {
   return `${sign}${Math.abs(value).toFixed(1)}%`;
 }
 
-export function BalanceHero({ totalBalanceCents, baseCurrency, netChangePercent }: BalanceHeroProps) {
+export function BalanceHero({
+  totalBalanceCents,
+  baseCurrency,
+  netChangePercent,
+}: BalanceHeroProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 p-4 sm:p-6">

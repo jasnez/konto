@@ -72,7 +72,8 @@ function getGreetingPart(timezone: string): string {
 function getFirstName(displayName: string | null, email: string | undefined): string {
   const trimmedDisplay = displayName?.trim();
   const emailLocalPart = email?.split('@')[0];
-  const source = trimmedDisplay && trimmedDisplay.length > 0 ? trimmedDisplay : (emailLocalPart ?? 'korisniče');
+  const source =
+    trimmedDisplay && trimmedDisplay.length > 0 ? trimmedDisplay : (emailLocalPart ?? 'korisniče');
   const firstName = source.split(/\s+/u)[0];
   return firstName.length > 0 ? firstName : 'korisniče';
 }
@@ -127,10 +128,22 @@ async function getDashboardSummary(
       .eq('user_id', userId)
       .is('deleted_at', null)
       .eq('include_in_net_worth', true),
-    baseQuery().gte('transaction_date', monthStart).lte('transaction_date', monthEnd).gt('base_amount_cents', 0),
-    baseQuery().gte('transaction_date', monthStart).lte('transaction_date', monthEnd).lt('base_amount_cents', 0),
-    baseQuery().gte('transaction_date', prevStart).lte('transaction_date', prevEnd).gt('base_amount_cents', 0),
-    baseQuery().gte('transaction_date', prevStart).lte('transaction_date', prevEnd).lt('base_amount_cents', 0),
+    baseQuery()
+      .gte('transaction_date', monthStart)
+      .lte('transaction_date', monthEnd)
+      .gt('base_amount_cents', 0),
+    baseQuery()
+      .gte('transaction_date', monthStart)
+      .lte('transaction_date', monthEnd)
+      .lt('base_amount_cents', 0),
+    baseQuery()
+      .gte('transaction_date', prevStart)
+      .lte('transaction_date', prevEnd)
+      .gt('base_amount_cents', 0),
+    baseQuery()
+      .gte('transaction_date', prevStart)
+      .lte('transaction_date', prevEnd)
+      .lt('base_amount_cents', 0),
     baseQuery()
       .gte('transaction_date', lastThirtyDaysStart)
       .lte('transaction_date', today)
@@ -200,7 +213,10 @@ async function getRecentTransactions(
     transactionDate: row.transaction_date,
     baseAmountCents: BigInt(row.base_amount_cents),
     baseCurrency: row.base_currency,
-    merchantLabel: row.merchants?.display_name ?? row.merchant_raw ?? (row.is_transfer ? 'Transfer' : 'Nepoznato'),
+    merchantLabel:
+      row.merchants?.display_name ??
+      row.merchant_raw ??
+      (row.is_transfer ? 'Transfer' : 'Nepoznato'),
     categoryLabel: row.categories?.name ?? (row.is_transfer ? 'Transfer' : 'Nerazvrstano'),
   }));
 }
