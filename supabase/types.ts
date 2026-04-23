@@ -509,6 +509,18 @@ export type Database = {
           transaction_count: number;
         }[];
       };
+      get_monthly_summary: {
+        Args: { p_base_currency: string; p_month: number; p_year: number };
+        Returns: {
+          avg_daily_spend: number;
+          month_expense: number;
+          month_income: number;
+          month_net: number;
+          net_change_percent: number;
+          prev_month_net: number;
+          total_balance: number;
+        };
+      };
     };
     Enums: {
       [_ in never]: never;

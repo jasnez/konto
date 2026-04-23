@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { endOfMonth, format, startOfMonth, subDays, subMonths } from 'date-fns';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { BalanceHero } from '@/components/dashboard/balance-hero';
 import { MetricCard } from '@/components/dashboard/metric-card';
@@ -13,22 +12,9 @@ import {
   DashboardMetricsSkeleton,
   DashboardRecentTransactionsSkeleton,
 } from '@/components/dashboard/dashboard-skeletons';
-import { convertToBase } from '@/lib/fx/convert';
+import { getMonthlySummary, type MonthlySummary } from '@/lib/queries/summary';
 import { createClient } from '@/lib/supabase/server';
 import type { Database } from '@/supabase/types';
-
-interface DashboardSummary {
-  totalBalanceCents: bigint;
-  monthIncomeCents: bigint;
-  monthExpenseCents: bigint;
-  monthSavedCents: bigint;
-  avgDailyThirtyDaysCents: bigint;
-  netChangePercent: number;
-}
-
-interface BaseAmountRow {
-  base_amount_cents: number;
-}
 
 interface RecentTxRow {
   id: string;
@@ -39,20 +25,6 @@ interface RecentTxRow {
   is_transfer: boolean;
   merchants: { display_name: string } | null;
   categories: { name: string } | null;
-}
-
-function sumRows(rows: BaseAmountRow[] | null, absolute = false): bigint {
-  let total = 0n;
-  for (const row of rows ?? []) {
-    const value = BigInt(row.base_amount_cents);
-    total += absolute && value < 0n ? -value : value;
-  }
-  return total;
-}
-
-function divideRounded(value: bigint, divisor: bigint): bigint {
-  if (divisor === 0n) return 0n;
-  return (value + divisor / 2n) / divisor;
 }
 
 function getGreetingPart(timezone: string): string {
@@ -76,121 +48,6 @@ function getFirstName(displayName: string | null, email: string | undefined): st
     trimmedDisplay && trimmedDisplay.length > 0 ? trimmedDisplay : (emailLocalPart ?? 'korisniče');
   const firstName = source.split(/\s+/u)[0];
   return firstName.length > 0 ? firstName : 'korisniče';
-}
-
-function calculatePercentChange(current: bigint, previous: bigint): number {
-  if (previous === 0n) {
-    if (current === 0n) return 0;
-    return current > 0n ? 100 : -100;
-  }
-
-  const ratio = (Number(current - previous) / Math.abs(Number(previous))) * 100;
-  if (!Number.isFinite(ratio)) {
-    return 0;
-  }
-  return Math.round(ratio * 10) / 10;
-}
-
-async function getDashboardSummary(
-  supabase: SupabaseClient<Database>,
-  userId: string,
-  baseCurrency: string,
-): Promise<DashboardSummary> {
-  const now = new Date();
-  const monthStart = format(startOfMonth(now), 'yyyy-MM-dd');
-  const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd');
-  const prevMonth = subMonths(now, 1);
-  const prevStart = format(startOfMonth(prevMonth), 'yyyy-MM-dd');
-  const prevEnd = format(endOfMonth(prevMonth), 'yyyy-MM-dd');
-  const today = format(now, 'yyyy-MM-dd');
-  const lastThirtyDaysStart = format(subDays(now, 29), 'yyyy-MM-dd');
-
-  const baseQuery = () =>
-    supabase
-      .from('transactions')
-      .select('base_amount_cents')
-      .eq('user_id', userId)
-      .is('deleted_at', null)
-      .eq('is_transfer', false)
-      .eq('is_excluded', false);
-
-  const [
-    { data: accounts },
-    { data: monthIncomeRows },
-    { data: monthExpenseRows },
-    { data: prevIncomeRows },
-    { data: prevExpenseRows },
-    { data: lastThirtyExpenseRows },
-  ] = await Promise.all([
-    supabase
-      .from('accounts')
-      .select('current_balance_cents,currency')
-      .eq('user_id', userId)
-      .is('deleted_at', null)
-      .eq('include_in_net_worth', true),
-    baseQuery()
-      .gte('transaction_date', monthStart)
-      .lte('transaction_date', monthEnd)
-      .gt('base_amount_cents', 0),
-    baseQuery()
-      .gte('transaction_date', monthStart)
-      .lte('transaction_date', monthEnd)
-      .lt('base_amount_cents', 0),
-    baseQuery()
-      .gte('transaction_date', prevStart)
-      .lte('transaction_date', prevEnd)
-      .gt('base_amount_cents', 0),
-    baseQuery()
-      .gte('transaction_date', prevStart)
-      .lte('transaction_date', prevEnd)
-      .lt('base_amount_cents', 0),
-    baseQuery()
-      .gte('transaction_date', lastThirtyDaysStart)
-      .lte('transaction_date', today)
-      .lt('base_amount_cents', 0),
-  ]);
-
-  const monthIncomeCents = sumRows(monthIncomeRows);
-  const monthExpenseCents = sumRows(monthExpenseRows, true);
-  const monthSavedCents = monthIncomeCents - monthExpenseCents;
-  const prevIncomeCents = sumRows(prevIncomeRows);
-  const prevExpenseCents = sumRows(prevExpenseRows, true);
-  const prevSavedCents = prevIncomeCents - prevExpenseCents;
-  const netChangePercent = calculatePercentChange(monthSavedCents, prevSavedCents);
-  const avgDailyThirtyDaysCents = divideRounded(sumRows(lastThirtyExpenseRows, true), 30n);
-
-  const conversionDate = today;
-  const convertedBalances = await Promise.allSettled(
-    (accounts ?? []).map(async (account) => {
-      const balanceCents = BigInt(account.current_balance_cents);
-      if (account.currency === baseCurrency) {
-        return balanceCents;
-      }
-      const { baseCents } = await convertToBase(
-        balanceCents,
-        account.currency,
-        baseCurrency,
-        conversionDate,
-      );
-      return baseCents;
-    }),
-  );
-
-  let totalBalanceCents = 0n;
-  for (const result of convertedBalances) {
-    if (result.status === 'fulfilled') {
-      totalBalanceCents += result.value;
-    }
-  }
-
-  return {
-    totalBalanceCents,
-    monthIncomeCents,
-    monthExpenseCents,
-    monthSavedCents,
-    avgDailyThirtyDaysCents,
-    netChangePercent,
-  };
 }
 
 async function getRecentTransactions(
@@ -225,13 +82,13 @@ async function HeroSection({
   summaryPromise,
   baseCurrency,
 }: {
-  summaryPromise: Promise<DashboardSummary>;
+  summaryPromise: Promise<MonthlySummary>;
   baseCurrency: string;
 }) {
   const summary = await summaryPromise;
   return (
     <BalanceHero
-      totalBalanceCents={summary.totalBalanceCents}
+      totalBalanceCents={summary.totalBalance}
       baseCurrency={baseCurrency}
       netChangePercent={summary.netChangePercent}
     />
@@ -242,7 +99,7 @@ async function MetricsSection({
   summaryPromise,
   baseCurrency,
 }: {
-  summaryPromise: Promise<DashboardSummary>;
+  summaryPromise: Promise<MonthlySummary>;
   baseCurrency: string;
 }) {
   const summary = await summaryPromise;
@@ -250,20 +107,20 @@ async function MetricsSection({
     <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <MetricCard
         title="Potrošeno ovaj mjesec"
-        amountCents={summary.monthExpenseCents}
+        amountCents={summary.monthExpense}
         currency={baseCurrency}
         tone="expense"
       />
       <MetricCard
         title="Prihodi ovaj mjesec"
-        amountCents={summary.monthIncomeCents}
+        amountCents={summary.monthIncome}
         currency={baseCurrency}
         tone="income"
       />
-      <MetricCard title="Sačuvano" amountCents={summary.monthSavedCents} currency={baseCurrency} />
+      <MetricCard title="Sačuvano" amountCents={summary.monthNet} currency={baseCurrency} />
       <MetricCard
-        title="Prosječno dnevno (30 dana)"
-        amountCents={summary.avgDailyThirtyDaysCents}
+        title="Prosječno dnevno"
+        amountCents={summary.avgDailySpend}
         currency={baseCurrency}
       />
     </section>
@@ -300,7 +157,11 @@ export default async function PocetnaPage() {
   const greeting = getGreetingPart(profile?.timezone ?? 'Europe/Sarajevo');
   const showMotivation = !profile?.onboarding_completed_at;
 
-  const summaryPromise = getDashboardSummary(supabase, user.id, baseCurrency);
+  const now = new Date();
+  const summaryPromise = getMonthlySummary(supabase, user.id, baseCurrency, {
+    year: now.getFullYear(),
+    month: now.getMonth() + 1,
+  });
   const recentPromise = getRecentTransactions(supabase, user.id);
 
   return (
