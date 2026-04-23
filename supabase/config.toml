@@ -376,7 +376,9 @@ deno_version = 2
 # secret_key = "env(SECRET_VALUE)"
 
 [analytics]
-enabled = true
+# Logflare is flaky on Docker Desktop for Windows without exposing the daemon on tcp://localhost:2375.
+# Disable locally unless you need self-hosted analytics; see CLI getting-started (Windows).
+enabled = false
 port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"

@@ -469,6 +469,19 @@ export type Database = {
       user_owns_category: { Args: { p_category_id: string }; Returns: boolean };
       user_owns_merchant: { Args: { p_merchant_id: string }; Returns: boolean };
       user_owns_transaction: { Args: { p_tx_id: string }; Returns: boolean };
+      search_merchants: {
+        Args: { p_limit?: number; p_query: string };
+        Returns: {
+          id: string;
+          canonical_name: string;
+          color: string | null;
+          default_category_id: string | null;
+          display_name: string;
+          icon: string | null;
+          similarity_score: number;
+          transaction_count: number;
+        }[];
+      };
     };
     Enums: {
       [_ in never]: never;
