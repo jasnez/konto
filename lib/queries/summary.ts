@@ -55,6 +55,16 @@ function toNumber(value: number | string | null | undefined): number {
   return 0;
 }
 
+const EMPTY_MONTHLY_SUMMARY: MonthlySummary = {
+  totalBalance: 0n,
+  monthIncome: 0n,
+  monthExpense: 0n,
+  monthNet: 0n,
+  prevMonthNet: 0n,
+  netChangePercent: 0,
+  avgDailySpend: 0n,
+};
+
 export async function getMonthlySummary(
   supabase: SummarySupabaseClient,
   userId: string,
@@ -72,7 +82,9 @@ export async function getMonthlySummary(
   });
 
   if (error) {
-    throw new Error(`get_monthly_summary failed: ${error.message}`);
+    // Ne ruši cijeli shell — npr. migracija RPC-a još nije na produkcijskom Supabaseu.
+    console.error('[getMonthlySummary] get_monthly_summary:', error.message);
+    return { ...EMPTY_MONTHLY_SUMMARY };
   }
 
   const payload = data as unknown as Partial<MonthlySummaryRpcResult>;

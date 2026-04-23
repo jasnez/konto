@@ -14,6 +14,7 @@ import {
   DashboardRecentTransactionsSkeleton,
 } from '@/components/dashboard/dashboard-skeletons';
 import { getMonthlySummary, type MonthlySummary } from '@/lib/queries/summary';
+import { safeIanaTimeZone } from '@/lib/safe-timezone';
 import { createClient } from '@/lib/supabase/server';
 import type { Database } from '@/supabase/types';
 
@@ -155,7 +156,7 @@ export default async function PocetnaPage() {
 
   const baseCurrency = profile?.base_currency ?? 'BAM';
   const firstName = getFirstName(profile?.display_name ?? null, user.email);
-  const greeting = getGreetingPart(profile?.timezone ?? 'Europe/Sarajevo');
+  const greeting = getGreetingPart(safeIanaTimeZone(profile?.timezone));
   const showMotivation = !profile?.onboarding_completed_at;
 
   const now = new Date();
