@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { searchMerchants } from './actions';
+import { createMerchant, deleteMerchant, searchMerchants, updateMerchant } from './actions';
+import { createClient } from '@/lib/supabase/server';
 
 const getUser = vi.fn();
 const rpc = vi.fn();
+const from = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(() => ({
-    auth: { getUser },
-    rpc,
-  })),
+  createClient: vi.fn(),
+}));
+
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
 }));
 
 const sampleKonzum = {
@@ -38,6 +41,12 @@ describe('searchMerchants', () => {
     vi.clearAllMocks();
     getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
     rpc.mockReset();
+    from.mockReset();
+    vi.mocked(createClient).mockResolvedValue({
+      auth: { getUser },
+      rpc,
+      from,
+    } as never);
   });
 
   it('returns empty list for blank query without calling RPC', async () => {
@@ -94,5 +103,105 @@ describe('searchMerchants', () => {
     const result = await searchMerchants('x', 3);
 
     expect(result).toEqual({ success: false, error: 'DATABASE_ERROR' });
+  });
+});
+
+describe('merchant CRUD actions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    rpc.mockReset();
+  });
+
+  it('createMerchant returns UNAUTHORIZED without user', async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    const result = await createMerchant({
+      canonical_name: 'Konzum',
+      display_name: 'Konzum',
+      default_category_id: null,
+      icon: null,
+      color: null,
+    });
+    expect(result).toEqual({ success: false, error: 'UNAUTHORIZED' });
+  });
+
+  it('createMerchant succeeds for valid input', async () => {
+    from.mockImplementation((table: string) => {
+      if (table === 'categories') {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                is: () => ({
+                  maybeSingle: () => Promise.resolve({ data: { id: 'cat1' }, error: null }),
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'merchants') {
+        return {
+          insert: () => ({
+            select: () => ({
+              single: () => Promise.resolve({ data: { id: 'm-new' }, error: null }),
+            }),
+          }),
+        };
+      }
+      throw new Error('unexpected table');
+    });
+
+    const result = await createMerchant({
+      canonical_name: 'Konzum',
+      display_name: 'Konzum',
+      default_category_id: '123e4567-e89b-12d3-a456-426614174000',
+      icon: null,
+      color: null,
+    });
+    expect(result).toEqual({ success: true, data: { id: 'm-new' } });
+  });
+
+  it('updateMerchant returns NOT_FOUND for non-owned merchant', async () => {
+    from.mockImplementation((table: string) => {
+      if (table !== 'merchants') throw new Error('unexpected table');
+      return {
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              is: () => ({
+                maybeSingle: () => Promise.resolve({ data: null, error: null }),
+              }),
+            }),
+          }),
+        }),
+      };
+    });
+
+    const result = await updateMerchant('123e4567-e89b-12d3-a456-426614174000', {
+      display_name: 'Novi',
+    });
+    expect(result).toEqual({ success: false, error: 'NOT_FOUND' });
+  });
+
+  it('deleteMerchant blocks when merchant has transactions', async () => {
+    from.mockImplementation((table: string) => {
+      if (table !== 'merchants') throw new Error('unexpected table');
+      return {
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              is: () => ({
+                maybeSingle: () =>
+                  Promise.resolve({ data: { id: 'm1', transaction_count: 2 }, error: null }),
+              }),
+            }),
+          }),
+        }),
+      };
+    });
+
+    const result = await deleteMerchant('123e4567-e89b-12d3-a456-426614174000');
+    expect(result).toEqual({ success: false, error: 'MERCHANT_HAS_TRANSACTIONS' });
   });
 });

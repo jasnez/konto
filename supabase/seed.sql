@@ -1,0 +1,2 @@
+-- Intentionally minimal seed for local reset flow.
+-- Keep deterministic fixtures in test files where possible.

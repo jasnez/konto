@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createAccount, updateAccount } from './actions';
+import { createAccount, deleteAccount, reorderAccounts, updateAccount } from './actions';
 import { CreateAccountSchema } from '@/lib/accounts/validation';
 import { revalidatePath } from 'next/cache';
 
@@ -148,5 +148,76 @@ describe('updateAccount (ownership)', () => {
 
     const result = await updateAccount(id, { name: 'Hijack' });
     expect(result).toEqual({ success: false, error: 'NOT_FOUND' });
+  });
+});
+
+describe('deleteAccount', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    from.mockReset();
+  });
+
+  it('returns UNAUTHORIZED when not logged in', async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    const result = await deleteAccount('123e4567-e89b-12d3-a456-426614174000');
+    expect(result).toEqual({ success: false, error: 'UNAUTHORIZED' });
+  });
+
+  it('soft deletes owned account', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    let step = 0;
+    from.mockImplementation((table: string) => {
+      if (table !== 'accounts') throw new Error('unexpected table');
+      step += 1;
+      if (step === 1) return fluent({ data: { id: 'acc1' }, error: null });
+      if (step === 2) return fluent({ data: null, error: null });
+      throw new Error('unexpected step');
+    });
+
+    const result = await deleteAccount('123e4567-e89b-12d3-a456-426614174000');
+    expect(result).toEqual({ success: true });
+  });
+});
+
+describe('reorderAccounts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    from.mockReset();
+  });
+
+  it('returns UNAUTHORIZED when not logged in', async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    const result = await reorderAccounts(['123e4567-e89b-12d3-a456-426614174000']);
+    expect(result).toEqual({ success: false, error: 'UNAUTHORIZED' });
+  });
+
+  it('updates sort order for owned ids', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    from.mockImplementation((table: string) => {
+      if (table !== 'accounts') throw new Error('unexpected table');
+      return {
+        select: () => ({
+          eq: () => ({
+            is: () => ({
+              in: () =>
+                Promise.resolve({
+                  data: [{ id: '123e4567-e89b-12d3-a456-426614174000' }],
+                  error: null,
+                }),
+            }),
+          }),
+        }),
+        update: () => ({
+          eq: () => ({
+            eq: () => ({
+              is: () => Promise.resolve({ data: null, error: null }),
+            }),
+          }),
+        }),
+      };
+    });
+
+    const result = await reorderAccounts(['123e4567-e89b-12d3-a456-426614174000']);
+    expect(result).toEqual({ success: true });
   });
 });

@@ -13,6 +13,7 @@ const PROTECTED_PATHS = [
   '/uvoz',
   '/podesavanja',
   '/kategorije',
+  '/merchants',
 ];
 
 export async function updateSession(request: NextRequest) {

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Loader2, Mail } from 'lucide-react';
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { sendOtp, verifyOtp } from '@/app/(auth)/shared/actions';
+import { createClient } from '@/lib/supabase/client';
 import {
   SendOtpSchema,
   VerifyOtpSchema,
@@ -73,22 +74,54 @@ export function EmailOtpForm({ variant, callbackErrored = false }: EmailOtpFormP
   const copy = COPY[variant];
   const [sentTo, setSentTo] = useState<string | null>(null);
 
-  return sentTo ? (
-    <OtpCodeStep
-      email={sentTo}
-      onResend={() => {
-        setSentTo(null);
-      }}
-    />
-  ) : (
-    <EmailStep
-      copy={copy}
-      callbackErrored={callbackErrored}
-      onSent={(email) => {
-        setSentTo(email);
-      }}
-    />
+  return (
+    <>
+      <HashSessionHandler />
+      {sentTo ? (
+        <OtpCodeStep
+          email={sentTo}
+          onResend={() => {
+            setSentTo(null);
+          }}
+        />
+      ) : (
+        <EmailStep
+          copy={copy}
+          callbackErrored={callbackErrored}
+          onSent={(email) => {
+            setSentTo(email);
+          }}
+        />
+      )}
+    </>
   );
+}
+
+function HashSessionHandler() {
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#')) return;
+
+    const params = new URLSearchParams(hash.slice(1));
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    if (!accessToken || !refreshToken) return;
+
+    const supabase = createClient();
+    void (async () => {
+      const { error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (error) {
+        window.location.replace('/prijava?error=true');
+        return;
+      }
+      window.location.replace('/pocetna');
+    })();
+  }, []);
+
+  return null;
 }
 
 function EmailStep({
