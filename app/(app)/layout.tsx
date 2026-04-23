@@ -3,6 +3,7 @@ import type { AccountOption } from '@/components/account-select';
 import type { CategoryOption } from '@/components/category-select';
 import { BottomNav } from '@/components/shell/bottom-nav';
 import { QuickAddProvider } from '@/components/shell/fab';
+import { QuickAddHotkeys } from '@/components/shell/quick-add-hotkeys';
 import { Sidebar } from '@/components/shell/sidebar';
 import { TopBar } from '@/components/shell/top-bar';
 import { createClient } from '@/lib/supabase/server';
@@ -71,6 +72,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <QuickAddProvider accounts={quickAddAccounts} categories={quickAddCategories}>
+      <QuickAddHotkeys />
       <div className="flex min-h-screen">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">

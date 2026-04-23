@@ -1,21 +1,16 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Plus } from 'lucide-react';
 import type { AccountOption } from '@/components/account-select';
 import type { CategoryOption } from '@/components/category-select';
 import { QuickAddTransaction } from '@/components/quick-add-transaction';
 import { Button, type buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useUiStore } from '@/stores/ui';
 import type { VariantProps } from 'class-variance-authority';
 
-interface QuickAddContextValue {
-  open: () => void;
-}
-
-const QuickAddContext = createContext<QuickAddContextValue | null>(null);
-
-/** Provides a single quick-add entry point for FAB, sidebar button, and Cmd/Ctrl+K. */
+/** Provides quick-add dialog + data for FAB, sidebar, and global shortcuts. */
 export function QuickAddProvider({
   children,
   accounts,
@@ -25,44 +20,24 @@ export function QuickAddProvider({
   accounts: AccountOption[];
   categories: CategoryOption[];
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const open = useCallback(() => {
-    setIsOpen(true);
-  }, []);
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== 'k') return;
-      if (!event.metaKey && !event.ctrlKey) return;
-      event.preventDefault();
-      setIsOpen(true);
-    }
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, []);
+  const quickAddOpen = useUiStore((s) => s.quickAddOpen);
+  const openQuickAdd = useUiStore((s) => s.openQuickAdd);
+  const closeQuickAdd = useUiStore((s) => s.closeQuickAdd);
 
   return (
-    <QuickAddContext.Provider value={{ open }}>
+    <>
       {children}
       <QuickAddTransaction
-        open={isOpen}
-        onOpenChange={setIsOpen}
+        open={quickAddOpen}
+        onOpenChange={(open) => {
+          if (open) openQuickAdd();
+          else closeQuickAdd();
+        }}
         accounts={accounts}
         categories={categories}
       />
-    </QuickAddContext.Provider>
+    </>
   );
-}
-
-function useQuickAdd() {
-  const ctx = useContext(QuickAddContext);
-  if (!ctx) {
-    throw new Error('QuickAddTrigger mora biti renderovan unutar <QuickAddProvider />.');
-  }
-  return ctx;
 }
 
 export function QuickAddTrigger({
@@ -76,12 +51,23 @@ export function QuickAddTrigger({
   variant?: VariantProps<typeof buttonVariants>['variant'];
   size?: VariantProps<typeof buttonVariants>['size'];
 }) {
-  const { open } = useQuickAdd();
+  const openQuickAdd = useUiStore((s) => s.openQuickAdd);
   return (
-    <Button type="button" variant={variant} size={size} className={className} onClick={open}>
+    <Button
+      type="button"
+      variant={variant}
+      size={size}
+      className={className}
+      onClick={openQuickAdd}
+    >
       {children}
     </Button>
   );
+}
+
+function shortcutTitleSuffix(): string {
+  if (typeof navigator === 'undefined') return 'Ctrl+K';
+  return /Mac|iPhone|iPod|iPad/i.test(navigator.userAgent) ? '⌘K' : 'Ctrl+K';
 }
 
 /**
@@ -90,11 +76,18 @@ export function QuickAddTrigger({
  * sidebar already has a "Dodaj" button.
  */
 export function MobileFab() {
-  const { open } = useQuickAdd();
+  const openQuickAdd = useUiStore((s) => s.openQuickAdd);
+  const [titleSuffix, setTitleSuffix] = useState('Ctrl+K');
+
+  useEffect(() => {
+    setTitleSuffix(shortcutTitleSuffix());
+  }, []);
+
   return (
     <button
       type="button"
-      onClick={open}
+      onClick={openQuickAdd}
+      title={`Dodaj transakciju (${titleSuffix})`}
       aria-label="Brzi unos"
       className={cn(
         'pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full',
