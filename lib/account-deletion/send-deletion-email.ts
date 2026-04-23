@@ -31,12 +31,24 @@ function escapeHtml(s: string): string {
     .replaceAll('"', '&quot;');
 }
 
-export type SendDeletionEmailResult = { ok: true } | { ok: false; error: 'NOT_CONFIGURED' | 'SEND_FAILED' };
+export type SendDeletionEmailResult =
+  | { ok: true }
+  | { ok: false; error: 'NOT_CONFIGURED' | 'SEND_FAILED' };
 
 /**
  * Transactional email via Resend. Requires RESEND_API_KEY and RESEND_FROM_EMAIL (verified domain).
  */
-export async function sendAccountDeletionEmail(to: string, cancelUrl: string): Promise<SendDeletionEmailResult> {
+export async function sendAccountDeletionEmail(
+  to: string,
+  cancelUrl: string,
+): Promise<SendDeletionEmailResult> {
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    process.env.E2E_ALLOW_DELETION_WITHOUT_RESEND === '1'
+  ) {
+    return { ok: true };
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
   if (!apiKey || !from) {
@@ -63,7 +75,10 @@ export async function sendAccountDeletionEmail(to: string, cancelUrl: string): P
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    console.error('account_deletion_email_send_failed', { status: res.status, body: body.slice(0, 200) });
+    console.error('account_deletion_email_send_failed', {
+      status: res.status,
+      body: body.slice(0, 200),
+    });
     return { ok: false, error: 'SEND_FAILED' };
   }
 

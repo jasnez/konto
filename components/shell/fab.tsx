@@ -86,6 +86,7 @@ export function MobileFab() {
   return (
     <button
       type="button"
+      data-testid="fab-brzi-unos"
       onClick={openQuickAdd}
       title={`Dodaj transakciju (${titleSuffix})`}
       aria-label="Brzi unos"

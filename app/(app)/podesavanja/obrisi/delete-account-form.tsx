@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -50,6 +51,11 @@ export function DeleteAccountForm() {
         }
       }
       toast.error(ERROR_MESSAGES[result.error]);
+    } catch (error: unknown) {
+      if (isRedirectError(error)) {
+        return;
+      }
+      toast.error('Nije uspjelo.', { description: 'Pokušaj ponovo.' });
     } finally {
       setIsPending(false);
     }

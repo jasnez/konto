@@ -1,10 +1,31 @@
-import { expect, type Page } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { Database } from '@/supabase/types';
+
+export function e2eWebKitPressFillProject(projectName: string): boolean {
+  return projectName === 'mobile-safari';
+}
+
+/**
+ * WebKit (mobile-safari) can drop a single `fill` on RHF fields — use sequential keypresses.
+ */
+export async function e2eFill(locator: Locator, text: string, usePress: boolean): Promise<void> {
+  await locator.click();
+  if (usePress) {
+    await locator.clear();
+    if (text.length > 0) {
+      await locator.pressSequentially(text, { delay: 8 });
+    }
+  } else {
+    await locator.fill(text);
+  }
+}
 
 interface QaUserSession {
   userId: string;
+  email: string;
 }
 
 const envFromFile = loadEnvLocal();
@@ -38,14 +59,18 @@ function mustEnv(name: string): string {
   return value;
 }
 
-function makeAdminClient() {
-  return createClient(mustEnv('NEXT_PUBLIC_SUPABASE_URL'), mustEnv('SUPABASE_SERVICE_ROLE_KEY'), {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+function makeAdminClient(): SupabaseClient<Database> {
+  return createClient<Database>(
+    mustEnv('NEXT_PUBLIC_SUPABASE_URL'),
+    mustEnv('SUPABASE_SERVICE_ROLE_KEY'),
+    {
+      auth: { autoRefreshToken: false, persistSession: false },
+    },
+  );
 }
 
-function makeAnonClient() {
-  return createClient(
+function makeAnonClient(): SupabaseClient<Database> {
+  return createClient<Database>(
     mustEnv('NEXT_PUBLIC_SUPABASE_URL'),
     mustEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
     {
@@ -56,7 +81,58 @@ function makeAnonClient() {
 
 function randomEmail(tag: string): string {
   const nonce = `${String(Date.now())}-${String(Math.floor(Math.random() * 1_000_000))}`;
-  return `qa-${tag}-${nonce}@konto.local`;
+  return `qa-${tag}-${nonce}@example.com`;
+}
+
+async function ensureDefaultE2EAccount(
+  admin: SupabaseClient<Database>,
+  userId: string,
+): Promise<void> {
+  const { count, error: countError } = await admin
+    .from('accounts')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('deleted_at', null);
+
+  if (countError) throw countError;
+  if (count !== null && count > 0) return;
+
+  const { error } = await admin.from('accounts').insert({
+    user_id: userId,
+    name: 'E2E Tekući',
+    type: 'checking',
+    currency: 'BAM',
+  });
+  if (error) throw error;
+}
+
+export async function getMagicLinkActionForEmail(
+  email: string,
+): Promise<{ actionUrl: string; userId: string }> {
+  const admin = makeAdminClient();
+  const generated = await admin.auth.admin.generateLink({
+    type: 'magiclink',
+    email,
+  });
+  if (generated.error) throw generated.error;
+
+  const { data } = generated;
+  const actionUrl = data.properties.action_link;
+  const userId = data.user.id;
+  if (!actionUrl || !userId) {
+    throw new Error('generateLink did not return action_link or user id for E2E.');
+  }
+  return { actionUrl: rewriteSupabaseActionLinkForE2E(actionUrl), userId };
+}
+
+/** Marks profile for scheduled deletion (middleware should send user to /obrisan). */
+export async function setProfileDeletedAt(userId: string, isoTimestamp: string): Promise<void> {
+  const admin = makeAdminClient();
+  const { error } = await admin
+    .from('profiles')
+    .update({ deleted_at: isoTimestamp })
+    .eq('id', userId);
+  if (error) throw error;
 }
 
 export async function signInAsTestUser(page: Page): Promise<QaUserSession> {
@@ -69,22 +145,73 @@ export async function signInAsTestUser(page: Page): Promise<QaUserSession> {
   });
   if (generated.error) throw generated.error;
 
-  const userId = generated.data.user.id;
-  const token = generated.data.properties.email_otp;
+  const { data } = generated;
+  const userId = data.user.id;
+  const token = data.properties.email_otp;
   if (!userId || !token) {
     throw new Error('Failed to prepare OTP login payload for E2E user.');
   }
 
-  const verified = await anon.auth.verifyOtp({ email, token, type: 'signup' });
-  if (verified.error || !verified.data.session) {
-    throw new Error(`Failed to verify E2E OTP: ${verified.error?.message ?? 'no session'}`);
+  let accessToken: string;
+  let refreshToken: string;
+  const verifiedEmail = await anon.auth.verifyOtp({ email, token, type: 'email' });
+  if (!verifiedEmail.error && verifiedEmail.data.session) {
+    accessToken = verifiedEmail.data.session.access_token;
+    refreshToken = verifiedEmail.data.session.refresh_token;
+  } else {
+    const verifiedSignup = await anon.auth.verifyOtp({ email, token, type: 'signup' });
+    if (verifiedSignup.error || !verifiedSignup.data.session) {
+      throw new Error(
+        `Failed to verify E2E OTP: ${verifiedEmail.error?.message ?? verifiedSignup.error?.message ?? 'no session'}`,
+      );
+    }
+    accessToken = verifiedSignup.data.session.access_token;
+    refreshToken = verifiedSignup.data.session.refresh_token;
   }
 
+  await ensureDefaultE2EAccount(admin, userId);
+  await applySessionToPage(page, accessToken, refreshToken);
+  await page.goto('/racuni', { waitUntil: 'domcontentloaded' });
+  await expect(page).toHaveURL(/\/racuni(?:\?.*)?$/);
+
+  return { userId, email };
+}
+
+function e2eAppOrigin(): string {
+  const raw =
+    process.env.E2E_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173';
+  return raw.replace(/localhost/gu, '127.0.0.1');
+}
+
+/**
+ * GoTrue `action_link` often embeds `redirect_to` (including URL-encoded) pointing at dev `site_url`
+ * (e.g. localhost:3000). Rewrite every occurrence so the browser lands on the Playwright app origin.
+ */
+function rewriteSupabaseActionLinkForE2E(actionUrl: string): string {
+  const origin = e2eAppOrigin();
+  const { hostname, port } = new URL(origin);
+  const encHostPort = `${hostname}%3A${port}`;
+  let out = actionUrl;
+  for (const legacy of ['http://localhost:3000', 'http://127.0.0.1:3000'] as const) {
+    out = out.replaceAll(legacy, origin);
+  }
+  out = out.replaceAll(encodeURIComponent('http://localhost:3000'), encodeURIComponent(origin));
+  out = out.replaceAll(encodeURIComponent('http://127.0.0.1:3000'), encodeURIComponent(origin));
+  out = out.replaceAll('localhost%3A3000', encHostPort);
+  out = out.replaceAll('127.0.0.1%3A3000', encHostPort);
+  return out;
+}
+
+async function applySessionToPage(
+  page: Page,
+  accessToken: string,
+  refreshToken: string,
+): Promise<void> {
   const secret = process.env.E2E_AUTH_BYPASS_SECRET ?? 'local-e2e-secret';
-  const signInResponse = await page.request.post('/api/test-auth/login', {
+  const signInResponse = await page.request.post(`${e2eAppOrigin()}/api/test-auth/login`, {
     data: {
-      accessToken: verified.data.session.access_token,
-      refreshToken: verified.data.session.refresh_token,
+      accessToken,
+      refreshToken,
       secret,
     },
   });
@@ -94,11 +221,15 @@ export async function signInAsTestUser(page: Page): Promise<QaUserSession> {
       `E2E login helper failed with status ${String(signInResponse.status())}: ${body}`,
     );
   }
+}
 
-  await page.goto('/pocetna', { waitUntil: 'domcontentloaded' });
-  await expect(page).toHaveURL(/\/pocetna(?:\?.*)?$/);
-
-  return { userId };
+/** Clicks the DOM node directly (avoids mobile FAB / fixed footers blocking hit-testing on WebKit). */
+export async function clickDomButton(locator: Locator): Promise<void> {
+  await locator.evaluate((el) => {
+    const b = el as HTMLButtonElement;
+    b.scrollIntoView({ block: 'center', inline: 'nearest' });
+    b.click();
+  });
 }
 
 export async function cleanupTestUser(userId: string): Promise<void> {

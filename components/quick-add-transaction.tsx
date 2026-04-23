@@ -105,7 +105,10 @@ function writeLastUsed(payload: LastUsedValues) {
 }
 
 function useIsMobileBreakpoint() {
-  const [isMobile, setIsMobile] = useState(false);
+  // Avoid first render as "desktop" on real mobile: opens the wrong host (Dialog vs Sheet) before effect runs.
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches,
+  );
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)');

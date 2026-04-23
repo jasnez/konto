@@ -268,6 +268,7 @@ function AccountFormFields(props: FieldsProps) {
   return (
     <Form {...form}>
       <form
+        method="post"
         onSubmit={form.handleSubmit(onSubmit)}
         className="mx-auto max-w-lg space-y-6 pb-24 md:pb-8"
       >
