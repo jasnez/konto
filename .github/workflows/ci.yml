@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint / Typecheck / Test / Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      # The install step would normally shell out to the Supabase CLI via the
+      # `postinstall` hook. In CI there is no local Supabase — skip it and use
+      # the committed `supabase/types.ts`.
+      SUPABASE_GEN_SKIP: '1'
+      # Placeholder env for `pnpm build`. The build runs real code paths that
+      # call mustExist() for the Supabase client constructors. These values are
+      # intentionally fake — the build only needs them to be *defined*, not to
+      # actually connect. Replace with real secrets once a production CI flow
+      # (preview deploys, E2E) is wired up.
+      NEXT_PUBLIC_SUPABASE_URL: 'https://ci-placeholder.supabase.co'
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'ci-placeholder-anon-key'
+      NEXT_PUBLIC_SITE_URL: 'https://ci-placeholder.invalid'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
