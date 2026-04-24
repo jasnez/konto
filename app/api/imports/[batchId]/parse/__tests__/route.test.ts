@@ -80,6 +80,22 @@ function buildSupabaseMock(options: {
         },
       };
     }
+    if (table === 'merchant_aliases') {
+      return {
+        select: () => ({
+          eq: () => Promise.resolve({ data: [], error: null }),
+        }),
+      };
+    }
+    if (table === 'merchants') {
+      return {
+        select: () => ({
+          in: () => ({
+            is: () => Promise.resolve({ data: [], error: null }),
+          }),
+        }),
+      };
+    }
     throw new Error(`Unexpected table ${table}`);
   });
 
@@ -173,6 +189,10 @@ describe('POST /api/imports/[batchId]/parse', () => {
         raw_description: 'BINGO MARKET SARAJEVO',
         reference: null,
         status: 'pending_review',
+        parse_confidence: 'high',
+        merchant_id: null,
+        category_id: null,
+        selected_for_import: true,
       }),
     ]);
 
@@ -184,6 +204,8 @@ describe('POST /api/imports/[batchId]/parse', () => {
         transaction_count: 1,
         parse_confidence: 'high',
         parse_warnings: [],
+        statement_period_start: null,
+        statement_period_end: null,
       }),
     );
   });

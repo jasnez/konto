@@ -222,6 +222,8 @@ export type Database = {
           transaction_count: number | null;
           parse_confidence: 'high' | 'medium' | 'low' | null;
           parse_warnings: Json | null;
+          statement_period_start: string | null;
+          statement_period_end: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -237,6 +239,8 @@ export type Database = {
           transaction_count?: number | null;
           parse_confidence?: 'high' | 'medium' | 'low' | null;
           parse_warnings?: Json | null;
+          statement_period_start?: string | null;
+          statement_period_end?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -252,6 +256,8 @@ export type Database = {
           transaction_count?: number | null;
           parse_confidence?: 'high' | 'medium' | 'low' | null;
           parse_warnings?: Json | null;
+          statement_period_start?: string | null;
+          statement_period_end?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -277,6 +283,10 @@ export type Database = {
           reference: string | null;
           status: 'pending_review' | 'accepted' | 'rejected' | 'imported';
           transaction_id: string | null;
+          selected_for_import: boolean;
+          parse_confidence: 'high' | 'medium' | 'low' | null;
+          category_id: string | null;
+          merchant_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -291,6 +301,10 @@ export type Database = {
           reference?: string | null;
           status?: 'pending_review' | 'accepted' | 'rejected' | 'imported';
           transaction_id?: string | null;
+          selected_for_import?: boolean;
+          parse_confidence?: 'high' | 'medium' | 'low' | null;
+          category_id?: string | null;
+          merchant_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -305,6 +319,10 @@ export type Database = {
           reference?: string | null;
           status?: 'pending_review' | 'accepted' | 'rejected' | 'imported';
           transaction_id?: string | null;
+          selected_for_import?: boolean;
+          parse_confidence?: 'high' | 'medium' | 'low' | null;
+          category_id?: string | null;
+          merchant_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };

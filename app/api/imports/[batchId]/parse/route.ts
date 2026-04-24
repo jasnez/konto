@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { extractPdfText } from '@/lib/parser/extract-text';
 import { parseStatementWithLLM } from '@/lib/parser/llm-parse';
 import { ocrFallback } from '@/lib/parser/ocr-fallback';
+import { findFirstMerchantAliasMatch } from '@/lib/import/merchant-alias-match';
 import { redactPII } from '@/lib/parser/redact-pii';
 import { createClient } from '@/lib/supabase/server';
 
@@ -118,18 +119,51 @@ export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
     })();
     const parsed = await parseStatementWithLLM(redacted, bankHint);
 
+    const { data: aliasRows } = await supabase
+      .from('merchant_aliases')
+      .select('merchant_id, pattern, pattern_type')
+      .eq('user_id', user.id);
+
+    const aliasInputs =
+      aliasRows && aliasRows.length > 0
+        ? await (async () => {
+            const mids = [...new Set(aliasRows.map((r) => r.merchant_id))];
+            const { data: merch } = await supabase
+              .from('merchants')
+              .select('id, default_category_id')
+              .in('id', mids)
+              .is('deleted_at', null);
+            const mMap = new Map((merch ?? []).map((m) => [m.id, m.default_category_id ?? null]));
+            return aliasRows
+              .filter((r) => mMap.has(r.merchant_id))
+              .map((r) => ({
+                merchantId: r.merchant_id,
+                defaultCategoryId: mMap.get(r.merchant_id) ?? null,
+                pattern: r.pattern,
+                patternType: r.pattern_type as 'exact' | 'contains' | 'starts_with' | 'regex',
+              }));
+          })()
+        : [];
+
     // 5. Insert parsed rows into the staging table for user review.
     if (parsed.transactions.length > 0) {
-      const rows = parsed.transactions.map((t) => ({
-        batch_id: batch.id,
-        user_id: user.id,
-        transaction_date: t.date,
-        amount_minor: t.amountMinor,
-        currency: t.currency,
-        raw_description: t.description,
-        reference: t.reference ?? null,
-        status: 'pending_review' as const,
-      }));
+      const rows = parsed.transactions.map((t) => {
+        const match = findFirstMerchantAliasMatch(t.description, aliasInputs);
+        return {
+          batch_id: batch.id,
+          user_id: user.id,
+          transaction_date: t.date,
+          amount_minor: t.amountMinor,
+          currency: t.currency,
+          raw_description: t.description,
+          reference: t.reference ?? null,
+          status: 'pending_review' as const,
+          parse_confidence: parsed.confidence,
+          merchant_id: match?.merchantId ?? null,
+          category_id: match?.categoryId ?? null,
+          selected_for_import: true,
+        };
+      });
       const { error: insertErr } = await supabase.from('parsed_transactions').insert(rows);
       if (insertErr) {
         console.error('parse_route_insert_error', {
@@ -149,6 +183,8 @@ export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
         transaction_count: parsed.transactions.length,
         parse_confidence: parsed.confidence,
         parse_warnings: parsed.warnings,
+        statement_period_start: parsed.statementPeriodStart ?? null,
+        statement_period_end: parsed.statementPeriodEnd ?? null,
         error_message: null,
       })
       .eq('id', batch.id)

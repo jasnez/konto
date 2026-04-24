@@ -237,6 +237,96 @@ export async function clickDomButton(locator: Locator): Promise<void> {
 
 export async function cleanupTestUser(userId: string): Promise<void> {
   const admin = makeAdminClient();
+  // Ukloni uvozne sesije prije auth brisanja (parsed_transactions CASCADE; transakcije dobiju SET NULL na batch).
+  const { error: importErr } = await admin.from('import_batches').delete().eq('user_id', userId);
+  if (importErr) {
+    console.error('cleanup_import_batches', { userId, error: importErr.message });
+  }
+  // Eksplicitno ukloni transakcije (lokalni GoTrue ponekad ne kaskadno obriše korisnika nakon import PDF-a).
+  const { error: txErr } = await admin.from('transactions').delete().eq('user_id', userId);
+  if (txErr) {
+    console.error('cleanup_transactions', { userId, error: txErr.message });
+  }
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) throw error;
+}
+
+export interface E2eParsedTxSeed {
+  transaction_date: string;
+  amount_minor: number;
+  currency: string;
+  raw_description: string;
+}
+
+/**
+ * Simulates a successful PDF parse for E2E: staging rows + batch `ready`.
+ * Deletes existing `parsed_transactions` for the batch first (idempotent if parse runs twice in dev Strict Mode).
+ */
+export async function e2eSeedImportBatchReady(input: {
+  batchId: string;
+  userId: string;
+  transactions: E2eParsedTxSeed[];
+  parseConfidence?: 'high' | 'medium' | 'low';
+  warnings?: string[];
+  periodStart?: string | null;
+  periodEnd?: string | null;
+}): Promise<void> {
+  const admin = makeAdminClient();
+  const {
+    batchId,
+    userId,
+    transactions,
+    parseConfidence = 'high',
+    warnings = [],
+    periodStart = '2026-01-01',
+    periodEnd = '2026-01-31',
+  } = input;
+
+  const { error: delErr } = await admin
+    .from('parsed_transactions')
+    .delete()
+    .eq('batch_id', batchId);
+  if (delErr) {
+    throw new Error(`e2eSeedImportBatchReady delete staged: ${delErr.message}`);
+  }
+
+  if (transactions.length > 0) {
+    const rows = transactions.map((t) => ({
+      batch_id: batchId,
+      user_id: userId,
+      transaction_date: t.transaction_date,
+      amount_minor: t.amount_minor,
+      currency: t.currency,
+      raw_description: t.raw_description,
+      reference: null as string | null,
+      status: 'pending_review' as const,
+      parse_confidence: parseConfidence,
+      merchant_id: null as string | null,
+      category_id: null as string | null,
+      selected_for_import: true,
+    }));
+
+    const { error: insErr } = await admin.from('parsed_transactions').insert(rows);
+    if (insErr) {
+      throw new Error(`e2eSeedImportBatchReady insert: ${insErr.message}`);
+    }
+  }
+
+  const { error: uErr } = await admin
+    .from('import_batches')
+    .update({
+      status: 'ready',
+      transaction_count: transactions.length,
+      parse_confidence: parseConfidence,
+      parse_warnings: warnings,
+      statement_period_start: periodStart,
+      statement_period_end: periodEnd,
+      error_message: null,
+    })
+    .eq('id', batchId)
+    .eq('user_id', userId);
+
+  if (uErr) {
+    throw new Error(`e2eSeedImportBatchReady update batch: ${uErr.message}`);
+  }
 }
