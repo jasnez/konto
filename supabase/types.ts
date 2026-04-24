@@ -513,7 +513,14 @@ export type Database = {
         }[];
       };
       get_monthly_summary: {
-        Args: { p_base_currency: string; p_month: number; p_year: number };
+        Args:
+          | { p_base_currency: string; p_month: number; p_year: number }
+          | {
+              p_base_currency: string;
+              p_month: number;
+              p_today_date: string;
+              p_year: number;
+            };
         Returns: {
           avg_daily_spend: number;
           month_expense: number;

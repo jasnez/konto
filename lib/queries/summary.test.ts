@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SummarySupabaseClient } from './summary';
-import { getMonthlySummary } from './summary';
+import { getMonthlySummary, resolveSummaryDateParts } from './summary';
 
 interface AccountRow {
   current_balance_cents: number;
@@ -69,6 +69,35 @@ describe('getMonthlySummary', () => {
       p_year: 2026,
       p_month: 4,
       p_base_currency: 'BAM',
+    });
+  });
+
+  it('forwards p_today_date when caller resolves it in user timezone', async () => {
+    const { supabase, rpcMock } = createSupabaseRpcMock(
+      {
+        total_balance: '0',
+        month_income: '0',
+        month_expense: '0',
+        month_net: '0',
+        prev_month_net: '0',
+        net_change_percent: 0,
+        avg_daily_spend: '0',
+      },
+      null,
+      [],
+    );
+
+    await getMonthlySummary(supabase, 'user-1', 'BAM', {
+      year: 2026,
+      month: 4,
+      todayDate: '2026-04-24',
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith('get_monthly_summary', {
+      p_year: 2026,
+      p_month: 4,
+      p_base_currency: 'BAM',
+      p_today_date: '2026-04-24',
     });
   });
 
@@ -150,6 +179,22 @@ describe('getMonthlySummary', () => {
     const summary = await getMonthlySummary(supabase, 'u1', 'BAM', { year: 2026, month: 4 });
 
     expect(summary.totalBalance).toBe(8401n);
+  });
+
+  it('resolveSummaryDateParts returns year/month/day in the given timezone at midnight crossover', () => {
+    // 2026-04-01T00:30 in Europe/Sarajevo == 2026-03-31T22:30 UTC.
+    // Naive UTC-based derivation would report March; timezone-aware must report April.
+    const utcInstant = new Date('2026-03-31T22:30:00Z');
+    const parts = resolveSummaryDateParts('Europe/Sarajevo', utcInstant);
+    expect(parts).toEqual({ year: 2026, month: 4, todayDate: '2026-04-01' });
+  });
+
+  it('resolveSummaryDateParts falls back to default timezone on invalid input', () => {
+    const utcInstant = new Date('2026-04-24T10:00:00Z');
+    const parts = resolveSummaryDateParts('Not/A_Real_TZ', utcInstant);
+    expect(parts.year).toBe(2026);
+    expect(parts.month).toBe(4);
+    expect(parts.todayDate).toBe('2026-04-24');
   });
 
   it('throws when userId is empty', async () => {
