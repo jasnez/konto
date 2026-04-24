@@ -2,6 +2,7 @@ import { cache } from 'react';
 import type { Metadata } from 'next';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
 import type { PostgrestError } from '@supabase/supabase-js';
+import { fetchTransferCounterpartyAccountNames } from '@/lib/db/transfer-counterparty-names';
 import { createClient } from '@/lib/supabase/server';
 import { TransactionsClient } from './transactions-client';
 import type { TransactionListItem, TransactionsFilters } from './types';
@@ -35,6 +36,7 @@ interface RawTransactionRow {
   notes: string | null;
   is_transfer: boolean;
   fx_stale: boolean | null;
+  transfer_pair_id: string | null;
   accounts: { id: string; name: string; currency: string };
   categories: { id: string; name: string; icon: string | null; kind: string } | null;
 }
@@ -111,7 +113,7 @@ async function fetchTransactionsUncached(
   let dataQuery = supabase
     .from('transactions')
     .select(
-      'id,transaction_date,original_amount_cents,original_currency,merchant_raw,merchant_id,description,notes,is_transfer,fx_stale,accounts(id,name,currency),categories(id,name,icon,kind)',
+      'id,transaction_date,original_amount_cents,original_currency,merchant_raw,merchant_id,description,notes,is_transfer,fx_stale,transfer_pair_id,accounts(id,name,currency),categories(id,name,icon,kind)',
     )
     .eq('user_id', userId)
     .is('deleted_at', null)
@@ -164,6 +166,17 @@ async function fetchTransactionsUncached(
   }
 
   const rawRows = data as RawTransactionRow[];
+  const pairTargets = [
+    ...new Set(
+      rawRows.map((row) => row.transfer_pair_id).filter((value): value is string => value !== null),
+    ),
+  ];
+  const counterpartyNames = await fetchTransferCounterpartyAccountNames(
+    supabase,
+    userId,
+    pairTargets,
+  );
+
   const merchantIds = rawRows
     .map((row) => row.merchant_id)
     .filter((value): value is string => value !== null);
@@ -191,6 +204,10 @@ async function fetchTransactionsUncached(
     notes: row.notes,
     is_transfer: row.is_transfer,
     fx_stale: row.fx_stale === true,
+    transfer_pair_id: row.transfer_pair_id,
+    transfer_counterparty_account_name: row.transfer_pair_id
+      ? (counterpartyNames.get(row.transfer_pair_id) ?? null)
+      : null,
     account: { id: row.accounts.id, name: row.accounts.name, currency: row.accounts.currency },
     category: row.categories
       ? {

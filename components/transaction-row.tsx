@@ -5,6 +5,7 @@ import { AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 import { Money, type MoneyTone } from '@/components/money';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import { getTransactionPrimaryLabel } from '@/lib/format/transaction-primary-label';
 import { cn } from '@/lib/utils';
 import type { TransactionListItem } from '@/app/(app)/transakcije/types';
 
@@ -44,7 +45,15 @@ export function TransactionRow({
     };
   }, []);
 
-  const merchantLabel = tx.merchant?.display_name ?? tx.merchant_raw ?? 'Nepoznato';
+  const merchantLabel = getTransactionPrimaryLabel({
+    merchant_display_name: tx.merchant?.display_name,
+    merchant_raw: tx.merchant_raw,
+    description: tx.description,
+    is_transfer: tx.is_transfer,
+    original_amount_cents: tx.original_amount_cents,
+    account_name: tx.account?.name ?? null,
+    transfer_counterparty_account_name: tx.transfer_counterparty_account_name,
+  });
   const categoryLabel = tx.category?.name ?? (tx.is_transfer ? 'Transfer' : 'Nerazvrstano');
   const accountLabel = tx.account?.name ?? 'Račun';
   const categoryIcon = tx.category ? tx.category.icon : null;

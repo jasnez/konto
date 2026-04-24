@@ -27,6 +27,10 @@ export interface TransactionListItem {
   notes: string | null;
   is_transfer: boolean;
   fx_stale: boolean;
+  /** Sibling leg id when this row is one side of a transfer pair. */
+  transfer_pair_id: string | null;
+  /** Account name on the paired transaction row, if resolved. */
+  transfer_counterparty_account_name: string | null;
   account: TransactionAccountRef | null;
   category: TransactionCategoryRef | null;
   merchant: TransactionMerchantRef | null;

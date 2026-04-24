@@ -13,6 +13,8 @@ import {
   DashboardMetricsSkeleton,
   DashboardRecentTransactionsSkeleton,
 } from '@/components/dashboard/dashboard-skeletons';
+import { fetchTransferCounterpartyAccountNames } from '@/lib/db/transfer-counterparty-names';
+import { getTransactionPrimaryLabel } from '@/lib/format/transaction-primary-label';
 import {
   getMonthlySummary,
   resolveSummaryDateParts,
@@ -27,10 +29,14 @@ interface RecentTxRow {
   transaction_date: string;
   base_amount_cents: number;
   base_currency: string;
+  original_amount_cents: number;
   merchant_raw: string | null;
+  description: string | null;
   is_transfer: boolean;
+  transfer_pair_id: string | null;
   merchants: { display_name: string } | null;
   categories: { name: string } | null;
+  accounts: { name: string } | null;
 }
 
 function getGreetingPart(timezone: string): string {
@@ -63,7 +69,7 @@ async function getRecentTransactions(
   const { data } = await supabase
     .from('transactions')
     .select(
-      'id,transaction_date,base_amount_cents,base_currency,merchant_raw,is_transfer,merchants(display_name),categories(name)',
+      'id,transaction_date,base_amount_cents,base_currency,original_amount_cents,merchant_raw,description,is_transfer,transfer_pair_id,merchants(display_name),categories(name),accounts(name)',
     )
     .eq('user_id', userId)
     .is('deleted_at', null)
@@ -71,15 +77,32 @@ async function getRecentTransactions(
     .order('created_at', { ascending: false })
     .limit(10);
 
-  return ((data as RecentTxRow[] | null) ?? []).map((row) => ({
+  const rows = (data as RecentTxRow[] | null) ?? [];
+  const pairTargets = [
+    ...new Set(rows.map((row) => row.transfer_pair_id).filter((id): id is string => id !== null)),
+  ];
+  const counterpartyNames = await fetchTransferCounterpartyAccountNames(
+    supabase,
+    userId,
+    pairTargets,
+  );
+
+  return rows.map((row) => ({
     id: row.id,
     transactionDate: row.transaction_date,
     baseAmountCents: BigInt(row.base_amount_cents),
     baseCurrency: row.base_currency,
-    merchantLabel:
-      row.merchants?.display_name ??
-      row.merchant_raw ??
-      (row.is_transfer ? 'Transfer' : 'Nepoznato'),
+    merchantLabel: getTransactionPrimaryLabel({
+      merchant_display_name: row.merchants?.display_name,
+      merchant_raw: row.merchant_raw,
+      description: row.description,
+      is_transfer: row.is_transfer,
+      original_amount_cents: row.original_amount_cents,
+      account_name: row.accounts?.name ?? null,
+      transfer_counterparty_account_name: row.transfer_pair_id
+        ? (counterpartyNames.get(row.transfer_pair_id) ?? null)
+        : null,
+    }),
     categoryLabel: row.categories?.name ?? (row.is_transfer ? 'Transfer' : 'Nerazvrstano'),
   }));
 }
