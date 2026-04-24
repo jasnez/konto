@@ -21,6 +21,8 @@ interface AccountCardProps {
 
 export function AccountCard({ account }: AccountCardProps) {
   const bal = account.current_balance_cents;
+  const isDebtAccount = account.type === 'credit_card' || account.type === 'loan';
+  const isDebtBalanceNegative = isDebtAccount && bal < 0;
 
   return (
     <Card
@@ -47,7 +49,12 @@ export function AccountCard({ account }: AccountCardProps) {
               {account.institution ? (
                 <p className="truncate text-sm text-muted-foreground">{account.institution}</p>
               ) : null}
-              <p className="text-2xl font-semibold tabular-nums tracking-tight">
+              <p
+                className={cn(
+                  'text-2xl font-semibold tabular-nums tracking-tight',
+                  isDebtBalanceNegative && 'text-destructive',
+                )}
+              >
                 {formatMinorUnits(bal, account.currency)}
               </p>
               <p className="text-xs text-muted-foreground">{account.currency}</p>
