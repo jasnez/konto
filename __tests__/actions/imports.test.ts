@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   finalizeImport,
   rejectImport,
+  retryImportParse,
   togglePartialExclusion,
   updateParsedTransaction,
 } from '@/lib/server/actions/imports';
@@ -731,5 +732,74 @@ describe('togglePartialExclusion', () => {
       excluded: true,
     });
     expect(result).toEqual({ success: false, error: 'NOT_FOUND' });
+  });
+});
+
+// ─── retryImportParse ────────────────────────────────────────────────
+
+describe('retryImportParse', () => {
+  it('clears staging and resets a failed batch to uploaded', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'failed',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+      },
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+
+    const result = await retryImportParse({ batchId: BATCH_ID });
+
+    expect(result).toEqual({ success: true });
+    expect(stub.parsedDeleteCalls).toBe(1);
+    expect(stub.batchUpdatePayloads[0]).toEqual({
+      status: 'uploaded',
+      error_message: null,
+      transaction_count: null,
+      parse_confidence: null,
+      parse_warnings: null,
+      statement_period_start: null,
+      statement_period_end: null,
+      imported_at: null,
+    });
+  });
+
+  it('allows retry when parse succeeded with zero transactions (ready)', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'ready',
+        account_id: ACCOUNT_ID,
+        storage_path: 'u/f.pdf',
+      },
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+
+    const result = await retryImportParse({ batchId: BATCH_ID });
+    expect(result).toEqual({ success: true });
+    expect(stub.parsedDeleteCalls).toBe(1);
+  });
+
+  it('returns BAD_STATE while parsing is in flight', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'parsing',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+      },
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+
+    const result = await retryImportParse({ batchId: BATCH_ID });
+    expect(result).toEqual({ success: false, error: 'BAD_STATE' });
+    expect(stub.parsedDeleteCalls).toBe(0);
   });
 });

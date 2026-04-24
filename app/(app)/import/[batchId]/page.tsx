@@ -1,8 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { format, parseISO } from 'date-fns';
+import { bs } from 'date-fns/locale';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { ImportBatchLifecycle } from '../import-batch-lifecycle';
+import { ImportBatchAwaitParse } from '../import-batch-await-parse';
+import { ImportBatchEmptyClient } from '../import-batch-empty-client';
+import { ImportBatchFailedClient } from '../import-batch-failed-client';
 import {
   ImportReviewClient,
   type ReviewCategoryOption,
@@ -48,6 +52,17 @@ function narrowStatus(raw: string): BatchStatus {
   return 'failed';
 }
 
+function formatStatementPeriodLabel(start: string | null, end: string | null): string {
+  if (!start && !end) return '—';
+  try {
+    const a = start ? format(parseISO(start), 'd. MMM yyyy.', { locale: bs }) : '…';
+    const b = end ? format(parseISO(end), 'd. MMM yyyy.', { locale: bs }) : '…';
+    return `${a} – ${b}`;
+  } catch {
+    return '—';
+  }
+}
+
 export default async function ImportBatchPage(props: PageProps) {
   const { batchId } = await props.params;
   if (!UUID_RE.test(batchId)) notFound();
@@ -90,22 +105,44 @@ export default async function ImportBatchPage(props: PageProps) {
   })();
 
   const warnings = parseWarningsJson(batch.parse_warnings);
+  const periodLabel = formatStatementPeriodLabel(
+    batch.statement_period_start,
+    batch.statement_period_end,
+  );
 
   if (batchStatus === 'failed') {
     return (
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 md:max-w-5xl md:px-6">
+      <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
         <p className="text-sm text-muted-foreground">
           <Link className="text-primary hover:underline" href="/import">
             ← Natrag na uvoz
           </Link>
         </p>
-        <h1 className="text-2xl font-bold tracking-tight">Pregled uvoza</h1>
-        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-base text-foreground">
-          <p className="font-medium">Obrada izvoda nije uspjela.</p>
-          {batch.error_message ? (
-            <p className="mt-2 text-sm text-muted-foreground">{batch.error_message}</p>
-          ) : null}
-        </div>
+        <header className="mt-4 space-y-1 border-b border-border/60 pb-6">
+          <h1 className="text-2xl font-bold tracking-tight">Pregled uvoza</h1>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{bankLabel}</span>
+            <span className="mx-2 text-muted-foreground">·</span>
+            <span>{batch.original_filename}</span>
+          </p>
+        </header>
+        <ImportBatchFailedClient batchId={batch.id} errorMessageRaw={batch.error_message} />
+      </div>
+    );
+  }
+
+  if (batchStatus === 'uploaded' || batchStatus === 'parsing') {
+    return (
+      <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
+        <p className="text-sm text-muted-foreground">
+          <Link className="text-primary hover:underline" href="/import">
+            ← Natrag na uvoz
+          </Link>
+        </p>
+        <header className="mt-4 space-y-1 border-b border-border/60 pb-6">
+          <h1 className="text-2xl font-bold tracking-tight">Pregled uvoza</h1>
+        </header>
+        <ImportBatchAwaitParse batchId={batch.id} status={batchStatus} />
       </div>
     );
   }
@@ -156,11 +193,32 @@ export default async function ImportBatchPage(props: PageProps) {
     parse_confidence: narrowConfidence(r.parse_confidence),
   }));
 
-  const showReview = batchStatus === 'ready';
+  if (initialRows.length === 0) {
+    return (
+      <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
+        <p className="text-sm text-muted-foreground">
+          <Link className="text-primary hover:underline" href="/import">
+            ← Natrag na uvoz
+          </Link>
+        </p>
+        <header className="mt-4 space-y-1 border-b border-border/60 pb-6">
+          <h1 className="text-2xl font-bold tracking-tight">Pregled uvoza</h1>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{bankLabel}</span>
+            <span className="mx-2 text-muted-foreground">·</span>
+            <span>{batch.original_filename}</span>
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Period izvoda: <span className="text-foreground">{periodLabel}</span>
+          </p>
+        </header>
+        <ImportBatchEmptyClient />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
-      <ImportBatchLifecycle batchId={batch.id} status={batchStatus} />
       <p className="text-sm text-muted-foreground">
         <Link className="text-primary hover:underline" href="/import">
           ← Natrag na uvoz
@@ -169,38 +227,23 @@ export default async function ImportBatchPage(props: PageProps) {
 
       <header className="mt-4 space-y-1 border-b border-border/60 pb-6">
         <h1 className="text-2xl font-bold tracking-tight">Pregled uvoza</h1>
-        {!showReview ? (
-          <p className="text-base text-muted-foreground">
-            {batchStatus === 'uploaded'
-              ? 'Priprema i obrada PDF-a…'
-              : 'AI parsira transakcije iz izvoda. Ovo može potrajati nekoliko sekundi.'}
-          </p>
-        ) : null}
       </header>
 
-      {showReview ? (
-        <div className="mt-6">
-          <ImportReviewClient
-            batchId={batch.id}
-            initialRows={initialRows}
-            categories={categories}
-            batch={{
-              bankLabel,
-              fileName: batch.original_filename,
-              parseConfidence: narrowConfidence(batch.parse_confidence),
-              parseWarnings: warnings,
-              periodStart: batch.statement_period_start,
-              periodEnd: batch.statement_period_end,
-            }}
-          />
-        </div>
-      ) : (
-        <div className="mt-8 flex min-h-[12rem] items-center justify-center rounded-xl border border-dashed border-border/80 bg-muted/20 px-4 py-12 text-center">
-          <p className="text-base text-muted-foreground">
-            {batchStatus === 'uploaded' ? 'Pokrećem obradu…' : 'Molimo pričekaj…'}
-          </p>
-        </div>
-      )}
+      <div className="mt-6">
+        <ImportReviewClient
+          batchId={batch.id}
+          initialRows={initialRows}
+          categories={categories}
+          batch={{
+            bankLabel,
+            fileName: batch.original_filename,
+            parseConfidence: narrowConfidence(batch.parse_confidence),
+            parseWarnings: warnings,
+            periodStart: batch.statement_period_start,
+            periodEnd: batch.statement_period_end,
+          }}
+        />
+      </div>
     </div>
   );
 }

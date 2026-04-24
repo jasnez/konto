@@ -806,3 +806,88 @@ export async function rejectImport(input: unknown): Promise<RejectImportResult> 
   revalidatePath(`/import/${batchId}`);
   return { success: true };
 }
+
+// ------------------------------------------------------------------
+// retryImportParse(batchId) — reset failed or empty-ready batch to re-run POST /parse
+// ------------------------------------------------------------------
+
+export type RetryImportParseResult =
+  | { success: true }
+  | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'NOT_FOUND' }
+  | { success: false; error: 'BAD_STATE' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
+export async function retryImportParse(input: unknown): Promise<RetryImportParseResult> {
+  const zod = BatchIdInputSchema.safeParse(input);
+  if (!zod.success) {
+    return {
+      success: false,
+      error: 'VALIDATION_ERROR',
+      details: buildValidationDetails(zod.error),
+    };
+  }
+
+  const { batchId } = zod.data;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  const { data: batch, error: bErr } = await supabase
+    .from('import_batches')
+    .select('id, status, account_id')
+    .eq('id', batchId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (bErr) {
+    console.error('retry_import_parse_load', { userId: user.id, error: bErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  if (!batch) {
+    return { success: false, error: 'NOT_FOUND' };
+  }
+  if (batch.status !== 'failed' && batch.status !== 'ready') {
+    return { success: false, error: 'BAD_STATE' };
+  }
+
+  const { error: delErr } = await supabase
+    .from('parsed_transactions')
+    .delete()
+    .eq('batch_id', batchId)
+    .eq('user_id', user.id);
+
+  if (delErr) {
+    console.error('retry_import_parse_staging', { userId: user.id, error: delErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  const { error: updErr } = await supabase
+    .from('import_batches')
+    .update({
+      status: 'uploaded',
+      error_message: null,
+      transaction_count: null,
+      parse_confidence: null,
+      parse_warnings: null,
+      statement_period_start: null,
+      statement_period_end: null,
+      imported_at: null,
+    })
+    .eq('id', batchId)
+    .eq('user_id', user.id);
+
+  if (updErr) {
+    console.error('retry_import_parse_reset', { userId: user.id, error: updErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidateImportViews(batch.account_id ?? null);
+  revalidatePath(`/import/${batchId}`);
+  return { success: true };
+}
