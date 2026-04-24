@@ -22,7 +22,7 @@ export default async function TransactionDetailPage({ params }: PageProps) {
       supabase
         .from('transactions')
         .select(
-          'id,transaction_date,original_amount_cents,original_currency,base_amount_cents,base_currency,fx_rate,fx_rate_date,merchant_raw,description,notes,source,is_transfer,tags,created_at,updated_at,accounts(id,name,currency),categories(id,name,icon)',
+          'id,transaction_date,original_amount_cents,original_currency,base_amount_cents,base_currency,fx_rate,fx_rate_date,merchant_raw,description,notes,source,is_transfer,tags,receipt_scan_id,created_at,updated_at,accounts(id,name,currency),categories(id,name,icon)',
         )
         .eq('id', id)
         .eq('user_id', user.id)
@@ -56,6 +56,7 @@ export default async function TransactionDetailPage({ params }: PageProps) {
     source: tx.source,
     is_transfer: tx.is_transfer,
     tags: tx.tags,
+    receipt_scan_id: tx.receipt_scan_id,
     created_at: tx.created_at,
     updated_at: tx.updated_at,
     account: { id: tx.accounts.id, name: tx.accounts.name, currency: tx.accounts.currency },

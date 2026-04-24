@@ -1,4 +1,5 @@
 import {
+  Camera,
   Home,
   Receipt,
   PieChart,
@@ -38,6 +39,13 @@ export const NAV_ITEMS: NavItem[] = [
     desktopOnly: true,
   },
   { href: '/transakcije', label: 'Transakcije', mobileLabel: 'Transakcije', icon: Receipt },
+  {
+    href: '/skeniraj',
+    label: 'Skeniraj račun',
+    mobileLabel: 'Skeniraj',
+    icon: Camera,
+    desktopOnly: true,
+  },
   { href: '/uvidi', label: 'Uvidi', mobileLabel: 'Uvidi', icon: PieChart, desktopOnly: true },
   { href: '/podesavanja', label: 'Podešavanja', mobileLabel: 'Više', icon: Settings },
 ];
