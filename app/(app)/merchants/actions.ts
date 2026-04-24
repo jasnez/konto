@@ -57,7 +57,8 @@ export type CreateMerchantResult =
   | { success: false; error: 'VALIDATION_ERROR'; details: MerchantFieldErrorDetails }
   | { success: false; error: 'UNAUTHORIZED' }
   | { success: false; error: 'DATABASE_ERROR' }
-  | { success: false; error: 'DUPLICATE_CANONICAL' };
+  | { success: false; error: 'DUPLICATE_CANONICAL'; existingId: string }
+  | { success: false; error: 'DUPLICATE_CANONICAL_NOT_FOUND' };
 
 export type UpdateMerchantResult =
   | { success: true }
@@ -205,7 +206,18 @@ export async function createMerchant(input: unknown): Promise<CreateMerchantResu
 
   if (insErr) {
     if (insErr.code === '23505') {
-      return { success: false, error: 'DUPLICATE_CANONICAL' };
+      const { data: existing } = await supabase
+        .from('merchants')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('canonical_name', canonical_name)
+        .is('deleted_at', null)
+        .maybeSingle();
+      if (existing) {
+        return { success: false, error: 'DUPLICATE_CANONICAL', existingId: existing.id };
+      }
+      console.error('create_merchant_duplicate_not_found', { userId: user.id, canonical_name });
+      return { success: false, error: 'DUPLICATE_CANONICAL_NOT_FOUND' };
     }
     console.error('create_merchant_error', { userId: user.id, error: insErr.message });
     return { success: false, error: 'DATABASE_ERROR' };

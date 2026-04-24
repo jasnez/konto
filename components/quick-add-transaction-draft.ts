@@ -103,6 +103,7 @@ export function buildDefaults(
       currency: accountCurrency,
       transaction_date: today,
       merchant_raw: lastUsed?.merchant_raw ?? null,
+      merchant_id: null,
       category_id: categoryId,
       notes: null,
     },

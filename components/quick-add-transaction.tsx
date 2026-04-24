@@ -65,7 +65,7 @@ export function QuickAddTransaction({
   const isMobile = useIsMobile();
   const amountInputRef = useRef<HTMLInputElement | null>(null);
   const merchantInputRef = useRef<HTMLInputElement | null>(null);
-  const createdMerchantsRef = useRef<Set<string>>(new Set());
+  const merchantIdCacheRef = useRef<Map<string, Promise<string | null>>>(new Map());
   const [kind, setKind] = useState<TransactionKind>('expense');
   const [showNotes, setShowNotes] = useState(false);
   const [retryDraft, setRetryDraft] = useState<RetryDraft | null>(null);
@@ -90,6 +90,10 @@ export function QuickAddTransaction({
   useEffect(() => {
     if (!open) return;
 
+    if (!retryDraft) {
+      merchantIdCacheRef.current.clear();
+    }
+
     if (retryDraft) {
       form.reset(retryDraft.values);
       setKind(retryDraft.kind);
@@ -112,24 +116,31 @@ export function QuickAddTransaction({
     };
   }, [accounts, categories, form, open, retryDraft]);
 
-  async function ensureMerchantExists(candidate: string, defaultCategoryId: string | null) {
+  function ensureMerchantExists(
+    candidate: string,
+    defaultCategoryId: string | null,
+  ): Promise<string | null> {
     const display = candidate.trim();
-    if (display.length === 0) return;
+    if (display.length === 0) return Promise.resolve(null);
 
     const canonical = toCanonicalMerchant(display);
-    if (createdMerchantsRef.current.has(canonical)) return;
+    const cached = merchantIdCacheRef.current.get(canonical);
+    if (cached) return cached;
 
-    const result = await createMerchant({
+    const promise = createMerchant({
       canonical_name: canonical,
       display_name: display,
       default_category_id: defaultCategoryId,
       icon: null,
       color: null,
+    }).then((result) => {
+      if (result.success) return result.data.id;
+      if (result.error === 'DUPLICATE_CANONICAL') return result.existingId;
+      return null;
     });
 
-    if (result.success || result.error === 'DUPLICATE_CANONICAL') {
-      createdMerchantsRef.current.add(canonical);
-    }
+    merchantIdCacheRef.current.set(canonical, promise);
+    return promise;
   }
 
   function focusCategoryField() {
@@ -141,21 +152,24 @@ export function QuickAddTransaction({
 
   async function onSubmit(values: QuickAddFormValues) {
     const signedAmount = normalizeAmountForKind(values.amount_cents, kind);
-    const payload: QuickAddFormValues = {
-      ...values,
-      amount_cents: signedAmount,
-      merchant_raw: values.merchant_raw,
-      category_id: values.category_id,
-      notes: values.notes,
-    };
 
-    const snapshot: RetryDraft = { values: payload, kind };
+    // Kick off merchant lookup immediately (may be already in-flight from onBlur)
+    const merchantPromise = values.merchant_raw
+      ? ensureMerchantExists(values.merchant_raw, values.category_id ?? null)
+      : Promise.resolve(null);
+
     onOpenChange(false);
     toast.success('Transakcija je dodata.');
 
-    if (payload.merchant_raw) {
-      await ensureMerchantExists(payload.merchant_raw, payload.category_id);
-    }
+    const merchantId = await merchantPromise;
+
+    const payload: QuickAddFormValues = {
+      ...values,
+      amount_cents: signedAmount,
+      merchant_id: merchantId,
+    };
+
+    const snapshot: RetryDraft = { values: payload, kind };
 
     const result = await createTransaction(payload);
     if (result.success) {
@@ -262,9 +276,9 @@ export function QuickAddTransaction({
                       field.onChange(next);
                     }}
                     onEnterNext={focusCategoryField}
-                    onBlurValue={(candidate, known) => {
-                      if (!known) {
-                        void ensureMerchantExists(candidate, form.getValues('category_id'));
+                    onBlurValue={(candidate) => {
+                      if (candidate.trim().length > 0) {
+                        void ensureMerchantExists(candidate, form.getValues('category_id') ?? null);
                       }
                     }}
                   />

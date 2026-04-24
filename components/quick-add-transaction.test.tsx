@@ -173,6 +173,122 @@ describe('QuickAddTransaction', () => {
     expect(onOpenChange).toHaveBeenCalledWith(true);
   });
 
+  it('resolves merchant_id and passes it to createTransaction on submit', async () => {
+    const user = userEvent.setup();
+    createTransactionMock.mockResolvedValue({ success: true, data: { id: 'tx1' } });
+    createMerchantMock.mockResolvedValue({ success: true, data: { id: 'merch-uuid-1' } });
+
+    render(
+      <QuickAddTransaction
+        open
+        onOpenChange={vi.fn()}
+        accounts={accounts}
+        categories={categories}
+      />,
+    );
+
+    const amountInput = await screen.findByRole('textbox', { name: 'Iznos' });
+    await user.clear(amountInput);
+    await user.type(amountInput, '50,00');
+
+    const merchantInput = screen.getByPlaceholderText('npr. Konzum');
+    await user.type(merchantInput, 'Konzum');
+
+    await user.click(screen.getByRole('button', { name: 'Spasi' }));
+
+    await waitFor(() => {
+      expect(createTransactionMock).toHaveBeenCalledTimes(1);
+    });
+
+    const txCall = createTransactionMock.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(txCall).toMatchObject({ merchant_raw: 'Konzum', merchant_id: 'merch-uuid-1' });
+    expect(createMerchantMock).toHaveBeenCalledWith(
+      expect.objectContaining({ canonical_name: 'konzum', display_name: 'Konzum' }),
+    );
+  });
+
+  it('uses existingId from DUPLICATE_CANONICAL on submit', async () => {
+    const user = userEvent.setup();
+    createTransactionMock.mockResolvedValue({ success: true, data: { id: 'tx2' } });
+    createMerchantMock.mockResolvedValue({
+      success: false,
+      error: 'DUPLICATE_CANONICAL',
+      existingId: 'existing-merch-uuid',
+    });
+
+    render(
+      <QuickAddTransaction
+        open
+        onOpenChange={vi.fn()}
+        accounts={accounts}
+        categories={categories}
+      />,
+    );
+
+    const amountInput = await screen.findByRole('textbox', { name: 'Iznos' });
+    await user.clear(amountInput);
+    await user.type(amountInput, '30,00');
+
+    const merchantInput = screen.getByPlaceholderText('npr. Konzum');
+    await user.type(merchantInput, 'Bingo');
+
+    await user.click(screen.getByRole('button', { name: 'Spasi' }));
+
+    await waitFor(() => {
+      expect(createTransactionMock).toHaveBeenCalledTimes(1);
+    });
+
+    const txCall = createTransactionMock.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(txCall).toMatchObject({
+      merchant_raw: 'Bingo',
+      merchant_id: 'existing-merch-uuid',
+    });
+  });
+
+  it('deduplicates concurrent ensureMerchantExists calls for the same canonical', async () => {
+    const user = userEvent.setup();
+    createTransactionMock.mockResolvedValue({ success: true, data: { id: 'tx3' } });
+
+    let resolveCreateMerchant!: (v: Awaited<ReturnType<typeof createMerchant>>) => void;
+    createMerchantMock.mockReturnValue(
+      new Promise((res) => {
+        resolveCreateMerchant = res;
+      }),
+    );
+
+    render(
+      <QuickAddTransaction
+        open
+        onOpenChange={vi.fn()}
+        accounts={accounts}
+        categories={categories}
+      />,
+    );
+
+    const merchantInput = screen.getByPlaceholderText('npr. Konzum');
+    await user.type(merchantInput, 'Lidl');
+    // Trigger onBlur to start the pre-warm promise
+    await user.tab();
+
+    // Now submit while the merchant call is still in-flight
+    const amountInput = screen.getByRole('textbox', { name: 'Iznos' });
+    await user.clear(amountInput);
+    await user.type(amountInput, '20,00');
+    await user.click(screen.getByRole('button', { name: 'Spasi' }));
+
+    // Resolve the pending merchant call
+    resolveCreateMerchant({ success: true, data: { id: 'lidl-id' } });
+
+    await waitFor(() => {
+      expect(createTransactionMock).toHaveBeenCalledTimes(1);
+    });
+
+    // createMerchant must have been called only once despite onBlur + onSubmit both triggering it
+    expect(createMerchantMock).toHaveBeenCalledTimes(1);
+    const txCall = createTransactionMock.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(txCall).toMatchObject({ merchant_id: 'lidl-id' });
+  });
+
   it('uses last-used values as defaults on open', async () => {
     window.localStorage.setItem(
       'konto:quick-add:last-used',

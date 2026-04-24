@@ -22,6 +22,7 @@ interface CreateTransactionInput {
   currency: string;
   transaction_date: string;
   merchant_raw: string | null;
+  merchant_id: string | null;
   category_id: string | null;
   notes: string | null;
 }
@@ -169,6 +170,33 @@ async function ensureOwnedCategory(
   return { ok: true };
 }
 
+async function ensureOwnedMerchant(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  merchantId: string | null,
+): Promise<{ ok: true } | { ok: false; error: 'FORBIDDEN' | 'DATABASE_ERROR' }> {
+  if (!merchantId) {
+    return { ok: true };
+  }
+
+  const { data: merchant, error } = await supabase
+    .from('merchants')
+    .select('id')
+    .eq('id', merchantId)
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (error) {
+    return { ok: false, error: 'DATABASE_ERROR' };
+  }
+  if (!merchant) {
+    return { ok: false, error: 'FORBIDDEN' };
+  }
+
+  return { ok: true };
+}
+
 async function getBaseCurrency(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
@@ -257,6 +285,15 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
     return { success: false, error: ownedCategory.error };
   }
 
+  const ownedMerchant = await ensureOwnedMerchant(
+    supabase,
+    user.id,
+    parsedData.merchant_id ?? null,
+  );
+  if (!ownedMerchant.ok) {
+    return { success: false, error: ownedMerchant.error };
+  }
+
   const baseCurrencyResult = await getBaseCurrency(supabase, user.id);
   if (!baseCurrencyResult.ok) {
     return { success: false, error: 'DATABASE_ERROR' };
@@ -308,6 +345,7 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
       fx_stale: fxResult.fxStale,
       transaction_date: parsedData.transaction_date,
       merchant_raw: parsedData.merchant_raw,
+      merchant_id: parsedData.merchant_id ?? null,
       category_id: parsedData.category_id,
       category_source: parsedData.category_id ? 'user' : null,
       notes: parsedData.notes,
@@ -384,6 +422,7 @@ export async function updateTransaction(
     transaction_date: nextInput.transaction_date ?? existingRow.transaction_date,
     merchant_raw:
       nextInput.merchant_raw !== undefined ? nextInput.merchant_raw : existingRow.merchant_raw,
+    merchant_id: null,
     category_id:
       nextInput.category_id !== undefined ? nextInput.category_id : existingRow.category_id,
     notes: nextInput.notes !== undefined ? nextInput.notes : existingRow.notes,
