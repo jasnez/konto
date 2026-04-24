@@ -133,4 +133,39 @@ describe('extractReceiptFields', () => {
     expect(result.ok).toBe(false);
     expect(result.error).toBe('ENETDOWN');
   });
+
+  it('returns ok=false with timeout message when fetch aborts', async () => {
+    // Simulate Gemini hanging: fetch rejects with AbortError when the signal fires.
+    global.fetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      return new Promise((_resolve, reject) => {
+        const signal = init?.signal;
+        if (!signal) return;
+        if (signal.aborted) {
+          const err = new Error('aborted');
+          err.name = 'AbortError';
+          reject(err);
+          return;
+        }
+        signal.addEventListener('abort', () => {
+          const err = new Error('aborted');
+          err.name = 'AbortError';
+          reject(err);
+        });
+      });
+    });
+
+    vi.useFakeTimers();
+    try {
+      const promise = extractReceiptFields(fakeImage, 'image/jpeg');
+      // Fast-forward past the 25 s internal timeout.
+      await vi.advanceTimersByTimeAsync(26_000);
+      const result = await promise;
+
+      expect(result.ok).toBe(false);
+      expect(result.error).toMatch(/predugo/u);
+      expect(result.extracted.total_amount).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

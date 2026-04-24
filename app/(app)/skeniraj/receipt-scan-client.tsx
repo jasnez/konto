@@ -1,6 +1,6 @@
 'use client';
 
-import { Camera, CheckCircle2, FileImage, Loader2, RefreshCw, Upload } from 'lucide-react';
+import { Camera, CheckCircle2, FileImage, Loader2, RefreshCw, Upload, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition, type ChangeEvent, type DragEvent } from 'react';
 import { toast } from 'sonner';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { getTodayIsoDate, readLastUsed } from '@/components/quick-add-transaction-draft';
+import { resizeForUpload } from '@/lib/image/resize-for-upload';
 import type { ExtractedReceipt } from '@/lib/schemas/receipt';
 import { analyzeReceipt, createTransactionFromReceipt, uploadReceipt } from './actions';
 
@@ -99,6 +100,9 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  // Ref identity = current in-flight run. `cancelScan` clears it; handlers
+  // then bail by comparing `runStateRef.current !== state`.
+  const runStateRef = useRef<{ previewUrl: string | null } | null>(null);
 
   function reset() {
     setPhase({ name: 'upload' });
@@ -108,6 +112,18 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
     setMerchantRaw('');
     setCategoryId(null);
     setNotes('');
+  }
+
+  function cancelScan() {
+    const state = runStateRef.current;
+    if (!state) return;
+    runStateRef.current = null;
+    if (state.previewUrl) {
+      URL.revokeObjectURL(state.previewUrl);
+      state.previewUrl = null;
+    }
+    setPhase({ name: 'upload' });
+    toast.info('Skeniranje otkazano.');
   }
 
   function openFilePicker() {
@@ -128,14 +144,27 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
       return;
     }
 
-    const previewUrl = URL.createObjectURL(file);
+    const state: { previewUrl: string | null } = { previewUrl: null };
+    runStateRef.current = state;
+
     setPhase({ name: 'uploading' });
 
+    // Client-side downscale + JPEG re-encode. Gracefully falls back to the
+    // original file if the browser can't decode it (e.g. HEIC in Chrome).
+    const { file: compressed } = await resizeForUpload(file);
+    if (runStateRef.current !== state) return;
+
+    const previewUrl = URL.createObjectURL(compressed);
+    state.previewUrl = previewUrl;
+
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', compressed);
     const upResult = await uploadReceipt(formData);
+    if (runStateRef.current !== state) return;
     if (!upResult.success) {
       URL.revokeObjectURL(previewUrl);
+      state.previewUrl = null;
+      runStateRef.current = null;
       toast.error(translateError(upResult.error));
       setPhase({ name: 'upload' });
       return;
@@ -144,6 +173,10 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
     setPhase({ name: 'analyzing', scanId: upResult.data.scanId, previewUrl });
 
     const anResult = await analyzeReceipt(upResult.data.scanId);
+    if (runStateRef.current !== state) return;
+
+    runStateRef.current = null;
+
     if (!anResult.success) {
       toast.error(
         anResult.error === 'LLM_ERROR' && 'message' in anResult
@@ -284,7 +317,20 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
           {phase.name === 'uploading' ? (
             <>
               <Loader2 className="size-12 animate-spin text-primary" aria-hidden />
-              <p className="text-sm text-muted-foreground">Upload u toku…</p>
+              <p className="text-sm font-medium">Korak 1/2: Slanje slike…</p>
+              <p className="text-xs text-muted-foreground">
+                Slika se optimizuje i prosljeđuje na server.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-11 min-h-[44px]"
+                onClick={cancelScan}
+              >
+                <X className="mr-2 size-4" aria-hidden />
+                Otkaži
+              </Button>
             </>
           ) : (
             <>
@@ -326,10 +372,23 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
           alt="Slika računa"
           className="mx-auto max-h-72 rounded-md object-contain"
         />
-        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" aria-hidden />
-          AI čita račun… (obično 3–8 s)
+        <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 font-medium text-foreground">
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+            Korak 2/2: AI čita račun…
+          </div>
+          <p className="text-xs">Obično 3–10 s, maksimalno 25 s.</p>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-11 min-h-[44px]"
+          onClick={cancelScan}
+        >
+          <X className="mr-2 size-4" aria-hidden />
+          Otkaži
+        </Button>
       </div>
     );
   }

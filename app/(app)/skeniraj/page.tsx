@@ -19,6 +19,12 @@ export const metadata: Metadata = {
   title: 'Skeniraj račun — Konto',
 };
 
+// Serverless function timeout for this route. Server Actions dispatched from
+// this page (uploadReceipt, analyzeReceipt) inherit it. Gemini has its own
+// 25 s hard timeout inside `extractReceiptFields`; 60 s is a safety net for
+// storage upload/download on top of that.
+export const maxDuration = 60;
+
 export default async function SkenirajPage() {
   const supabase = await createClient();
   const {
