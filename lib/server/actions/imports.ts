@@ -33,52 +33,6 @@ function buildValidationDetails(error: z.ZodError): ValidationDetails {
   return { _root: error.issues.map((issue) => issue.message) };
 }
 
-interface ImportBatchRecord {
-  id: string;
-}
-
-interface ImportBatchError {
-  message: string;
-}
-
-interface ImportBatchInsert {
-  user_id: string;
-  account_id: string;
-  storage_path: string;
-  checksum: string;
-  status: 'uploaded';
-  original_filename: string;
-}
-
-interface ImportBatchesClient {
-  select: (columns: 'id') => {
-    eq: (
-      column: 'user_id',
-      value: string,
-    ) => {
-      eq: (
-        column: 'checksum',
-        value: string,
-      ) => {
-        maybeSingle: () => Promise<{
-          data: ImportBatchRecord | null;
-          error: ImportBatchError | null;
-        }>;
-      };
-    };
-  };
-  insert: (payload: ImportBatchInsert) => {
-    select: (columns: 'id') => {
-      single: () => Promise<{ data: ImportBatchRecord | null; error: ImportBatchError | null }>;
-    };
-  };
-}
-
-function importBatches(supabase: Awaited<ReturnType<typeof createClient>>): ImportBatchesClient {
-  // `import_batches` table lands in a later migration than current generated types.
-  return supabase.from('import_batches' as never) as unknown as ImportBatchesClient;
-}
-
 export async function uploadStatement(formData: FormData): Promise<UploadStatementResult> {
   const parsed = UploadSchema.safeParse({
     accountId: formData.get('accountId'),
@@ -116,7 +70,8 @@ export async function uploadStatement(formData: FormData): Promise<UploadStateme
   const arrayBuffer = await file.arrayBuffer();
   const checksum = createHash('sha256').update(Buffer.from(arrayBuffer)).digest('hex');
 
-  const { data: existing, error: existingErr } = await importBatches(supabase)
+  const { data: existing, error: existingErr } = await supabase
+    .from('import_batches')
     .select('id')
     .eq('user_id', user.id)
     .eq('checksum', checksum)
@@ -142,7 +97,8 @@ export async function uploadStatement(formData: FormData): Promise<UploadStateme
     return { success: false, error: 'STORAGE_ERROR' };
   }
 
-  const { data: batch, error: insertErr } = await importBatches(supabase)
+  const { data: batch, error: insertErr } = await supabase
+    .from('import_batches')
     .insert({
       user_id: user.id,
       account_id: accountId,
@@ -154,10 +110,10 @@ export async function uploadStatement(formData: FormData): Promise<UploadStateme
     .select('id')
     .single();
 
-  if (insertErr || !batch?.id) {
+  if (insertErr) {
     console.error('upload_statement_insert_error', {
       userId: user.id,
-      error: insertErr?.message ?? 'unknown',
+      error: insertErr.message,
     });
     await supabase.storage
       .from('bank-statements')
@@ -168,6 +124,18 @@ export async function uploadStatement(formData: FormData): Promise<UploadStateme
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
+  const batchId = batch.id;
+  if (!batchId) {
+    console.error('upload_statement_insert_error', { userId: user.id, error: 'missing id' });
+    await supabase.storage
+      .from('bank-statements')
+      .remove([path])
+      .catch(() => {
+        // Best-effort cleanup.
+      });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
   revalidatePath('/import');
-  return { success: true, data: { batchId: batch.id } };
+  return { success: true, data: { batchId } };
 }

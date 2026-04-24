@@ -9,6 +9,7 @@ import {
   Tags,
   Wallet,
   CreditCard,
+  FileUp,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -44,6 +45,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Skeniraj račun',
     mobileLabel: 'Skeniraj',
     icon: Camera,
+    desktopOnly: true,
+  },
+  {
+    href: '/import',
+    label: 'Uvezi izvod',
+    mobileLabel: 'Uvoz',
+    icon: FileUp,
     desktopOnly: true,
   },
   { href: '/uvidi', label: 'Uvidi', mobileLabel: 'Uvidi', icon: PieChart, desktopOnly: true },

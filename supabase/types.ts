@@ -209,6 +209,53 @@ export type Database = {
         };
         Relationships: [];
       };
+      import_batches: {
+        Row: {
+          id: string;
+          user_id: string;
+          account_id: string | null;
+          storage_path: string | null;
+          checksum: string;
+          original_filename: string;
+          status: 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed';
+          error_message: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          account_id?: string | null;
+          storage_path?: string | null;
+          checksum: string;
+          original_filename: string;
+          status?: 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed';
+          error_message?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          account_id?: string | null;
+          storage_path?: string | null;
+          checksum?: string;
+          original_filename?: string;
+          status?: 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed';
+          error_message?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'import_batches_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       installment_occurrences: {
         Row: {
           amount_cents: number;
@@ -656,6 +703,13 @@ export type Database = {
             columns: ['category_id'];
             isOneToOne: false;
             referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'transactions_import_batch_id_fkey';
+            columns: ['import_batch_id'];
+            isOneToOne: false;
+            referencedRelation: 'import_batches';
             referencedColumns: ['id'];
           },
           {
