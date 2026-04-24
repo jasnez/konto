@@ -485,7 +485,11 @@ export function TransactionsClient({
             ? `Obrisati transakciju "${getDeleteTransactionLabel(pendingDeleteTx)}"?`
             : 'Obrisati transakciju?'
         }
-        description="Možeš je kasnije vratiti kroz restore (soft delete)."
+        description={
+          pendingDeleteTx?.transfer_pair_id
+            ? 'Ovo je transfer — biće obrisana oba para (zaduženje i odobrenje). Možeš ih kasnije vratiti.'
+            : 'Možeš je kasnije vratiti kroz restore (soft delete).'
+        }
         onConfirm={handleDeleteSingle}
       />
 

@@ -74,6 +74,7 @@ export function QuickAddTransaction({
     resolver: zodResolver(CreateTransactionSchema) as never,
     defaultValues: {
       account_id: '',
+      to_account_id: undefined,
       amount_cents: 0n,
       currency: 'BAM',
       transaction_date: getTodayIsoDate(),
@@ -85,7 +86,10 @@ export function QuickAddTransaction({
   });
 
   const selectedAccountId = form.watch('account_id');
+  const selectedToAccountId = form.watch('to_account_id');
   const selectedAccount = accounts.find((account) => account.id === selectedAccountId);
+  const toAccounts = accounts.filter((account) => account.id !== selectedAccountId);
+  const isTransfer = kind === 'transfer';
 
   useEffect(() => {
     if (!open) return;
@@ -153,10 +157,12 @@ export function QuickAddTransaction({
   async function onSubmit(values: QuickAddFormValues) {
     const signedAmount = normalizeAmountForKind(values.amount_cents, kind);
 
-    // Kick off merchant lookup immediately (may be already in-flight from onBlur)
-    const merchantPromise = values.merchant_raw
-      ? ensureMerchantExists(values.merchant_raw, values.category_id ?? null)
-      : Promise.resolve(null);
+    // Kick off merchant lookup immediately (may be already in-flight from onBlur).
+    // Transfers have no merchant.
+    const merchantPromise =
+      !isTransfer && values.merchant_raw
+        ? ensureMerchantExists(values.merchant_raw, values.category_id ?? null)
+        : Promise.resolve(null);
 
     onOpenChange(false);
     toast.success('Transakcija je dodata.');
@@ -166,7 +172,9 @@ export function QuickAddTransaction({
     const payload: QuickAddFormValues = {
       ...values,
       amount_cents: signedAmount,
-      merchant_id: merchantId,
+      merchant_id: isTransfer ? null : merchantId,
+      merchant_raw: isTransfer ? null : values.merchant_raw,
+      category_id: isTransfer ? null : values.category_id,
     };
 
     const snapshot: RetryDraft = { values: payload, kind };
@@ -252,6 +260,7 @@ export function QuickAddTransaction({
                   shouldDirty: true,
                 });
                 form.setValue('category_id', null, { shouldDirty: true });
+                form.setValue('to_account_id', undefined, { shouldDirty: true });
               }}
             >
               <TabsList className="grid w-full grid-cols-3">
@@ -262,58 +271,65 @@ export function QuickAddTransaction({
             </Tabs>
           </div>
 
-          <FormField
-            control={form.control}
-            name="merchant_raw"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Prodavač</FormLabel>
-                <FormControl>
-                  <MerchantCombobox
-                    inputRef={merchantInputRef}
-                    value={field.value ?? ''}
-                    onValueChange={(next) => {
-                      field.onChange(next);
-                    }}
-                    onEnterNext={focusCategoryField}
-                    onBlurValue={(candidate) => {
-                      if (candidate.trim().length > 0) {
-                        void ensureMerchantExists(candidate, form.getValues('category_id') ?? null);
-                      }
-                    }}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {!isTransfer ? (
+            <FormField
+              control={form.control}
+              name="merchant_raw"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Prodavač</FormLabel>
+                  <FormControl>
+                    <MerchantCombobox
+                      inputRef={merchantInputRef}
+                      value={field.value ?? ''}
+                      onValueChange={(next) => {
+                        field.onChange(next);
+                      }}
+                      onEnterNext={focusCategoryField}
+                      onBlurValue={(candidate) => {
+                        if (candidate.trim().length > 0) {
+                          void ensureMerchantExists(
+                            candidate,
+                            form.getValues('category_id') ?? null,
+                          );
+                        }
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : null}
 
-          <FormField
-            control={form.control}
-            name="category_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Kategorija</FormLabel>
-                <FormControl>
-                  <CategorySelect
-                    id="quick-add-category-trigger"
-                    categories={categories}
-                    kind={kind}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {!isTransfer ? (
+            <FormField
+              control={form.control}
+              name="category_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Kategorija</FormLabel>
+                  <FormControl>
+                    <CategorySelect
+                      id="quick-add-category-trigger"
+                      categories={categories}
+                      kind={kind}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : null}
 
           <FormField
             control={form.control}
             name="account_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Račun</FormLabel>
+                <FormLabel>{isTransfer ? 'Sa računa' : 'Račun'}</FormLabel>
                 <FormControl>
                   <AccountSelect
                     id="quick-add-account"
@@ -324,6 +340,10 @@ export function QuickAddTransaction({
                       const nextCurrency =
                         accounts.find((account) => account.id === nextAccountId)?.currency ?? 'BAM';
                       form.setValue('currency', nextCurrency);
+                      // Reset to_account_id if it now matches the selected from-account.
+                      if (form.getValues('to_account_id') === nextAccountId) {
+                        form.setValue('to_account_id', undefined, { shouldDirty: true });
+                      }
                     }}
                   />
                 </FormControl>
@@ -331,6 +351,38 @@ export function QuickAddTransaction({
               </FormItem>
             )}
           />
+
+          {isTransfer ? (
+            <FormField
+              control={form.control}
+              name="to_account_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Na račun</FormLabel>
+                  <FormControl>
+                    <AccountSelect
+                      id="quick-add-to-account"
+                      accounts={toAccounts}
+                      value={field.value ?? ''}
+                      onValueChange={(nextAccountId) => {
+                        field.onChange(nextAccountId || undefined);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : null}
+
+          {isTransfer &&
+          selectedToAccountId &&
+          selectedAccount?.currency !==
+            accounts.find((a) => a.id === selectedToAccountId)?.currency ? (
+            <p className="text-sm text-muted-foreground">
+              Međuvalutni transfer — iznos će biti automatski konvertovan po tekućem kursu.
+            </p>
+          ) : null}
 
           <FormField
             control={form.control}

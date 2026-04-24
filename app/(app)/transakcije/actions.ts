@@ -55,6 +55,7 @@ interface ValidationDetails {
 
 export type CreateTransactionResult =
   | { success: true; data: { id: string } }
+  | { success: true; data: { id: string; transferPairId: string } }
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
   | { success: false; error: 'UNAUTHORIZED' }
   | { success: false; error: 'FORBIDDEN' }
@@ -275,6 +276,13 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
   }
 
   const parsedData: CreateTransactionInputSchema = parsed.data;
+
+  // ── Transfer branch ────────────────────────────────────────────────────────
+  if (parsedData.to_account_id) {
+    return createTransferPair(supabase, user.id, parsedData);
+  }
+
+  // ── Regular transaction branch ─────────────────────────────────────────────
   const ownedAccount = await ensureOwnedAccount(supabase, user.id, parsedData.account_id);
   if (!ownedAccount.ok) {
     return { success: false, error: ownedAccount.error };
@@ -362,6 +370,91 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
 
   revalidateTransactionViews([parsedData.account_id]);
   return { success: true, data: { id: tx.id } };
+}
+
+async function createTransferPair(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  parsedData: CreateTransactionInputSchema,
+): Promise<CreateTransactionResult> {
+  const toAccountId = parsedData.to_account_id ?? '';
+
+  const [fromAccount, toAccount, baseCurrencyResult] = await Promise.all([
+    ensureOwnedAccount(supabase, userId, parsedData.account_id),
+    ensureOwnedAccount(supabase, userId, toAccountId),
+    getBaseCurrency(supabase, userId),
+  ]);
+
+  if (!fromAccount.ok) return { success: false, error: fromAccount.error };
+  if (!toAccount.ok) return { success: false, error: toAccount.error };
+  if (!baseCurrencyResult.ok) return { success: false, error: 'DATABASE_ERROR' };
+
+  const baseCurrency = baseCurrencyResult.value;
+  const fromCurrency = fromAccount.currency;
+  const toCurrency = toAccount.currency;
+  const absAmount =
+    parsedData.amount_cents < 0n ? -parsedData.amount_cents : parsedData.amount_cents;
+  const date = parsedData.transaction_date;
+
+  let fromFx: Awaited<ReturnType<typeof convertToBase>>;
+  let toAmountCents: bigint;
+  let toFx: Awaited<ReturnType<typeof convertToBase>>;
+
+  try {
+    fromFx = await convertToBase(absAmount, fromCurrency, baseCurrency, date);
+
+    if (fromCurrency === toCurrency) {
+      toAmountCents = absAmount;
+      toFx = fromFx;
+    } else {
+      // Convert from-currency amount to to-currency amount using cross rate.
+      const crossResult = await convertToBase(absAmount, fromCurrency, toCurrency, date);
+      toAmountCents = crossResult.baseCents;
+      toFx = await convertToBase(toAmountCents, toCurrency, baseCurrency, date);
+    }
+  } catch (error) {
+    console.error('create_transfer_fx_error', {
+      userId,
+      error: error instanceof Error ? error.message : 'unknown',
+    });
+    return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+  }
+
+  interface RpcResult {
+    from_id: string;
+    to_id: string;
+  }
+
+  const { data: rpcData, error: rpcError } = await (
+    supabase.rpc as (fn: string, args: Record<string, unknown>) => ReturnType<typeof supabase.rpc>
+  )('create_transfer_pair', {
+    p_from_account_id: parsedData.account_id,
+    p_to_account_id: toAccountId,
+    p_from_amount_cents: bigintToDbInt(-absAmount),
+    p_to_amount_cents: bigintToDbInt(toAmountCents),
+    p_from_currency: fromCurrency,
+    p_to_currency: toCurrency,
+    p_from_base_cents: bigintToDbInt(fromFx.baseCents),
+    p_to_base_cents: bigintToDbInt(toFx.baseCents),
+    p_base_currency: baseCurrency,
+    p_from_fx_rate: fromFx.fxRate,
+    p_to_fx_rate: toFx.fxRate,
+    p_from_fx_rate_date: fromFx.fxRateDate,
+    p_to_fx_rate_date: toFx.fxRateDate,
+    p_from_fx_stale: fromFx.fxStale,
+    p_to_fx_stale: toFx.fxStale,
+    p_transaction_date: date,
+    p_notes: parsedData.notes ?? null,
+  });
+
+  if (rpcError) {
+    console.error('create_transfer_pair_rpc_error', { userId, error: rpcError.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  const result = rpcData as unknown as RpcResult;
+  revalidateTransactionViews([parsedData.account_id, toAccountId]);
+  return { success: true, data: { id: result.from_id, transferPairId: result.to_id } };
 }
 
 export async function updateTransaction(
@@ -528,7 +621,7 @@ export async function deleteTransaction(id: unknown): Promise<DeleteTransactionR
 
   const { data: existing, error: existingError } = await supabase
     .from('transactions')
-    .select('id,account_id,deleted_at')
+    .select('id,account_id,transfer_pair_id,deleted_at')
     .eq('id', parsed.data)
     .eq('user_id', user.id)
     .maybeSingle();
@@ -544,11 +637,31 @@ export async function deleteTransaction(id: unknown): Promise<DeleteTransactionR
   }
 
   const deletedAt = new Date().toISOString();
+
+  // For transfer pairs, soft-delete both legs together so both account balances update.
+  const idsToDelete = [parsed.data];
+  const affectedAccountIds = [existing.account_id];
+
+  if (existing.transfer_pair_id) {
+    const { data: pair } = await supabase
+      .from('transactions')
+      .select('id,account_id')
+      .eq('id', existing.transfer_pair_id)
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (pair) {
+      idsToDelete.push(pair.id);
+      affectedAccountIds.push(pair.account_id);
+    }
+  }
+
   const { error: deleteError } = await supabase
     .from('transactions')
     .update({ deleted_at: deletedAt })
-    .eq('id', parsed.data)
     .eq('user_id', user.id)
+    .in('id', idsToDelete)
     .is('deleted_at', null);
 
   if (deleteError) {
@@ -560,7 +673,7 @@ export async function deleteTransaction(id: unknown): Promise<DeleteTransactionR
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidateTransactionViews([existing.account_id]);
+  revalidateTransactionViews(affectedAccountIds);
   return { success: true };
 }
 
@@ -634,7 +747,7 @@ export async function bulkDeleteTransactions(ids: unknown): Promise<BulkDeleteTr
   const txIds = parsed.data;
   const { data: ownedRows, error: ownedError } = await supabase
     .from('transactions')
-    .select('id,account_id')
+    .select('id,account_id,transfer_pair_id')
     .eq('user_id', user.id)
     .in('id', txIds)
     .is('deleted_at', null);
@@ -646,18 +759,40 @@ export async function bulkDeleteTransactions(ids: unknown): Promise<BulkDeleteTr
     return { success: false, error: 'FORBIDDEN' };
   }
 
+  // Expand bulk delete to include paired transfer legs not already in the selection.
+  const pairIds = ownedRows
+    .map((row) => row.transfer_pair_id)
+    .filter((id): id is string => id !== null && !txIds.includes(id));
+
+  const allIds = [...txIds];
+  const allAccountIds = ownedRows.map((row) => row.account_id);
+
+  if (pairIds.length > 0) {
+    const { data: pairRows } = await supabase
+      .from('transactions')
+      .select('id,account_id')
+      .eq('user_id', user.id)
+      .in('id', pairIds)
+      .is('deleted_at', null);
+
+    (pairRows ?? []).forEach((row) => {
+      allIds.push(row.id);
+      allAccountIds.push(row.account_id);
+    });
+  }
+
   const deletedAt = new Date().toISOString();
   const { error: deleteError } = await supabase
     .from('transactions')
     .update({ deleted_at: deletedAt })
     .eq('user_id', user.id)
-    .in('id', txIds)
+    .in('id', allIds)
     .is('deleted_at', null);
 
   if (deleteError) {
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidateTransactionViews(ownedRows.map((row) => row.account_id));
+  revalidateTransactionViews(allAccountIds);
   return { success: true, data: { count: txIds.length } };
 }

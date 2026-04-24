@@ -99,6 +99,7 @@ export function buildDefaults(
     kind,
     values: {
       account_id: accountId,
+      to_account_id: undefined,
       amount_cents: normalizeAmountForKind(0n, kind),
       currency: accountCurrency,
       transaction_date: today,

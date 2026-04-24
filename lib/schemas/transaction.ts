@@ -21,35 +21,46 @@ function normalizeOptionalUuid(value: string | null | undefined): string | null 
 
 export const TransactionKindSchema = z.enum(['expense', 'income', 'transfer']);
 
-export const CreateTransactionSchema = z.object({
-  account_id: z.uuid(),
-  amount_cents: z.bigint().refine((value) => value !== 0n, 'Iznos ne može biti 0'),
-  currency: z
-    .string()
-    .length(3)
-    .transform((value) => value.toUpperCase()),
-  transaction_date: z.string().regex(ISO_DATE_REGEX),
-  merchant_raw: z
-    .string()
-    .max(200)
-    .optional()
-    .nullable()
-    .transform((value) => normalizeOptionalString(value)),
-  merchant_id: z
-    .union([z.uuid(), z.null()])
-    .optional()
-    .transform((value) => normalizeOptionalUuid(value)),
-  category_id: z
-    .union([z.uuid(), z.literal(''), z.null()])
-    .optional()
-    .transform((value) => normalizeOptionalUuid(value)),
-  notes: z
-    .string()
-    .max(500)
-    .optional()
-    .nullable()
-    .transform((value) => normalizeOptionalString(value)),
-});
+export const CreateTransactionSchema = z
+  .object({
+    account_id: z.uuid(),
+    to_account_id: z.uuid().optional(),
+    amount_cents: z.bigint().refine((value) => value !== 0n, 'Iznos ne može biti 0'),
+    currency: z
+      .string()
+      .length(3)
+      .transform((value) => value.toUpperCase()),
+    transaction_date: z.string().regex(ISO_DATE_REGEX),
+    merchant_raw: z
+      .string()
+      .max(200)
+      .optional()
+      .nullable()
+      .transform((value) => normalizeOptionalString(value)),
+    merchant_id: z
+      .union([z.uuid(), z.null()])
+      .optional()
+      .transform((value) => normalizeOptionalUuid(value)),
+    category_id: z
+      .union([z.uuid(), z.literal(''), z.null()])
+      .optional()
+      .transform((value) => normalizeOptionalUuid(value)),
+    notes: z
+      .string()
+      .max(500)
+      .optional()
+      .nullable()
+      .transform((value) => normalizeOptionalString(value)),
+  })
+  .superRefine((data, ctx) => {
+    if (data.to_account_id !== undefined && data.to_account_id === data.account_id) {
+      ctx.addIssue({
+        code: 'custom',
+        message: '"Sa računa" i "Na račun" ne mogu biti isti račun.',
+        path: ['to_account_id'],
+      });
+    }
+  });
 
 export const UpdateTransactionSchema = z
   .object({
