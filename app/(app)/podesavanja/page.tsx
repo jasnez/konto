@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { ThemeToggle } from '@/components/shell/theme-toggle';
 import { createClient } from '@/lib/supabase/server';
 import { ProfileForm } from './profile-form';
+import { RestoreDefaultCategoriesButton } from './restore-default-categories-button';
 import { SignOutButton } from './signout-button';
 import {
   BASE_CURRENCIES,
@@ -71,6 +72,20 @@ export default async function PodesavanjaPage() {
         </CardHeader>
         <CardContent>
           <ThemeToggle />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Kategorije</CardTitle>
+          <CardDescription>
+            Ako ti nedostaju standardne kategorije (npr. nalog je kreiran prije ažuriranja aplikacije),
+            možeš ih ponovo uvesti. Ovo ne briše tvoje postojeće kategorije — samo dodaje one koje još
+            nemaju isti slug.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RestoreDefaultCategoriesButton />
         </CardContent>
       </Card>
 
