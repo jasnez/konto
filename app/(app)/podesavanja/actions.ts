@@ -24,6 +24,10 @@ export type ExportAllDataResult =
       error: 'UNAUTHORIZED' | 'RATE_LIMITED' | 'DATABASE_ERROR';
     };
 
+export type RestoreDefaultCategoriesResult =
+  | { success: true }
+  | { success: false; error: 'UNAUTHORIZED' | 'DATABASE_ERROR' };
+
 /**
  * Builds a full JSON export for the signed-in user (backup / portability).
  * Prefer downloading via GET `/api/export/data` from the browser so the response is streamable.
@@ -41,6 +45,31 @@ export async function exportAllData(): Promise<ExportAllDataResult> {
   }
 
   return { success: true, json: result.json };
+}
+
+/**
+ * Re-runs the idempotent default category seed for the signed-in user.
+ * Existing rows (same user_id + slug) are left unchanged.
+ */
+export async function restoreDefaultCategories(): Promise<RestoreDefaultCategoriesResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  const { error } = await supabase.rpc('restore_default_categories_for_user');
+  if (error) {
+    console.error('restore_default_categories_error', { userId: user.id, error: error.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidatePath('/podesavanja');
+  revalidatePath('/kategorije');
+  revalidatePath('/transakcije');
+  return { success: true };
 }
 
 export async function updateProfile(input: unknown): Promise<UpdateProfileResult> {

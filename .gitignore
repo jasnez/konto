@@ -38,6 +38,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Agent / IDE worktrees (local copies; not part of the app source tree)
+.claire/
+.claude/
+
 # supabase local
 .supabase
 

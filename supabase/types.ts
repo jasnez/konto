@@ -495,6 +495,10 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: undefined;
       };
+      restore_default_categories_for_user: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
       user_owns_account: { Args: { p_account_id: string }; Returns: boolean };
       user_owns_category: { Args: { p_category_id: string }; Returns: boolean };
       user_owns_merchant: { Args: { p_merchant_id: string }; Returns: boolean };
