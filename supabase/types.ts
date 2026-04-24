@@ -219,6 +219,9 @@ export type Database = {
           original_filename: string;
           status: 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed';
           error_message: string | null;
+          transaction_count: number | null;
+          parse_confidence: 'high' | 'medium' | 'low' | null;
+          parse_warnings: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -231,6 +234,9 @@ export type Database = {
           original_filename: string;
           status?: 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed';
           error_message?: string | null;
+          transaction_count?: number | null;
+          parse_confidence?: 'high' | 'medium' | 'low' | null;
+          parse_warnings?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -243,6 +249,9 @@ export type Database = {
           original_filename?: string;
           status?: 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed';
           error_message?: string | null;
+          transaction_count?: number | null;
+          parse_confidence?: 'high' | 'medium' | 'low' | null;
+          parse_warnings?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -252,6 +261,66 @@ export type Database = {
             columns: ['account_id'];
             isOneToOne: false;
             referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      parsed_transactions: {
+        Row: {
+          id: string;
+          batch_id: string;
+          user_id: string;
+          transaction_date: string;
+          amount_minor: number;
+          currency: string;
+          raw_description: string;
+          reference: string | null;
+          status: 'pending_review' | 'accepted' | 'rejected' | 'imported';
+          transaction_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          batch_id: string;
+          user_id: string;
+          transaction_date: string;
+          amount_minor: number;
+          currency: string;
+          raw_description: string;
+          reference?: string | null;
+          status?: 'pending_review' | 'accepted' | 'rejected' | 'imported';
+          transaction_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          batch_id?: string;
+          user_id?: string;
+          transaction_date?: string;
+          amount_minor?: number;
+          currency?: string;
+          raw_description?: string;
+          reference?: string | null;
+          status?: 'pending_review' | 'accepted' | 'rejected' | 'imported';
+          transaction_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'parsed_transactions_batch_id_fkey';
+            columns: ['batch_id'];
+            isOneToOne: false;
+            referencedRelation: 'import_batches';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'parsed_transactions_transaction_id_fkey';
+            columns: ['transaction_id'];
+            isOneToOne: false;
+            referencedRelation: 'transactions';
             referencedColumns: ['id'];
           },
         ];
