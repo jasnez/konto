@@ -24,7 +24,7 @@ const repoRoot = join(__dirname, '..');
 const outDir = join(repoRoot, 'lighthouse-reports');
 const lighthouseCli = join(repoRoot, 'node_modules', 'lighthouse', 'cli', 'index.js');
 
-const KEY_PATHS = ['/pocetna', '/transakcije', '/racuni'];
+const KEY_PATHS = ['/pocetna', '/transakcije', '/racuni', '/import'];
 
 const SUPABASE_LOCAL_DEMO_ANON = [
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',
