@@ -20,7 +20,7 @@ interface TransactionRowProps {
     meta: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean },
   ) => void;
   onLongPressSelect: (index: number) => void;
-  onDelete: (txId: string) => void;
+  onRequestDelete: (tx: TransactionListItem) => void;
 }
 
 export function TransactionRow({
@@ -31,7 +31,7 @@ export function TransactionRow({
   onOpen,
   onToggleSelection,
   onLongPressSelect,
-  onDelete,
+  onRequestDelete,
 }: TransactionRowProps) {
   const [swipeOffset, setSwipeOffset] = useState(0);
   const touchStartX = useRef<number | null>(null);
@@ -95,7 +95,7 @@ export function TransactionRow({
           className="h-9 w-9"
           aria-label="Obriši transakciju"
           onClick={() => {
-            onDelete(tx.id);
+            onRequestDelete(tx);
           }}
         >
           <Trash2 className="h-4 w-4" aria-hidden />
@@ -213,7 +213,7 @@ export function TransactionRow({
             aria-label="Obriši transakciju"
             onClick={(event) => {
               event.stopPropagation();
-              onDelete(tx.id);
+              onRequestDelete(tx);
             }}
           >
             <Trash2 className="h-4 w-4" aria-hidden />

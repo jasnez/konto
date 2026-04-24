@@ -4,16 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { deleteAccount } from '@/app/(app)/racuni/actions';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
 interface Props {
@@ -23,13 +14,10 @@ interface Props {
 
 export function AccountCardDelete({ accountId, accountName }: Props) {
   const [open, setOpen] = React.useState(false);
-  const [busy, setBusy] = React.useState(false);
   const router = useRouter();
 
   async function handleDelete() {
-    setBusy(true);
     const r = await deleteAccount(accountId);
-    setBusy(false);
     if (r.success) {
       setOpen(false);
       toast.success('Račun je uklonjen.');
@@ -64,32 +52,13 @@ export function AccountCardDelete({ accountId, accountName }: Props) {
       >
         Obriši
       </DropdownMenuItem>
-      <AlertDialog open={open} onOpenChange={setOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Obrisati račun?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Račun „{accountName}” bit će skriven. Transakcije ostaju u bazi (soft delete) dok se
-              logika ne promijeni.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="h-11" disabled={busy}>
-              Odustani
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="h-11 bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={busy}
-              onClick={(e) => {
-                e.preventDefault();
-                void handleDelete();
-              }}
-            >
-              {busy ? 'Brisanje…' : 'Obriši'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={`Obrisati račun "${accountName}"?`}
+        description="Račun će biti skriven (soft delete), a postojeće transakcije ostaju u bazi."
+        onConfirm={handleDelete}
+      />
     </>
   );
 }

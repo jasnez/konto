@@ -4,17 +4,8 @@ import { useState } from 'react';
 import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,8 +44,8 @@ export function MerchantsClient({
   async function confirmDelete() {
     if (!deleteTarget) return;
     const result = await deleteMerchant(deleteTarget.id);
-    setDeleteTarget(null);
     if (result.success) {
+      setDeleteTarget(null);
       toast.success('Prodavač je obrisan.');
       router.refresh();
       return;
@@ -66,6 +57,7 @@ export function MerchantsClient({
       return;
     }
     if (result.error === 'NOT_FOUND') {
+      setDeleteTarget(null);
       toast.error('Zapis više ne postoji.');
       router.refresh();
       return;
@@ -166,32 +158,19 @@ export function MerchantsClient({
         categoryOptions={categoryOptions}
       />
 
-      <AlertDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => {
-          if (!o) setDeleteTarget(null);
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Obrisati prodavača?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Možeš samo ako još nema povezanih transakcija (broj transakcija = 0).
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Odustani</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                void confirmDelete();
-              }}
-            >
-              Obriši
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={
+          deleteTarget
+            ? `Obrisati prodavača "${deleteTarget.display_name}"?`
+            : 'Obrisati prodavača?'
+        }
+        description="Možeš obrisati prodavača samo ako nema povezanih transakcija (broj transakcija = 0)."
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

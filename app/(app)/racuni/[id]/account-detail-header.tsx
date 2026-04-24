@@ -8,23 +8,13 @@ import { toast } from 'sonner';
 import { deleteAccount } from '@/app/(app)/racuni/actions';
 import { formatMinorUnits } from '@/lib/format/amount';
 import { Button } from '@/components/ui/button';
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { cn } from '@/lib/utils';
 
 interface Props {
   account: {
@@ -42,12 +32,9 @@ interface Props {
 export function AccountDetailHeader({ account }: Props) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [busy, setBusy] = React.useState(false);
 
   async function handleDelete() {
-    setBusy(true);
     const r = await deleteAccount(account.id);
-    setBusy(false);
     if (r.success) {
       setDialogOpen(false);
       toast.success('Račun je uklonjen.');
@@ -128,33 +115,13 @@ export function AccountDetailHeader({ account }: Props) {
         </DropdownMenu>
       </div>
 
-      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Obrisati račun?</AlertDialogTitle>
-            <AlertDialogDescription>
-              „{account.name}” će biti uklonjen s liste. Ovo je soft delete.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="h-11" disabled={busy}>
-              Odustani
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className={cn(
-                'h-11 bg-destructive text-destructive-foreground hover:bg-destructive/90',
-              )}
-              disabled={busy}
-              onClick={(e) => {
-                e.preventDefault();
-                void handleDelete();
-              }}
-            >
-              {busy ? 'Brisanje…' : 'Obriši'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title={`Obrisati račun "${account.name}"?`}
+        description="Račun će biti uklonjen s liste kroz soft delete."
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

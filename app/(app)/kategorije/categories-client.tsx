@@ -21,17 +21,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -267,9 +258,9 @@ export function CategoriesClient({ categories }: { categories: CategoryListItem[
   async function confirmDelete() {
     if (!deleteTarget) return;
     const target = deleteTarget;
-    setDeleteTarget(null);
     const result = await deleteCategory(target.id);
     if (result.success) {
+      setDeleteTarget(null);
       router.refresh();
       toast.success('Kategorija je obrisana.', {
         action: {
@@ -293,6 +284,7 @@ export function CategoriesClient({ categories }: { categories: CategoryListItem[
       return;
     }
     if (result.error === 'NOT_FOUND') {
+      setDeleteTarget(null);
       toast.error('Kategorija više ne postoji.');
       router.refresh();
       return;
@@ -401,33 +393,17 @@ export function CategoriesClient({ categories }: { categories: CategoryListItem[
         parentOptions={parentOptions}
       />
 
-      <AlertDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => {
-          if (!o) setDeleteTarget(null);
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Obrisati kategoriju?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Kategorija će nestati s liste. Transakcije koje su je koristile ostaju, ali bez ove
-              kategorije. Možeš je odmah vratiti putem obavijesti.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Odustani</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                void confirmDelete();
-              }}
-            >
-              Obriši
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={
+          deleteTarget ? `Obrisati kategoriju "${deleteTarget.name}"?` : 'Obrisati kategoriju?'
+        }
+        description="Kategorija će nestati s liste. Transakcije ostaju, ali bez te kategorije. Možeš je odmah vratiti kroz obavijest."
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

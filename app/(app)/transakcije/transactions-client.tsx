@@ -14,6 +14,7 @@ import { DatePicker } from '@/components/date-picker';
 import { QuickAddTrigger } from '@/components/shell/fab';
 import { TransactionRow } from '@/components/transaction-row';
 import { Button } from '@/components/ui/button';
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -74,6 +75,11 @@ function splitParamList(raw: string | null): string[] {
     .filter((value) => value.length > 0);
 }
 
+function getDeleteTransactionLabel(tx: TransactionListItem): string {
+  const preferred = tx.merchant?.display_name ?? tx.merchant_raw ?? tx.description ?? 'Transakcija';
+  return preferred.trim().length > 0 ? preferred : 'Transakcija';
+}
+
 export function TransactionsClient({
   transactions,
   filters,
@@ -87,6 +93,8 @@ export function TransactionsClient({
   const searchParams = useSearchParams();
   const [searchDraft, setSearchDraft] = useState(filters.search);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [pendingDeleteTx, setPendingDeleteTx] = useState<TransactionListItem | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const [pullStartY, setPullStartY] = useState<number | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
@@ -174,9 +182,11 @@ export function TransactionsClient({
     setLastSelectedIndex(rowIndex);
   }
 
-  async function handleDeleteSingle(txId: string) {
-    const result = await deleteTransaction(txId);
+  async function handleDeleteSingle() {
+    if (!pendingDeleteTx) return;
+    const result = await deleteTransaction(pendingDeleteTx.id);
     if (result.success) {
+      setPendingDeleteTx(null);
       toast.success('Transakcija je obrisana.');
       router.refresh();
       return;
@@ -188,6 +198,7 @@ export function TransactionsClient({
     if (selectedIds.size === 0) return;
     const result = await bulkDeleteTransactions(Array.from(selectedIds));
     if (result.success) {
+      setBulkDeleteOpen(false);
       toast.success(`Obrisano: ${String(result.data.count)} transakcija.`);
       setSelectedIds(new Set());
       router.refresh();
@@ -363,7 +374,9 @@ export function TransactionsClient({
               type="button"
               variant="destructive"
               size="sm"
-              onClick={() => void handleBulkDelete()}
+              onClick={() => {
+                setBulkDeleteOpen(true);
+              }}
             >
               Obriši
             </Button>
@@ -417,8 +430,8 @@ export function TransactionsClient({
                       });
                       setLastSelectedIndex(rowIndex);
                     }}
-                    onDelete={(txId) => {
-                      void handleDeleteSingle(txId);
+                    onRequestDelete={(targetTx) => {
+                      setPendingDeleteTx(targetTx);
                     }}
                   />
                 ))}
@@ -461,6 +474,28 @@ export function TransactionsClient({
           </div>
         </div>
       ) : null}
+
+      <ConfirmDeleteDialog
+        open={pendingDeleteTx !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteTx(null);
+        }}
+        title={
+          pendingDeleteTx
+            ? `Obrisati transakciju "${getDeleteTransactionLabel(pendingDeleteTx)}"?`
+            : 'Obrisati transakciju?'
+        }
+        description="Možeš je kasnije vratiti kroz restore (soft delete)."
+        onConfirm={handleDeleteSingle}
+      />
+
+      <ConfirmDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title={`Obrisati ${String(selectedIds.size)} transakcija?`}
+        description="Sve odabrane transakcije će biti soft obrisane i možeš ih kasnije vratiti."
+        onConfirm={handleBulkDelete}
+      />
     </div>
   );
 }

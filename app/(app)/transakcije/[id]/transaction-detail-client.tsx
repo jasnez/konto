@@ -9,16 +9,7 @@ import { ArrowLeft, GitBranchPlus, Pencil, Repeat, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { deleteTransaction, updateTransaction } from '@/app/(app)/transakcije/actions';
 import { Button } from '@/components/ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import {
   Select,
   SelectContent,
@@ -78,7 +69,6 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [busyCategory, setBusyCategory] = React.useState(false);
-  const [busyDelete, setBusyDelete] = React.useState(false);
   const [categoryId, setCategoryId] = React.useState<string | null>(tx.category?.id ?? null);
 
   async function handleCategoryChange(nextCategoryId: string | null) {
@@ -98,9 +88,7 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
   }
 
   async function handleDelete() {
-    setBusyDelete(true);
     const result = await deleteTransaction(tx.id);
-    setBusyDelete(false);
 
     if (result.success) {
       setDeleteOpen(false);
@@ -245,29 +233,13 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
         </Button>
       </section>
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Obrisati transakciju?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Ova akcija radi soft delete. Možeš je kasnije vratiti kroz restore.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busyDelete}>Odustani</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={busyDelete}
-              onClick={(event) => {
-                event.preventDefault();
-                void handleDelete();
-              }}
-            >
-              {busyDelete ? 'Brisanje…' : 'Obriši'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Obrisati transakciju?"
+        description="Ova akcija radi soft delete. Možeš je kasnije vratiti kroz restore."
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }
