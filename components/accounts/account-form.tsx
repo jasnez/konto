@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -252,10 +251,18 @@ function InitialBalanceMoney({
   );
 }
 
+// AccountFormFields renders the shared fields for both create and edit forms.
+// The two callers pass different strongly-typed `useForm` instances
+// (CreateAccountFormValues vs AccountFormEditValues). Expressing that
+// heterogeneity in a single generic without leaking RHF's third transform-
+// type parameter conflicts with zodResolver's widened return — the clean
+// generic path fights zod's transforms more than it's worth for one shared
+// shell. Instead we keep the interior typed as `any`-flavoured FieldsProps
+// and scope the eslint-disable to just this function, not the whole file.
+
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any */
 interface FieldsProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSubmit: (v: any) => void | Promise<void>;
   isSubmitting: boolean;
   mode: 'create' | 'edit';
@@ -431,3 +438,4 @@ function AccountFormFields(props: FieldsProps) {
     </Form>
   );
 }
+/* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any */
