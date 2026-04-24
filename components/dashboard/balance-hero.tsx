@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { Money } from '@/components/money';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatMoney } from '@/lib/format/format-money';
 import { cn } from '@/lib/utils';
 
 interface BalanceHeroProps {
@@ -26,8 +26,8 @@ export function BalanceHero({
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 p-4 sm:p-6">
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">Ukupno stanje</p>
-          <CardTitle className="text-3xl font-semibold tabular-nums tracking-tight sm:text-4xl">
-            {formatMoney(totalBalanceCents, baseCurrency, 'bs-BA')}
+          <CardTitle className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            <Money cents={totalBalanceCents} currency={baseCurrency} tone="default" />
           </CardTitle>
         </div>
         <Link

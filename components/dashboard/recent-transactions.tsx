@@ -2,9 +2,8 @@ import Link from 'next/link';
 import { format, parseISO } from 'date-fns';
 import { bs } from 'date-fns/locale';
 import { ArrowRight } from 'lucide-react';
+import { Money } from '@/components/money';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatMoney } from '@/lib/format/format-money';
-import { cn } from '@/lib/utils';
 
 export interface RecentTransactionItem {
   id: string;
@@ -55,16 +54,11 @@ export function RecentTransactions({ items }: RecentTransactionsProps) {
                       {item.categoryLabel} · {formatTransactionDate(item.transactionDate)}
                     </p>
                   </div>
-                  <p
-                    className={cn(
-                      'shrink-0 text-sm font-semibold tabular-nums',
-                      item.baseAmountCents > 0n && 'text-green-600 dark:text-green-400',
-                      item.baseAmountCents < 0n && 'text-red-600 dark:text-red-400',
-                      item.baseAmountCents === 0n && 'text-muted-foreground',
-                    )}
-                  >
-                    {formatMoney(item.baseAmountCents, item.baseCurrency, 'bs-BA')}
-                  </p>
+                  <Money
+                    cents={item.baseAmountCents}
+                    currency={item.baseCurrency}
+                    className="shrink-0 text-sm font-semibold"
+                  />
                 </Link>
               </li>
             ))}

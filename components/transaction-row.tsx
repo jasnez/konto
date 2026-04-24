@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Pencil, Trash2 } from 'lucide-react';
+import { Money, type MoneyTone } from '@/components/money';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { formatMoney } from '@/lib/format/format-money';
 import { cn } from '@/lib/utils';
 import type { TransactionListItem } from '@/app/(app)/transakcije/types';
 
@@ -49,14 +49,7 @@ export function TransactionRow({
   const accountLabel = tx.account?.name ?? 'Račun';
   const categoryIcon = tx.category ? tx.category.icon : null;
   const amount = BigInt(tx.original_amount_cents);
-  const formattedAmount = formatMoney(amount, tx.original_currency, 'bs-BA');
-  const amountClassName = tx.is_transfer
-    ? 'text-blue-600 dark:text-blue-400'
-    : amount > 0n
-      ? 'text-green-600 dark:text-green-400'
-      : amount < 0n
-        ? 'text-red-600 dark:text-red-400'
-        : 'text-muted-foreground';
+  const amountTone: MoneyTone = tx.is_transfer ? 'transfer' : 'auto';
 
   function clearLongPressTimer() {
     if (longPressTimer.current !== null) {
@@ -181,7 +174,12 @@ export function TransactionRow({
               <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
             </span>
           ) : null}
-          <p className={cn('font-medium tabular-nums', amountClassName)}>{formattedAmount}</p>
+          <Money
+            cents={amount}
+            currency={tx.original_currency}
+            tone={amountTone}
+            className="font-medium"
+          />
         </div>
 
         <div className="ml-2 hidden shrink-0 items-center gap-1 opacity-0 transition-opacity md:flex md:group-hover:opacity-100">
