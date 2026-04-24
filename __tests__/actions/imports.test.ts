@@ -308,6 +308,7 @@ describe('finalizeImport', () => {
           merchant_id: null,
           category_id: CATEGORY_ID,
           category_source: 'user',
+          category_confidence: 1,
         }),
       ],
     });
@@ -596,6 +597,33 @@ describe('updateParsedTransaction', () => {
 
     expect(result).toEqual({ success: true });
     expect(stub.parsedUpdatePayloads[0]).toEqual({ raw_description: 'Novi opis' });
+  });
+
+  it('marks categorization as user override when category is changed', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      parsedRow: {
+        id: PARSED_ID_A,
+        batch_id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'pending_review',
+      },
+      categoryOwner: { id: CATEGORY_ID },
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+
+    const result = await updateParsedTransaction({
+      id: PARSED_ID_A,
+      batchId: BATCH_ID,
+      category_id: CATEGORY_ID,
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(stub.parsedUpdatePayloads[0]).toEqual({
+      category_id: CATEGORY_ID,
+      categorization_source: 'user',
+      categorization_confidence: 1,
+    });
   });
 
   it('is RLS-safe: refuses to update a row owned by another user', async () => {

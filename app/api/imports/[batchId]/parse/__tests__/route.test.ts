@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NextRequest } from 'next/server';
 import { POST } from '../route';
+import { runCategorizationCascade } from '@/lib/categorization/cascade';
 import { extractPdfText, type ExtractResult } from '@/lib/parser/extract-text';
 import { parseStatementWithLLM, type ParseResult } from '@/lib/parser/llm-parse';
 import { ocrFallback } from '@/lib/parser/ocr-fallback';
 import { createClient } from '@/lib/supabase/server';
 
+vi.mock('@/lib/categorization/cascade', () => ({ runCategorizationCascade: vi.fn() }));
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }));
 vi.mock('@/lib/parser/extract-text', () => ({ extractPdfText: vi.fn() }));
 vi.mock('@/lib/parser/llm-parse', () => ({ parseStatementWithLLM: vi.fn() }));
@@ -80,22 +82,6 @@ function buildSupabaseMock(options: {
         },
       };
     }
-    if (table === 'merchant_aliases') {
-      return {
-        select: () => ({
-          eq: () => Promise.resolve({ data: [], error: null }),
-        }),
-      };
-    }
-    if (table === 'merchants') {
-      return {
-        select: () => ({
-          in: () => ({
-            is: () => Promise.resolve({ data: [], error: null }),
-          }),
-        }),
-      };
-    }
     throw new Error(`Unexpected table ${table}`);
   });
 
@@ -167,6 +153,10 @@ describe('POST /api/imports/[batchId]/parse', () => {
     vi.mocked(createClient).mockResolvedValue(client as never);
     vi.mocked(extractPdfText).mockResolvedValue(extractedText);
     vi.mocked(parseStatementWithLLM).mockResolvedValue(parsedOk);
+    vi.mocked(runCategorizationCascade).mockResolvedValue({
+      source: 'none',
+      confidence: 0,
+    });
 
     const res = await invoke('batch-1');
     expect(res.status).toBe(200);
@@ -177,6 +167,14 @@ describe('POST /api/imports/[batchId]/parse', () => {
     expect(extractPdfText).toHaveBeenCalledTimes(1);
     expect(ocrFallback).not.toHaveBeenCalled();
     expect(parseStatementWithLLM).toHaveBeenCalledWith(expect.any(String), 'Raiffeisen');
+    expect(runCategorizationCascade).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({
+        description: 'BINGO MARKET SARAJEVO',
+        userId: 'user-1',
+        amountMinor: -12550,
+      }),
+    );
 
     expect(insertCalls).toHaveLength(1);
     expect(insertCalls[0]?.rows).toEqual([
@@ -190,6 +188,8 @@ describe('POST /api/imports/[batchId]/parse', () => {
         reference: null,
         status: 'pending_review',
         parse_confidence: 'high',
+        categorization_source: 'none',
+        categorization_confidence: 0,
         merchant_id: null,
         category_id: null,
         selected_for_import: true,
@@ -254,6 +254,10 @@ describe('POST /api/imports/[batchId]/parse', () => {
     vi.mocked(createClient).mockResolvedValue(client as never);
     vi.mocked(extractPdfText).mockResolvedValue(extractedText);
     vi.mocked(parseStatementWithLLM).mockRejectedValue(new Error('gemini_timeout'));
+    vi.mocked(runCategorizationCascade).mockResolvedValue({
+      source: 'none',
+      confidence: 0,
+    });
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     const res = await invoke('batch-1');
@@ -327,6 +331,10 @@ describe('POST /api/imports/[batchId]/parse', () => {
     vi.mocked(createClient).mockResolvedValue(client as never);
     vi.mocked(extractPdfText).mockResolvedValue(extractedText);
     vi.mocked(parseStatementWithLLM).mockResolvedValue(parsedOk);
+    vi.mocked(runCategorizationCascade).mockResolvedValue({
+      source: 'none',
+      confidence: 0,
+    });
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     const res = await invoke('batch-1');

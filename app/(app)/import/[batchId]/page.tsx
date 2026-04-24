@@ -27,6 +27,14 @@ export const maxDuration = 60;
 
 type ConfidenceLevel = 'high' | 'medium' | 'low' | null;
 type BatchStatus = 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed' | 'rejected';
+type CategorizationSource =
+  | 'rule'
+  | 'alias_exact'
+  | 'alias_fuzzy'
+  | 'history'
+  | 'llm'
+  | 'none'
+  | 'user';
 
 function parseWarningsJson(raw: unknown): string[] {
   if (!raw || !Array.isArray(raw)) return [];
@@ -36,6 +44,21 @@ function parseWarningsJson(raw: unknown): string[] {
 function narrowConfidence(raw: string | null): ConfidenceLevel {
   if (raw === 'high' || raw === 'medium' || raw === 'low') return raw;
   return null;
+}
+
+function narrowCategorizationSource(raw: string | null): CategorizationSource {
+  if (
+    raw === 'rule' ||
+    raw === 'alias_exact' ||
+    raw === 'alias_fuzzy' ||
+    raw === 'history' ||
+    raw === 'llm' ||
+    raw === 'none' ||
+    raw === 'user'
+  ) {
+    return raw;
+  }
+  return 'none';
 }
 
 function narrowStatus(raw: string): BatchStatus {
@@ -152,7 +175,7 @@ export default async function ImportBatchPage(props: PageProps) {
       supabase
         .from('parsed_transactions')
         .select(
-          'id, transaction_date, raw_description, amount_minor, currency, category_id, merchant_id, selected_for_import, parse_confidence, status',
+          'id, transaction_date, raw_description, amount_minor, currency, category_id, merchant_id, selected_for_import, parse_confidence, categorization_source, categorization_confidence, status',
         )
         .eq('batch_id', batchId)
         .eq('user_id', user.id)
@@ -191,6 +214,8 @@ export default async function ImportBatchPage(props: PageProps) {
     merchant_id: r.merchant_id,
     selected_for_import: r.selected_for_import,
     parse_confidence: narrowConfidence(r.parse_confidence),
+    categorization_source: narrowCategorizationSource(r.categorization_source),
+    categorization_confidence: r.categorization_confidence ?? 0,
   }));
 
   if (initialRows.length === 0) {

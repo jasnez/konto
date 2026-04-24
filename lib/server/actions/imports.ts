@@ -291,6 +291,15 @@ export async function updateParsedTransaction(
   if (p.category_id !== undefined) patch.category_id = p.category_id;
   if (p.merchant_id !== undefined) patch.merchant_id = p.merchant_id;
   if (p.selected_for_import !== undefined) patch.selected_for_import = p.selected_for_import;
+  if (p.category_id !== undefined || p.merchant_id !== undefined) {
+    if (p.category_id === null && (p.merchant_id === undefined || p.merchant_id === null)) {
+      patch.categorization_source = 'none';
+      patch.categorization_confidence = 0;
+    } else {
+      patch.categorization_source = 'user';
+      patch.categorization_confidence = 1;
+    }
+  }
 
   const { error: upErr } = await supabase
     .from('parsed_transactions')
@@ -468,7 +477,11 @@ export async function bulkApplyCategoryToParsedRows(
 
   const { error: uErr } = await supabase
     .from('parsed_transactions')
-    .update({ category_id: categoryId })
+    .update({
+      category_id: categoryId,
+      categorization_source: categoryId ? 'user' : 'none',
+      categorization_confidence: categoryId ? 1 : 0,
+    })
     .eq('user_id', user.id)
     .in('id', targetIds);
 
@@ -511,6 +524,7 @@ interface PreparedImportRow {
   merchant_id: string | null;
   category_id: string | null;
   category_source: string | null;
+  category_confidence: number | null;
   dedup_hash: string;
 }
 
@@ -557,7 +571,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
   const { data: staged, error: sErr } = await supabase
     .from('parsed_transactions')
     .select(
-      'id, transaction_date, amount_minor, currency, raw_description, merchant_id, category_id',
+      'id, transaction_date, amount_minor, currency, raw_description, merchant_id, category_id, categorization_source, categorization_confidence',
     )
     .eq('batch_id', batchId)
     .eq('user_id', user.id)
@@ -627,7 +641,8 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
       merchant_raw: row.raw_description,
       merchant_id: row.merchant_id,
       category_id: row.category_id,
-      category_source: row.category_id ? 'user' : null,
+      category_source: row.category_id ? (row.categorization_source ?? 'user') : null,
+      category_confidence: row.category_id ? (row.categorization_confidence ?? 1) : null,
       dedup_hash: dedupHash,
     });
   }
@@ -671,6 +686,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
     merchant_id: r.merchant_id,
     category_id: r.category_id,
     category_source: r.category_source,
+    category_confidence: r.category_confidence,
     dedup_hash: r.dedup_hash,
   }));
 

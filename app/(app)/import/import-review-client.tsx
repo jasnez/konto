@@ -53,6 +53,15 @@ export interface ReviewParsedRow {
   merchant_id: string | null;
   selected_for_import: boolean;
   parse_confidence: 'high' | 'medium' | 'low' | null;
+  categorization_source:
+    | 'rule'
+    | 'alias_exact'
+    | 'alias_fuzzy'
+    | 'history'
+    | 'llm'
+    | 'none'
+    | 'user';
+  categorization_confidence: number;
 }
 
 interface BatchHeaderModel {
@@ -114,6 +123,48 @@ function minorToEditableInput(minor: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function formatCategorizationConfidence(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return '0%';
+  const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
+  return `${String(pct)}%`;
+}
+
+function categorizationBadgeMeta(source: ReviewParsedRow['categorization_source']): {
+  label: string;
+  className: string;
+} {
+  switch (source) {
+    case 'rule':
+    case 'alias_exact':
+      return {
+        label: 'Auto',
+        className: 'border-primary/30 bg-primary/10 text-foreground',
+      };
+    case 'alias_fuzzy':
+    case 'history':
+      return {
+        label: 'Provjeri',
+        className: 'border-[hsl(var(--warning))]/50 bg-[hsl(var(--warning))]/15 text-foreground',
+      };
+    case 'llm':
+      return {
+        label: 'AI predlog',
+        className: 'border-[hsl(var(--warning))] bg-[hsl(var(--warning))]/20 text-foreground',
+      };
+    case 'user':
+      return {
+        label: 'Ručno',
+        className: 'border-border bg-muted text-foreground',
+      };
+    case 'none':
+    default:
+      return {
+        label: 'Nije kategorisano',
+        className: 'border-destructive/40 bg-destructive/10 text-foreground',
+      };
+  }
 }
 
 type PendingPatch = Partial<{
@@ -231,7 +282,18 @@ export function ImportReviewClient({
 
   const setCategory = useCallback(
     (rowId: string, categoryId: string | null) => {
-      setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, category_id: categoryId } : r)));
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === rowId
+            ? {
+                ...r,
+                category_id: categoryId,
+                categorization_source: categoryId ? 'user' : 'none',
+                categorization_confidence: categoryId ? 1 : 0,
+              }
+            : r,
+        ),
+      );
       void (async () => {
         const res = await updateParsedTransaction({
           id: rowId,
@@ -255,6 +317,9 @@ export function ImportReviewClient({
                 ...r,
                 merchant_id: merchantId,
                 category_id: categoryId ?? r.category_id,
+                categorization_source: merchantId || categoryId ? 'user' : r.categorization_source,
+                categorization_confidence:
+                  merchantId || categoryId ? 1 : r.categorization_confidence,
               }
             : r,
         ),
@@ -328,7 +393,18 @@ export function ImportReviewClient({
         toast.error('Masovna kategorija nije primijenjena.');
         return;
       }
-      setRows((prev) => prev.map((r) => (bulkIds.has(r.id) ? { ...r, category_id: cat } : r)));
+      setRows((prev) =>
+        prev.map((r) =>
+          bulkIds.has(r.id)
+            ? {
+                ...r,
+                category_id: cat,
+                categorization_source: cat ? 'user' : 'none',
+                categorization_confidence: cat ? 1 : 0,
+              }
+            : r,
+        ),
+      );
       toast.success(`Kategorija primijenjena na ${String(res.updated)} stavki.`);
       setBulkIds(new Set());
       setBulkMode(false);
@@ -448,6 +524,9 @@ export function ImportReviewClient({
               </th>
               <th className="min-w-[8rem] py-2 pr-2 font-medium" scope="col">
                 Kategorija
+              </th>
+              <th className="min-w-[10rem] py-2 pr-2 font-medium" scope="col">
+                AI status
               </th>
               <th className="py-2 pr-2 font-medium" scope="col">
                 Iznos
@@ -581,6 +660,7 @@ const ReviewDesktopRow = memo(function ReviewDesktopRow({
 
   const lowConfidence = row.parse_confidence === 'low';
   const unknownMerchant = !row.merchant_id;
+  const categorizationMeta = categorizationBadgeMeta(row.categorization_source);
 
   const toggleBulk = useCallback(() => {
     setBulkIds((prev) => {
@@ -672,6 +752,12 @@ const ReviewDesktopRow = memo(function ReviewDesktopRow({
         </Select>
       </td>
       <td className="py-2 pr-2">
+        <Badge variant="outline" className={cn('h-8 px-2 text-xs', categorizationMeta.className)}>
+          {categorizationMeta.label} ·{' '}
+          {formatCategorizationConfidence(row.categorization_confidence)}
+        </Badge>
+      </td>
+      <td className="py-2 pr-2">
         <input
           type="text"
           inputMode="decimal"
@@ -740,6 +826,7 @@ const ReviewMobileCard = memo(function ReviewMobileCard(
 
   const lowConfidence = row.parse_confidence === 'low';
   const unknownMerchant = !row.merchant_id;
+  const categorizationMeta = categorizationBadgeMeta(row.categorization_source);
 
   const toggleBulk = useCallback(() => {
     setBulkIds((prev) => {
@@ -771,6 +858,13 @@ const ReviewMobileCard = memo(function ReviewMobileCard(
         />
       </div>
       <div className="pr-14">
+        <Badge
+          variant="outline"
+          className={cn('mb-2 h-8 px-2 text-xs', categorizationMeta.className)}
+        >
+          {categorizationMeta.label} ·{' '}
+          {formatCategorizationConfidence(row.categorization_confidence)}
+        </Badge>
         <input
           type="date"
           className="mb-2 h-11 w-full rounded-md border border-input bg-background px-2 text-sm tabular-nums"

@@ -579,6 +579,8 @@ export type Database = {
         Row: {
           amount_minor: number;
           batch_id: string;
+          categorization_confidence: number | null;
+          categorization_source: string | null;
           category_id: string | null;
           created_at: string;
           currency: string;
@@ -597,6 +599,8 @@ export type Database = {
         Insert: {
           amount_minor: number;
           batch_id: string;
+          categorization_confidence?: number | null;
+          categorization_source?: string | null;
           category_id?: string | null;
           created_at?: string;
           currency: string;
@@ -615,6 +619,8 @@ export type Database = {
         Update: {
           amount_minor?: number;
           batch_id?: string;
+          categorization_confidence?: number | null;
+          categorization_source?: string | null;
           category_id?: string | null;
           created_at?: string;
           currency?: string;
