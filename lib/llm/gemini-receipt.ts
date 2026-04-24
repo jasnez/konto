@@ -6,26 +6,35 @@ import {
 
 const GEMINI_MODEL = 'gemini-2.5-flash-lite';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_TIMEOUT_MS = 25_000;
 
-const PROMPT = `Ti si asistent za ekstrakciju podataka sa fiskalnih računa iz Bosne i Hercegovine (BiH), Hrvatske i Srbije.
+const PROMPT = `Ti si asistent za ekstrakciju podataka sa fiskalnih računa.
+Primarni region je Bosna i Hercegovina (BiH), Hrvatska i Srbija, ali podrži i račune iz EU i Skandinavije (Švedska, Norveška, Danska) i drugih zemalja.
 Analiziraj priloženu sliku računa i vrati ISKLJUČIVO JSON objekat — bez markdown code blockova, bez komentara, bez objašnjenja.
 
 JSON shema:
 {
   "total_amount": number | null,           // ukupan iznos sa uključenim PDV-om/PDV (npr. 45.89)
-  "currency":     string | null,           // ISO kod: "BAM" (KM/konvertibilna marka), "EUR", "USD", "HRK", "RSD"
+  "currency":     string | null,           // ISO kod valute (3 slova velika)
   "date":         string | null,           // ISO datum "YYYY-MM-DD"
-  "merchant_name": string | null,          // ime prodavca (npr. "Konzum d.o.o.", "Bingo", "Tržnica Markale")
+  "merchant_name": string | null,          // ime prodavca (npr. "Konzum d.o.o.", "Bingo", "ICA")
   "items":        Array<{ name: string, quantity?: number, unit_price?: number, total?: number }>,
   "tax_amount":   number | null,           // iznos PDV-a ako je eksplicitno naveden
   "confidence":   number                   // 0..1 koliko si siguran u ekstrakciju
 }
 
+Podržane valute (ISO 4217, ne ograničavaj se samo na ovu listu):
+- BAM (KM, konvertibilna marka), EUR, USD, GBP, CHF
+- HRK (kuna, istorijski), RSD (srpski dinar)
+- SEK (švedska kruna, "kr"), NOK (norveška kruna), DKK (danska kruna)
+- PLN (poljski zlot), CZK (češka kruna), HUF (mađarska forinta), TRY (turska lira)
+
 Pravila:
 - Ako slika NIJE račun ili je nečitljiva, vrati sva polja kao null, items=[], confidence=0.
-- "total_amount" mora biti POZITIVAN broj sa ZA UKUPNO PLAĆENO (sa PDV-om). Nemoj koristiti subtotal.
+- "total_amount" mora biti POZITIVAN broj sa UKUPNO PLAĆENO (sa PDV-om). Nemoj koristiti subtotal.
 - Ako račun koristi oznaku "KM", mapiraj currency na "BAM".
-- Datumi u BiH su često "DD.MM.YYYY." ili "DD/MM/YYYY" — konvertuj u "YYYY-MM-DD".
+- Ako račun koristi oznaku "kr" bez jasne države, pokušaj prepoznati jezik/lokaciju (švedski jezik → SEK, norveški → NOK, danski → DKK).
+- Datumi su često "DD.MM.YYYY.", "DD/MM/YYYY", "YYYY-MM-DD" — konvertuj u "YYYY-MM-DD".
 - Ako datum fali, vrati null (NE današnji datum).
 - "merchant_name" je ime prodavnice/firme, NE adresa niti JIB/PDV broj.
 - Decimalni zarez i tačka su ekvivalentni — vrati broj sa decimalnom tačkom.
@@ -97,20 +106,36 @@ export async function extractReceiptFields(
     },
   };
 
+  // Hard 25 s timeout so the UI never hangs. Vercel function has
+  // `maxDuration = 60` which is a safety net on top of this.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, GEMINI_TIMEOUT_MS);
+
   let response: Response;
   try {
     response = await fetch(`${GEMINI_ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
+      signal: controller.signal,
     });
   } catch (err) {
+    const aborted =
+      (err instanceof Error && err.name === 'AbortError') || controller.signal.aborted;
     return {
       extracted: emptyExtractedReceipt(),
       rawResponse: '',
       ok: false,
-      error: err instanceof Error ? err.message : 'Mrežna greška.',
+      error: aborted
+        ? 'Gemini predugo ne odgovara. Pokušaj ponovo sa manjom slikom.'
+        : err instanceof Error
+          ? err.message
+          : 'Mrežna greška.',
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (!response.ok) {
