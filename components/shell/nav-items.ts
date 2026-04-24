@@ -7,6 +7,7 @@ import {
   Store,
   Tags,
   Wallet,
+  CreditCard,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -29,6 +30,13 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/racuni', label: 'Računi', mobileLabel: 'Računi', icon: Wallet },
   { href: '/kategorije', label: 'Kategorije', mobileLabel: 'Kat.', icon: Tags },
   { href: '/merchants', label: 'Prodavači', mobileLabel: 'Shop', icon: Store, desktopOnly: true },
+  {
+    href: '/kartice-rate',
+    label: 'Kartice na rate',
+    mobileLabel: 'Rate',
+    icon: CreditCard,
+    desktopOnly: true,
+  },
   { href: '/transakcije', label: 'Transakcije', mobileLabel: 'Transakcije', icon: Receipt },
   { href: '/uvidi', label: 'Uvidi', mobileLabel: 'Uvidi', icon: PieChart, desktopOnly: true },
   { href: '/podesavanja', label: 'Podešavanja', mobileLabel: 'Više', icon: Settings },

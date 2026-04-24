@@ -39,7 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [{ data: accounts }, { data: categories }] = await Promise.all([
     supabase
       .from('accounts')
-      .select('id,name,currency')
+      .select('id,name,currency,type')
       .eq('user_id', user.id)
       .is('deleted_at', null)
       .order('sort_order', { ascending: true })
@@ -57,6 +57,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     id: account.id,
     name: account.name,
     currency: account.currency,
+    type: account.type,
   }));
 
   const quickAddCategories: CategoryOption[] = [];

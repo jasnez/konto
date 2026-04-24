@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { CalendarDays, Loader2, MessageSquareMore } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import { createInstallmentPlan } from '@/app/(app)/kartice-rate/actions';
 import { createMerchant } from '@/app/(app)/merchants/actions';
 import { createTransaction } from '@/app/(app)/transakcije/actions';
 import { AccountSelect, type AccountOption } from '@/components/account-select';
@@ -26,7 +27,9 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Sheet,
   SheetContent,
@@ -69,6 +72,9 @@ export function QuickAddTransaction({
   const [kind, setKind] = useState<TransactionKind>('expense');
   const [showNotes, setShowNotes] = useState(false);
   const [retryDraft, setRetryDraft] = useState<RetryDraft | null>(null);
+  const [isInstallment, setIsInstallment] = useState(false);
+  const [installmentCount, setInstallmentCount] = useState(3);
+  const [dayOfMonth, setDayOfMonth] = useState(15);
 
   const form = useForm<QuickAddFormValues>({
     resolver: zodResolver(CreateTransactionSchema) as never,
@@ -87,15 +93,27 @@ export function QuickAddTransaction({
 
   const selectedAccountId = form.watch('account_id');
   const selectedToAccountId = form.watch('to_account_id');
+  const watchedAmount = form.watch('amount_cents');
   const selectedAccount = accounts.find((account) => account.id === selectedAccountId);
   const toAccounts = accounts.filter((account) => account.id !== selectedAccountId);
   const isTransfer = kind === 'transfer';
+  const isCreditCard = selectedAccount?.type === 'credit_card';
+  const showInstallmentToggle = kind === 'expense' && isCreditCard && !isTransfer;
+  const selectedCurrency = selectedAccount?.currency ?? 'BAM';
+  const absAmount = watchedAmount < 0n ? -watchedAmount : watchedAmount;
+  const derivedInstallmentCents =
+    absAmount > 0n && installmentCount > 1
+      ? absAmount / BigInt(installmentCount) + (absAmount % BigInt(installmentCount) > 0n ? 1n : 0n)
+      : 0n;
 
   useEffect(() => {
     if (!open) return;
 
     if (!retryDraft) {
       merchantIdCacheRef.current.clear();
+      setIsInstallment(false);
+      setInstallmentCount(3);
+      setDayOfMonth(15);
     }
 
     if (retryDraft) {
@@ -158,16 +176,45 @@ export function QuickAddTransaction({
     const signedAmount = normalizeAmountForKind(values.amount_cents, kind);
 
     // Kick off merchant lookup immediately (may be already in-flight from onBlur).
-    // Transfers have no merchant.
+    // Transfers and installments handle merchant separately.
     const merchantPromise =
       !isTransfer && values.merchant_raw
         ? ensureMerchantExists(values.merchant_raw, values.category_id ?? null)
         : Promise.resolve(null);
 
     onOpenChange(false);
-    toast.success('Transakcija je dodata.');
 
     const merchantId = await merchantPromise;
+
+    // ── Installment plan branch ───────────────────────────────────────────
+    if (isInstallment && showInstallmentToggle) {
+      toast.success('Plan na rate je kreiran.');
+      const totalAbs = signedAmount < 0n ? -signedAmount : signedAmount;
+      const result = await createInstallmentPlan({
+        account_id: values.account_id,
+        merchant_id: merchantId ?? null,
+        category_id: values.category_id ?? null,
+        currency: values.currency,
+        total_cents: totalAbs,
+        installment_count: installmentCount,
+        installment_cents: derivedInstallmentCents > 0n ? derivedInstallmentCents : totalAbs,
+        start_date: values.transaction_date,
+        day_of_month: dayOfMonth,
+        notes: values.notes ?? null,
+      });
+      if (!result.success) {
+        toast.error('Greška pri kreiranju plana na rate.', {
+          description:
+            result.error === 'NOT_CREDIT_CARD'
+              ? 'Odabrani račun nije kreditna kartica.'
+              : 'Pokušaj ponovo.',
+        });
+      }
+      return;
+    }
+
+    // ── Regular / transfer branch ─────────────────────────────────────────
+    toast.success('Transakcija je dodata.');
 
     const payload: QuickAddFormValues = {
       ...values,
@@ -261,6 +308,7 @@ export function QuickAddTransaction({
                 });
                 form.setValue('category_id', null, { shouldDirty: true });
                 form.setValue('to_account_id', undefined, { shouldDirty: true });
+                if (nextKind !== 'expense') setIsInstallment(false);
               }}
             >
               <TabsList className="grid w-full grid-cols-3">
@@ -337,12 +385,16 @@ export function QuickAddTransaction({
                     value={field.value}
                     onValueChange={(nextAccountId) => {
                       field.onChange(nextAccountId);
-                      const nextCurrency =
-                        accounts.find((account) => account.id === nextAccountId)?.currency ?? 'BAM';
+                      const nextAccount = accounts.find((a) => a.id === nextAccountId);
+                      const nextCurrency = nextAccount?.currency ?? 'BAM';
                       form.setValue('currency', nextCurrency);
                       // Reset to_account_id if it now matches the selected from-account.
                       if (form.getValues('to_account_id') === nextAccountId) {
                         form.setValue('to_account_id', undefined, { shouldDirty: true });
+                      }
+                      // Turn off installment if new account is not a credit card.
+                      if (nextAccount?.type !== 'credit_card') {
+                        setIsInstallment(false);
                       }
                     }}
                   />
@@ -382,6 +434,72 @@ export function QuickAddTransaction({
             <p className="text-sm text-muted-foreground">
               Međuvalutni transfer — iznos će biti automatski konvertovan po tekućem kursu.
             </p>
+          ) : null}
+
+          {showInstallmentToggle ? (
+            <div className="space-y-3 rounded-lg border p-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="installment-toggle" className="cursor-pointer">
+                  Na rate
+                </Label>
+                <Switch
+                  id="installment-toggle"
+                  checked={isInstallment}
+                  onCheckedChange={setIsInstallment}
+                />
+              </div>
+
+              {isInstallment ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="inst-count" className="text-xs text-muted-foreground">
+                        Broj rata (2–60)
+                      </Label>
+                      <Input
+                        id="inst-count"
+                        type="number"
+                        min={2}
+                        max={60}
+                        value={installmentCount}
+                        onChange={(e) => {
+                          const v = Math.max(2, Math.min(60, Number(e.target.value)));
+                          setInstallmentCount(Number.isFinite(v) ? v : 3);
+                        }}
+                        className="h-11 min-h-[44px]"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="inst-day" className="text-xs text-muted-foreground">
+                        Dan u mj. (1–28)
+                      </Label>
+                      <Input
+                        id="inst-day"
+                        type="number"
+                        min={1}
+                        max={28}
+                        value={dayOfMonth}
+                        onChange={(e) => {
+                          const v = Math.max(1, Math.min(28, Number(e.target.value)));
+                          setDayOfMonth(Number.isFinite(v) ? v : 15);
+                        }}
+                        className="h-11 min-h-[44px]"
+                      />
+                    </div>
+                  </div>
+                  {derivedInstallmentCents > 0n ? (
+                    <p className="text-xs text-muted-foreground">
+                      ≈{' '}
+                      {new Intl.NumberFormat('bs-BA', {
+                        style: 'currency',
+                        currency: selectedCurrency,
+                      }).format(Number(derivedInstallmentCents) / 100)}{' '}
+                      / rati · zadnja rata može biti različita zbog zaokruživanja
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           ) : null}
 
           <FormField

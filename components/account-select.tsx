@@ -12,6 +12,8 @@ export interface AccountOption {
   id: string;
   name: string;
   currency: string;
+  /** Account type — used to conditionally show installment UI for credit cards. */
+  type?: string;
 }
 
 interface AccountSelectProps {

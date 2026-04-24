@@ -1,6 +1,11 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+﻿export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: '14.5';
+  };
   graphql_public: {
     Tables: {
       [_ in never]: never;
@@ -177,6 +182,160 @@ export type Database = {
           },
         ];
       };
+      fx_rates: {
+        Row: {
+          base: string;
+          date: string;
+          fetched_at: string;
+          quote: string;
+          rate: number;
+          source: string;
+        };
+        Insert: {
+          base?: string;
+          date: string;
+          fetched_at?: string;
+          quote: string;
+          rate: number;
+          source?: string;
+        };
+        Update: {
+          base?: string;
+          date?: string;
+          fetched_at?: string;
+          quote?: string;
+          rate?: number;
+          source?: string;
+        };
+        Relationships: [];
+      };
+      installment_occurrences: {
+        Row: {
+          amount_cents: number;
+          created_at: string;
+          due_date: string;
+          id: string;
+          occurrence_num: number;
+          plan_id: string;
+          state: string;
+          transaction_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          amount_cents: number;
+          created_at?: string;
+          due_date: string;
+          id?: string;
+          occurrence_num: number;
+          plan_id: string;
+          state?: string;
+          transaction_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          created_at?: string;
+          due_date?: string;
+          id?: string;
+          occurrence_num?: number;
+          plan_id?: string;
+          state?: string;
+          transaction_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'installment_occurrences_plan_id_fkey';
+            columns: ['plan_id'];
+            isOneToOne: false;
+            referencedRelation: 'installment_plans';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'installment_occurrences_transaction_id_fkey';
+            columns: ['transaction_id'];
+            isOneToOne: false;
+            referencedRelation: 'transactions';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      installment_plans: {
+        Row: {
+          account_id: string;
+          category_id: string | null;
+          created_at: string;
+          currency: string;
+          day_of_month: number;
+          id: string;
+          installment_cents: number;
+          installment_count: number;
+          merchant_id: string | null;
+          notes: string | null;
+          start_date: string;
+          status: string;
+          total_cents: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          account_id: string;
+          category_id?: string | null;
+          created_at?: string;
+          currency: string;
+          day_of_month: number;
+          id?: string;
+          installment_cents: number;
+          installment_count: number;
+          merchant_id?: string | null;
+          notes?: string | null;
+          start_date: string;
+          status?: string;
+          total_cents: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          account_id?: string;
+          category_id?: string | null;
+          created_at?: string;
+          currency?: string;
+          day_of_month?: number;
+          id?: string;
+          installment_cents?: number;
+          installment_count?: number;
+          merchant_id?: string | null;
+          notes?: string | null;
+          start_date?: string;
+          status?: string;
+          total_cents?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'installment_plans_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'installment_plans_category_id_fkey';
+            columns: ['category_id'];
+            isOneToOne: false;
+            referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'installment_plans_merchant_id_fkey';
+            columns: ['merchant_id'];
+            isOneToOne: false;
+            referencedRelation: 'merchants';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       merchant_aliases: {
         Row: {
           created_at: string;
@@ -301,33 +460,6 @@ export type Database = {
           timezone?: string;
           updated_at?: string;
           week_start?: number;
-        };
-        Relationships: [];
-      };
-      fx_rates: {
-        Row: {
-          base: string;
-          date: string;
-          fetched_at: string;
-          quote: string;
-          rate: number;
-          source: string;
-        };
-        Insert: {
-          base?: string;
-          date: string;
-          fetched_at?: string;
-          quote: string;
-          rate: number;
-          source?: string;
-        };
-        Update: {
-          base?: string;
-          date?: string;
-          fetched_at?: string;
-          quote?: string;
-          rate?: number;
-          source?: string;
         };
         Relationships: [];
       };
@@ -471,6 +603,13 @@ export type Database = {
             referencedColumns: ['id'];
           },
           {
+            foreignKeyName: 'transactions_merchant_id_fkey';
+            columns: ['merchant_id'];
+            isOneToOne: false;
+            referencedRelation: 'merchants';
+            referencedColumns: ['id'];
+          },
+          {
             foreignKeyName: 'transactions_split_parent_id_fkey';
             columns: ['split_parent_id'];
             isOneToOne: false;
@@ -491,50 +630,69 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      insert_default_categories: {
-        Args: { p_user_id: string };
-        Returns: undefined;
+      create_transfer_pair: {
+        Args: {
+          p_base_currency: string;
+          p_from_account_id: string;
+          p_from_amount_cents: number;
+          p_from_base_cents: number;
+          p_from_currency: string;
+          p_from_fx_rate: number;
+          p_from_fx_rate_date: string;
+          p_from_fx_stale: boolean;
+          p_notes: string;
+          p_to_account_id: string;
+          p_to_amount_cents: number;
+          p_to_base_cents: number;
+          p_to_currency: string;
+          p_to_fx_rate: number;
+          p_to_fx_rate_date: string;
+          p_to_fx_stale: boolean;
+          p_transaction_date: string;
+        };
+        Returns: Json;
       };
-      restore_default_categories_for_user: {
-        Args: Record<string, never>;
-        Returns: undefined;
-      };
-      user_owns_account: { Args: { p_account_id: string }; Returns: boolean };
-      user_owns_category: { Args: { p_category_id: string }; Returns: boolean };
-      user_owns_merchant: { Args: { p_merchant_id: string }; Returns: boolean };
-      user_owns_transaction: { Args: { p_tx_id: string }; Returns: boolean };
-      search_merchants: {
-        Args: { p_limit?: number; p_query: string };
-        Returns: {
-          id: string;
-          canonical_name: string;
-          color: string | null;
-          default_category_id: string | null;
-          display_name: string;
-          icon: string | null;
-          similarity_score: number;
-          transaction_count: number;
-        }[];
-      };
-      get_monthly_summary: {
-        Args:
-          | { p_base_currency: string; p_month: number; p_year: number }
-          | {
+      get_monthly_summary:
+        | {
+            Args: { p_base_currency: string; p_month: number; p_year: number };
+            Returns: Json;
+          }
+        | {
+            Args: {
               p_base_currency: string;
               p_month: number;
               p_today_date: string;
               p_year: number;
             };
-        Returns: {
-          avg_daily_spend: number;
-          month_expense: number;
-          month_income: number;
-          month_net: number;
-          net_change_percent: number;
-          prev_month_net: number;
-          total_balance: number;
-        };
+            Returns: Json;
+          };
+      insert_default_categories: {
+        Args: { p_user_id: string };
+        Returns: undefined;
       };
+      restore_default_categories_for_user: { Args: never; Returns: undefined };
+      search_merchants: {
+        Args: { p_limit?: number; p_query: string };
+        Returns: {
+          canonical_name: string;
+          color: string;
+          default_category_id: string;
+          display_name: string;
+          icon: string;
+          id: string;
+          similarity_score: number;
+          transaction_count: number;
+        }[];
+      };
+      user_owns_account: { Args: { p_account_id: string }; Returns: boolean };
+      user_owns_account_row: {
+        Args: { p_account_id: string };
+        Returns: boolean;
+      };
+      user_owns_category: { Args: { p_category_id: string }; Returns: boolean };
+      user_owns_merchant: { Args: { p_merchant_id: string }; Returns: boolean };
+      user_owns_transaction: { Args: { p_tx_id: string }; Returns: boolean };
+      user_owns_transaction_row: { Args: { p_tx_id: string }; Returns: boolean };
     };
     Enums: {
       [_ in never]: never;

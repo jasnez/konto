@@ -241,7 +241,7 @@ export default async function TransakcijePage({ searchParams }: PageProps) {
   const [{ data: accountsRaw }, { data: categoriesRaw }, txData] = await Promise.all([
     supabase
       .from('accounts')
-      .select('id,name,currency')
+      .select('id,name,currency,type')
       .eq('user_id', user.id)
       .is('deleted_at', null)
       .order('sort_order', { ascending: true })
@@ -260,6 +260,7 @@ export default async function TransakcijePage({ searchParams }: PageProps) {
     id: account.id,
     name: account.name,
     currency: account.currency,
+    type: account.type,
   }));
 
   const categories: CategoryOption[] = [];
