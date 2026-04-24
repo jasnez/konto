@@ -21,6 +21,7 @@ export default tseslint.config(
       'components/ui/**',
       'supabase/types.ts',
       'scripts/**',
+      'public/**',
     ],
   },
   ...tseslint.configs.strictTypeChecked,
