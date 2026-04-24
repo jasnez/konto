@@ -23,6 +23,7 @@ import { MoneyInput } from '@/components/money-input';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -78,6 +79,7 @@ function CreateAccountForm() {
     mode: 'onSubmit',
   });
   const isSubmitting = form.formState.isSubmitting;
+  const accountType = form.watch('type');
 
   async function onSubmit(values: CreateAccountFormValues) {
     const result: CreateAccountResult = await createAccount(values);
@@ -130,9 +132,15 @@ function CreateAccountForm() {
                   formControl={form.control}
                   fieldValue={field.value}
                   onCentsStringChange={field.onChange}
+                  accountType={accountType}
                   error={fieldState.error?.message}
                 />
               </FormControl>
+              {accountType === 'credit_card' || accountType === 'loan' ? (
+                <FormDescription>
+                  Za kreditnu karticu/kredit unesi negativan iznos (zaduzenje).
+                </FormDescription>
+              ) : null}
               <FormMessage />
             </FormItem>
           )}
@@ -223,14 +231,17 @@ function InitialBalanceMoney({
   formControl,
   fieldValue,
   onCentsStringChange,
+  accountType,
   error,
 }: {
   formControl: Control<CreateAccountFormValues>;
   fieldValue: string | undefined;
   onCentsStringChange: (v: string) => void;
+  accountType: CreateAccountFormValues['type'];
   error?: string;
 }) {
   const currencyCode = useWatch({ control: formControl, name: 'currency', defaultValue: 'BAM' });
+  const allowNegative = accountType === 'credit_card' || accountType === 'loan';
   let cents: bigint;
   try {
     cents = BigInt(fieldValue ?? '0');
@@ -246,6 +257,7 @@ function InitialBalanceMoney({
         onCentsStringChange(c.toString());
       }}
       currency={currencyCode}
+      allowNegative={allowNegative}
       error={error}
     />
   );

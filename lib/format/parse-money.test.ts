@@ -50,6 +50,12 @@ describe('parseMoneyString', () => {
     expect(parseMoneyString('0,00', 'bs-BA')).toBe(BigInt(0));
   });
 
+  it('accepts leading minus for zero amounts', () => {
+    expect(parseMoneyString('-0', 'bs-BA')).toBe(BigInt(0));
+    expect(parseMoneyString('-0,00', 'bs-BA')).toBe(BigInt(0));
+    expect(parseMoneyString('−0,00', 'bs-BA')).toBe(BigInt(0));
+  });
+
   it('handles large numbers', () => {
     expect(parseMoneyString('1.234.567,89', 'bs-BA')).toBe(BigInt(123456789));
   });
