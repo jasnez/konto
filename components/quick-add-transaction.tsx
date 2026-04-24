@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { CreateTransactionSchema } from '@/lib/schemas/transaction';
 import { cn } from '@/lib/utils';
 
@@ -104,27 +105,6 @@ function writeLastUsed(payload: LastUsedValues) {
   }
 }
 
-function useIsMobileBreakpoint() {
-  // Avoid first render as "desktop" on real mobile: opens the wrong host (Dialog vs Sheet) before effect runs.
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches,
-  );
-
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 767px)');
-    const onChange = () => {
-      setIsMobile(media.matches);
-    };
-    onChange();
-    media.addEventListener('change', onChange);
-    return () => {
-      media.removeEventListener('change', onChange);
-    };
-  }, []);
-
-  return isMobile;
-}
-
 function buildDefaults(
   accounts: AccountOption[],
   categories: CategoryOption[],
@@ -173,7 +153,7 @@ export function QuickAddTransaction({
   accounts,
   categories,
 }: QuickAddTransactionProps) {
-  const isMobile = useIsMobileBreakpoint();
+  const isMobile = useIsMobile();
   const amountInputRef = useRef<HTMLInputElement | null>(null);
   const merchantInputRef = useRef<HTMLInputElement | null>(null);
   const createdMerchantsRef = useRef<Set<string>>(new Set());

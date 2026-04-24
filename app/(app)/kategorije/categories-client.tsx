@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { CategoryInput } from '@/lib/categories/validation';
 import { deleteCategory, reorderCategories } from './actions';
 import { CategoryFormDialog } from './category-form-dialog';
@@ -181,19 +182,7 @@ export function CategoriesClient({ categories }: { categories: CategoryListItem[
   const [editing, setEditing] = useState<CategoryListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CategoryListItem | null>(null);
   const [reorderMode, setReorderMode] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)');
-    const apply = () => {
-      setIsDesktop(mq.matches);
-    };
-    apply();
-    mq.addEventListener('change', apply);
-    return () => {
-      mq.removeEventListener('change', apply);
-    };
-  }, []);
+  const isDesktop = !useIsMobile();
 
   useEffect(() => {
     if (!isDesktop) {
