@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import React from 'react';
 import { format } from 'date-fns';
 import { bs } from 'date-fns/locale';
-import { ArrowLeft, GitBranchPlus, Pencil, Repeat, Trash2 } from 'lucide-react';
+import { ArrowLeft, GitBranchPlus, ImageIcon, Pencil, Repeat, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getSignedReceiptUrl } from '@/app/(app)/skeniraj/actions';
 import { deleteTransaction, updateTransaction } from '@/app/(app)/transakcije/actions';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
@@ -41,6 +42,7 @@ interface TransactionDetailView {
   source: string;
   is_transfer: boolean;
   tags: string[] | null;
+  receipt_scan_id: string | null;
   created_at: string;
   updated_at: string;
   account: { id: string; name: string; currency: string } | null;
@@ -70,6 +72,29 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [busyCategory, setBusyCategory] = React.useState(false);
   const [categoryId, setCategoryId] = React.useState<string | null>(tx.category?.id ?? null);
+  const [receiptUrl, setReceiptUrl] = React.useState<string | null>(null);
+  const [receiptLoading, setReceiptLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    const state = { cancelled: false };
+    const scanId = tx.receipt_scan_id;
+    if (!scanId) {
+      setReceiptUrl(null);
+      return () => {
+        state.cancelled = true;
+      };
+    }
+    setReceiptLoading(true);
+    void (async () => {
+      const result = await getSignedReceiptUrl(scanId, 300);
+      if (state.cancelled) return;
+      setReceiptLoading(false);
+      if (result.success) setReceiptUrl(result.data.url);
+    })();
+    return () => {
+      state.cancelled = true;
+    };
+  }, [tx.receipt_scan_id]);
 
   async function handleCategoryChange(nextCategoryId: string | null) {
     setCategoryId(nextCategoryId);
@@ -225,6 +250,34 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
           </Button>
         </div>
       </section>
+
+      {tx.receipt_scan_id ? (
+        <section className="rounded-2xl border bg-card p-5">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <ImageIcon className="size-5" aria-hidden />
+            Skenirani račun
+          </h2>
+          {receiptLoading ? (
+            <p className="mt-3 text-sm text-muted-foreground">Učitavanje…</p>
+          ) : receiptUrl ? (
+            <a
+              href={receiptUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 block overflow-hidden rounded-lg border"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={receiptUrl}
+                alt="Slika fiskalnog računa"
+                className="mx-auto max-h-96 w-full object-contain"
+              />
+            </a>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">Slika računa nije dostupna.</p>
+          )}
+        </section>
+      ) : null}
 
       <section className="rounded-2xl border bg-card p-5">
         <h2 className="text-lg font-semibold">Povezano</h2>

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CalendarDays, Loader2, MessageSquareMore } from 'lucide-react';
+import { CalendarDays, Camera, Loader2, MessageSquareMore } from 'lucide-react';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { createInstallmentPlan } from '@/app/(app)/kartice-rate/actions';
@@ -262,6 +263,17 @@ export function QuickAddTransaction({
         className="flex h-full flex-col gap-4"
       >
         <div className="space-y-4 overflow-y-auto pr-1">
+          <Button asChild type="button" variant="outline" className="h-11 min-h-[44px] w-full">
+            <Link
+              href="/skeniraj"
+              onClick={() => {
+                onOpenChange(false);
+              }}
+            >
+              <Camera className="mr-2 size-4" aria-hidden />
+              Uslikaj račun umjesto ručnog unosa
+            </Link>
+          </Button>
           <FormField
             control={form.control}
             name="amount_cents"

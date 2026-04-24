@@ -463,6 +463,59 @@ export type Database = {
         };
         Relationships: [];
       };
+      receipt_scans: {
+        Row: {
+          created_at: string;
+          error_message: string | null;
+          extracted_at: string | null;
+          extracted_json: Json | null;
+          id: string;
+          mime: string;
+          size_bytes: number;
+          status: string;
+          storage_path: string;
+          transaction_id: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          error_message?: string | null;
+          extracted_at?: string | null;
+          extracted_json?: Json | null;
+          id?: string;
+          mime: string;
+          size_bytes: number;
+          status?: string;
+          storage_path: string;
+          transaction_id?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          error_message?: string | null;
+          extracted_at?: string | null;
+          extracted_json?: Json | null;
+          id?: string;
+          mime?: string;
+          size_bytes?: number;
+          status?: string;
+          storage_path?: string;
+          transaction_id?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'receipt_scans_transaction_id_fkey';
+            columns: ['transaction_id'];
+            isOneToOne: false;
+            referencedRelation: 'transactions';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       transactions: {
         Row: {
           account_id: string;
@@ -495,6 +548,7 @@ export type Database = {
           original_amount_cents: number;
           original_currency: string;
           posted_date: string | null;
+          receipt_scan_id: string | null;
           recurring_group_id: string | null;
           source: string;
           split_parent_id: string | null;
@@ -536,6 +590,7 @@ export type Database = {
           original_amount_cents: number;
           original_currency: string;
           posted_date?: string | null;
+          receipt_scan_id?: string | null;
           recurring_group_id?: string | null;
           source: string;
           split_parent_id?: string | null;
@@ -577,6 +632,7 @@ export type Database = {
           original_amount_cents?: number;
           original_currency?: string;
           posted_date?: string | null;
+          receipt_scan_id?: string | null;
           recurring_group_id?: string | null;
           source?: string;
           split_parent_id?: string | null;
@@ -610,6 +666,13 @@ export type Database = {
             referencedColumns: ['id'];
           },
           {
+            foreignKeyName: 'transactions_receipt_scan_id_fkey';
+            columns: ['receipt_scan_id'];
+            isOneToOne: false;
+            referencedRelation: 'receipt_scans';
+            referencedColumns: ['id'];
+          },
+          {
             foreignKeyName: 'transactions_split_parent_id_fkey';
             columns: ['split_parent_id'];
             isOneToOne: false;
@@ -630,6 +693,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      count_receipt_scans_today: { Args: never; Returns: number };
       create_transfer_pair: {
         Args: {
           p_base_currency: string;

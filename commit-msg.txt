@@ -1,0 +1,58 @@
+feat(T1): OCR fiskalnog racuna sa Gemini vision (MVP)
+
+Dodaje /skeniraj rutu gdje korisnik uslika ili uploaduje fiskalni racun,
+a AI (Gemini 2.5 Flash-Lite, native vision) ekstrahuje iznos, valutu,
+datum, prodavca i stavke. Forma se pre-popuni pa korisnik samo potvrdi.
+
+Backend
+- supabase/migrations/20260426100000_00023_receipt_scans.sql:
+  - Storage bucket 'receipts' sa RLS po user_id folderu.
+  - Tabela receipt_scans (audit + extracted_json) + trigger + RLS.
+  - transactions.receipt_scan_id FK za link nazad.
+  - Prosiren source enum sa 'import_receipt'.
+  - RPC count_receipt_scans_today() za rate-limit (20/dan).
+- lib/schemas/receipt.ts: Zod ExtractedReceiptSchema + salvage fallback.
+- lib/llm/gemini-receipt.ts: single-shot Gemini 2.5 Flash-Lite preko raw
+  fetch (bez SDK-a), parsing, code-fence stripping, partial-data coerce.
+- app/(app)/skeniraj/actions.ts:
+  - uploadReceipt: rate-limit + storage upload + DB row (best-effort
+    rollback na insert error).
+  - analyzeReceipt: idempotent cache hit, download + Gemini + persist.
+  - createTransactionFromReceipt: FX konverzija, dedup hash,
+    source='import_receipt', bi-direkcioni link scan<->transaction.
+  - getSignedReceiptUrl: 5-min signed URL za detail preview.
+
+UI
+- app/(app)/skeniraj/page.tsx + receipt-scan-client.tsx: tri-fazni wizard
+  (upload/drag-drop ili native kamera -> analyzing spinner -> forma sa
+  pre-popunjenim iznosom/datumom/prodavcem + preview slike, stavke u
+  details expanderu, confidence indikator).
+- components/quick-add-transaction.tsx: 'Uslikaj racun' link na vrhu
+  dialog-a kao shortcut umjesto rucnog unosa.
+- components/shell/nav-items.ts: 'Skeniraj racun' u desktop sidebar-u.
+- app/(app)/transakcije/[id]/*: prikaz skenirane slike sa signed URL-om
+  i full-size linkom u detail page-u.
+
+Sigurnost i ops
+- RLS enforced na svim layerima (Storage + DB + serverska provjera
+  vlasnistva u svakoj akciji).
+- Sirovi OCR tekst se ne loguje u PostHog (samo console.error za ops).
+- Rate limit 20 skenova/korisnik/dan preko RPC-a.
+- Hard limit 10 MB po slici, whitelisted MIME tipovi.
+- Gemini: temperature 0.1 + responseMimeType 'application/json' za
+  deterministic izlaz.
+
+Testovi (21 novih, 191 ukupno prolazi)
+- lib/schemas/receipt.test.ts: Zod shape validation + empty-payload
+  fallback + currency normalization + supported-currency check.
+- lib/llm/gemini-receipt.test.ts: mock fetch za valid JSON, code-fence,
+  invalid JSON, HTTP error, network error, missing API key, partial
+  data salvage.
+
+Env
+- .env.example: GEMINI_API_KEY (obavezan za /skeniraj) i MISTRAL_API_KEY
+  (rezervisano za F2-E2-T4 PDF flow).
+
+Acceptance: upload/uslikaj Konzum racun -> unutar ~5-8s forma pre-popunjena
+sa ispravnim iznosom i datumom -> spasi -> transakcija u listi sa
+source='import_receipt' i linkom na sliku u detalju.
