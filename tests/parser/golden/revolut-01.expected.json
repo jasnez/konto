@@ -1,0 +1,65 @@
+{
+  "statementId": "revolut-01",
+  "bank": "revolut",
+  "periodStart": "2026-01-01",
+  "periodEnd": "2026-01-31",
+  "currency": "EUR",
+  "transactions": [
+    {
+      "date": "2026-01-07",
+      "amountMinor": 4644,
+      "currency": "EUR",
+      "description": "JYSK SARAJEVO",
+      "reference": "REF-4101"
+    },
+    {
+      "date": "2026-01-10",
+      "amountMinor": -1589,
+      "currency": "EUR",
+      "description": "GLS SHIPPING",
+      "reference": null
+    },
+    {
+      "date": "2026-01-13",
+      "amountMinor": -1630,
+      "currency": "EUR",
+      "description": "MCDONALDS SARAJEVO",
+      "reference": null
+    },
+    {
+      "date": "2026-01-16",
+      "amountMinor": -1671,
+      "currency": "EUR",
+      "description": "DELHAIZE IDEA",
+      "reference": "REF-4104"
+    },
+    {
+      "date": "2026-01-19",
+      "amountMinor": -1712,
+      "currency": "EUR",
+      "description": "BOSNA OSIGURANJE",
+      "reference": null
+    },
+    {
+      "date": "2026-01-22",
+      "amountMinor": 5259,
+      "currency": "EUR",
+      "description": "NETFLIX.COM",
+      "reference": null
+    },
+    {
+      "date": "2026-01-25",
+      "amountMinor": -1794,
+      "currency": "EUR",
+      "description": "BOOKING.COM",
+      "reference": "REF-4107"
+    },
+    {
+      "date": "2026-01-01",
+      "amountMinor": -1835,
+      "currency": "EUR",
+      "description": "BINGO MARKET SARAJEVO",
+      "reference": null
+    }
+  ]
+}

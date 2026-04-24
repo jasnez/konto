@@ -1,0 +1,93 @@
+{
+  "statementId": "asa-bih-02",
+  "bank": "asa-bih",
+  "periodStart": "2026-02-01",
+  "periodEnd": "2026-02-28",
+  "currency": "BAM",
+  "transactions": [
+    {
+      "date": "2026-02-06",
+      "amountMinor": 4392,
+      "currency": "BAM",
+      "description": "SPARKASSE ATM ISPLATA",
+      "reference": "REF-3201"
+    },
+    {
+      "date": "2026-02-09",
+      "amountMinor": -1505,
+      "currency": "BAM",
+      "description": "AIRBNB * RESERVATION",
+      "reference": null
+    },
+    {
+      "date": "2026-02-12",
+      "amountMinor": -1546,
+      "currency": "BAM",
+      "description": "DM DROGERIE MARKT",
+      "reference": null
+    },
+    {
+      "date": "2026-02-15",
+      "amountMinor": -1587,
+      "currency": "BAM",
+      "description": "POS UPLATA KAFIC BAJKA",
+      "reference": "REF-3204"
+    },
+    {
+      "date": "2026-02-18",
+      "amountMinor": -1628,
+      "currency": "BAM",
+      "description": "UBER TRIP",
+      "reference": null
+    },
+    {
+      "date": "2026-02-21",
+      "amountMinor": 5007,
+      "currency": "BAM",
+      "description": "BH TELECOM PRETPLATA",
+      "reference": null
+    },
+    {
+      "date": "2026-02-24",
+      "amountMinor": -1710,
+      "currency": "BAM",
+      "description": "PAYROLL UPLATA",
+      "reference": "REF-3207"
+    },
+    {
+      "date": "2026-02-27",
+      "amountMinor": -1751,
+      "currency": "BAM",
+      "description": "AMAZON EU SARL",
+      "reference": null
+    },
+    {
+      "date": "2026-02-03",
+      "amountMinor": -1792,
+      "currency": "BAM",
+      "description": "WOLT DOSTAVA",
+      "reference": null
+    },
+    {
+      "date": "2026-02-06",
+      "amountMinor": -1833,
+      "currency": "BAM",
+      "description": "TRANSFER SA DRUGOG RACUNA",
+      "reference": "REF-3210"
+    },
+    {
+      "date": "2026-02-09",
+      "amountMinor": 5622,
+      "currency": "BAM",
+      "description": "APPLE.COM/BILL",
+      "reference": null
+    },
+    {
+      "date": "2026-02-12",
+      "amountMinor": -1915,
+      "currency": "BAM",
+      "description": "ALTA BENZINSKA STANICA",
+      "reference": null
+    }
+  ]
+}

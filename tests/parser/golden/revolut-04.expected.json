@@ -1,0 +1,156 @@
+{
+  "statementId": "revolut-04",
+  "bank": "revolut",
+  "periodStart": "2026-04-01",
+  "periodEnd": "2026-04-30",
+  "currency": "EUR",
+  "transactions": [
+    {
+      "date": "2026-04-10",
+      "amountMinor": 5121,
+      "currency": "EUR",
+      "description": "TRANSFER SA DRUGOG RACUNA",
+      "reference": "REF-4401"
+    },
+    {
+      "date": "2026-04-13",
+      "amountMinor": -1748,
+      "currency": "EUR",
+      "description": "APPLE.COM/BILL",
+      "reference": null
+    },
+    {
+      "date": "2026-04-16",
+      "amountMinor": -1789,
+      "currency": "EUR",
+      "description": "ALTA BENZINSKA STANICA",
+      "reference": null
+    },
+    {
+      "date": "2026-04-19",
+      "amountMinor": -1830,
+      "currency": "EUR",
+      "description": "JYSK SARAJEVO",
+      "reference": "REF-4404"
+    },
+    {
+      "date": "2026-04-22",
+      "amountMinor": -1871,
+      "currency": "EUR",
+      "description": "GLS SHIPPING",
+      "reference": null
+    },
+    {
+      "date": "2026-04-25",
+      "amountMinor": 5736,
+      "currency": "EUR",
+      "description": "MCDONALDS SARAJEVO",
+      "reference": null
+    },
+    {
+      "date": "2026-04-01",
+      "amountMinor": -1953,
+      "currency": "EUR",
+      "description": "DELHAIZE IDEA",
+      "reference": "REF-4407"
+    },
+    {
+      "date": "2026-04-04",
+      "amountMinor": -1994,
+      "currency": "EUR",
+      "description": "BOSNA OSIGURANJE",
+      "reference": null
+    },
+    {
+      "date": "2026-04-07",
+      "amountMinor": -2035,
+      "currency": "EUR",
+      "description": "NETFLIX.COM",
+      "reference": null
+    },
+    {
+      "date": "2026-04-10",
+      "amountMinor": -2076,
+      "currency": "EUR",
+      "description": "BOOKING.COM",
+      "reference": "REF-4410"
+    },
+    {
+      "date": "2026-04-13",
+      "amountMinor": 6351,
+      "currency": "EUR",
+      "description": "BINGO MARKET SARAJEVO",
+      "reference": null
+    },
+    {
+      "date": "2026-04-16",
+      "amountMinor": -2158,
+      "currency": "EUR",
+      "description": "SPARKASSE ATM ISPLATA",
+      "reference": null
+    },
+    {
+      "date": "2026-04-19",
+      "amountMinor": -2199,
+      "currency": "EUR",
+      "description": "AIRBNB * RESERVATION",
+      "reference": "REF-4413"
+    },
+    {
+      "date": "2026-04-22",
+      "amountMinor": -2240,
+      "currency": "EUR",
+      "description": "DM DROGERIE MARKT",
+      "reference": null
+    },
+    {
+      "date": "2026-04-25",
+      "amountMinor": -2281,
+      "currency": "EUR",
+      "description": "POS UPLATA KAFIC BAJKA",
+      "reference": null
+    },
+    {
+      "date": "2026-04-01",
+      "amountMinor": 6966,
+      "currency": "EUR",
+      "description": "UBER TRIP",
+      "reference": "REF-4416"
+    },
+    {
+      "date": "2026-04-04",
+      "amountMinor": -2363,
+      "currency": "EUR",
+      "description": "BH TELECOM PRETPLATA",
+      "reference": null
+    },
+    {
+      "date": "2026-04-07",
+      "amountMinor": -2404,
+      "currency": "EUR",
+      "description": "PAYROLL UPLATA",
+      "reference": null
+    },
+    {
+      "date": "2026-04-10",
+      "amountMinor": -2445,
+      "currency": "EUR",
+      "description": "AMAZON EU SARL",
+      "reference": "REF-4419"
+    },
+    {
+      "date": "2026-04-13",
+      "amountMinor": -2486,
+      "currency": "EUR",
+      "description": "WOLT DOSTAVA",
+      "reference": null
+    },
+    {
+      "date": "2026-04-16",
+      "amountMinor": 7581,
+      "currency": "EUR",
+      "description": "TRANSFER SA DRUGOG RACUNA",
+      "reference": null
+    }
+  ]
+}

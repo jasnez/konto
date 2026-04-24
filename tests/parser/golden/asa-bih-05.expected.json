@@ -1,0 +1,198 @@
+{
+  "statementId": "asa-bih-05",
+  "bank": "asa-bih",
+  "periodStart": "2026-05-01",
+  "periodEnd": "2026-05-31",
+  "currency": "BAM",
+  "transactions": [
+    {
+      "date": "2026-05-09",
+      "amountMinor": 4869,
+      "currency": "BAM",
+      "description": "NETFLIX.COM",
+      "reference": "REF-3501"
+    },
+    {
+      "date": "2026-05-12",
+      "amountMinor": -1664,
+      "currency": "BAM",
+      "description": "BOOKING.COM",
+      "reference": null
+    },
+    {
+      "date": "2026-05-15",
+      "amountMinor": -1705,
+      "currency": "BAM",
+      "description": "BINGO MARKET SARAJEVO",
+      "reference": null
+    },
+    {
+      "date": "2026-05-18",
+      "amountMinor": -1746,
+      "currency": "BAM",
+      "description": "SPARKASSE ATM ISPLATA",
+      "reference": "REF-3504"
+    },
+    {
+      "date": "2026-05-21",
+      "amountMinor": -1787,
+      "currency": "BAM",
+      "description": "AIRBNB * RESERVATION",
+      "reference": null
+    },
+    {
+      "date": "2026-05-24",
+      "amountMinor": 5484,
+      "currency": "BAM",
+      "description": "DM DROGERIE MARKT",
+      "reference": null
+    },
+    {
+      "date": "2026-05-27",
+      "amountMinor": -1869,
+      "currency": "BAM",
+      "description": "POS UPLATA KAFIC BAJKA",
+      "reference": "REF-3507"
+    },
+    {
+      "date": "2026-05-03",
+      "amountMinor": -1910,
+      "currency": "BAM",
+      "description": "UBER TRIP",
+      "reference": null
+    },
+    {
+      "date": "2026-05-06",
+      "amountMinor": -1951,
+      "currency": "BAM",
+      "description": "BH TELECOM PRETPLATA",
+      "reference": null
+    },
+    {
+      "date": "2026-05-09",
+      "amountMinor": -1992,
+      "currency": "BAM",
+      "description": "PAYROLL UPLATA",
+      "reference": "REF-3510"
+    },
+    {
+      "date": "2026-05-12",
+      "amountMinor": 6099,
+      "currency": "BAM",
+      "description": "AMAZON EU SARL",
+      "reference": null
+    },
+    {
+      "date": "2026-05-15",
+      "amountMinor": -2074,
+      "currency": "BAM",
+      "description": "WOLT DOSTAVA",
+      "reference": null
+    },
+    {
+      "date": "2026-05-18",
+      "amountMinor": -2115,
+      "currency": "BAM",
+      "description": "TRANSFER SA DRUGOG RACUNA",
+      "reference": "REF-3513"
+    },
+    {
+      "date": "2026-05-21",
+      "amountMinor": -2156,
+      "currency": "BAM",
+      "description": "APPLE.COM/BILL",
+      "reference": null
+    },
+    {
+      "date": "2026-05-24",
+      "amountMinor": -2197,
+      "currency": "BAM",
+      "description": "ALTA BENZINSKA STANICA",
+      "reference": null
+    },
+    {
+      "date": "2026-05-27",
+      "amountMinor": 6714,
+      "currency": "BAM",
+      "description": "JYSK SARAJEVO",
+      "reference": "REF-3516"
+    },
+    {
+      "date": "2026-05-03",
+      "amountMinor": -2279,
+      "currency": "BAM",
+      "description": "GLS SHIPPING",
+      "reference": null
+    },
+    {
+      "date": "2026-05-06",
+      "amountMinor": -2320,
+      "currency": "BAM",
+      "description": "MCDONALDS SARAJEVO",
+      "reference": null
+    },
+    {
+      "date": "2026-05-09",
+      "amountMinor": -2361,
+      "currency": "BAM",
+      "description": "DELHAIZE IDEA",
+      "reference": "REF-3519"
+    },
+    {
+      "date": "2026-05-12",
+      "amountMinor": -2402,
+      "currency": "BAM",
+      "description": "BOSNA OSIGURANJE",
+      "reference": null
+    },
+    {
+      "date": "2026-05-15",
+      "amountMinor": 7329,
+      "currency": "BAM",
+      "description": "NETFLIX.COM",
+      "reference": null
+    },
+    {
+      "date": "2026-05-18",
+      "amountMinor": -2484,
+      "currency": "BAM",
+      "description": "BOOKING.COM",
+      "reference": "REF-3522"
+    },
+    {
+      "date": "2026-05-21",
+      "amountMinor": -2525,
+      "currency": "BAM",
+      "description": "BINGO MARKET SARAJEVO",
+      "reference": null
+    },
+    {
+      "date": "2026-05-24",
+      "amountMinor": -2566,
+      "currency": "BAM",
+      "description": "SPARKASSE ATM ISPLATA",
+      "reference": null
+    },
+    {
+      "date": "2026-05-27",
+      "amountMinor": -2607,
+      "currency": "BAM",
+      "description": "AIRBNB * RESERVATION",
+      "reference": "REF-3525"
+    },
+    {
+      "date": "2026-05-03",
+      "amountMinor": 7944,
+      "currency": "BAM",
+      "description": "DM DROGERIE MARKT",
+      "reference": null
+    },
+    {
+      "date": "2026-05-06",
+      "amountMinor": -2689,
+      "currency": "BAM",
+      "description": "POS UPLATA KAFIC BAJKA",
+      "reference": null
+    }
+  ]
+}

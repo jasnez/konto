@@ -1,0 +1,93 @@
+{
+  "statementId": "wise-02",
+  "bank": "wise",
+  "periodStart": "2026-02-01",
+  "periodEnd": "2026-02-28",
+  "currency": "EUR",
+  "transactions": [
+    {
+      "date": "2026-02-10",
+      "amountMinor": 5214,
+      "currency": "EUR",
+      "description": "DM DROGERIE MARKT",
+      "reference": "REF-5201"
+    },
+    {
+      "date": "2026-02-13",
+      "amountMinor": -1779,
+      "currency": "EUR",
+      "description": "POS UPLATA KAFIC BAJKA",
+      "reference": null
+    },
+    {
+      "date": "2026-02-16",
+      "amountMinor": -1820,
+      "currency": "EUR",
+      "description": "UBER TRIP",
+      "reference": null
+    },
+    {
+      "date": "2026-02-19",
+      "amountMinor": -1861,
+      "currency": "EUR",
+      "description": "BH TELECOM PRETPLATA",
+      "reference": "REF-5204"
+    },
+    {
+      "date": "2026-02-22",
+      "amountMinor": -1902,
+      "currency": "EUR",
+      "description": "PAYROLL UPLATA",
+      "reference": null
+    },
+    {
+      "date": "2026-02-25",
+      "amountMinor": 5829,
+      "currency": "EUR",
+      "description": "AMAZON EU SARL",
+      "reference": null
+    },
+    {
+      "date": "2026-02-01",
+      "amountMinor": -1984,
+      "currency": "EUR",
+      "description": "WOLT DOSTAVA",
+      "reference": "REF-5207"
+    },
+    {
+      "date": "2026-02-04",
+      "amountMinor": -2025,
+      "currency": "EUR",
+      "description": "TRANSFER SA DRUGOG RACUNA",
+      "reference": null
+    },
+    {
+      "date": "2026-02-07",
+      "amountMinor": -2066,
+      "currency": "EUR",
+      "description": "APPLE.COM/BILL",
+      "reference": null
+    },
+    {
+      "date": "2026-02-10",
+      "amountMinor": -2107,
+      "currency": "EUR",
+      "description": "ALTA BENZINSKA STANICA",
+      "reference": "REF-5210"
+    },
+    {
+      "date": "2026-02-13",
+      "amountMinor": 6444,
+      "currency": "EUR",
+      "description": "JYSK SARAJEVO",
+      "reference": null
+    },
+    {
+      "date": "2026-02-16",
+      "amountMinor": -2189,
+      "currency": "EUR",
+      "description": "GLS SHIPPING",
+      "reference": null
+    }
+  ]
+}

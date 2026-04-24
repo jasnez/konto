@@ -1,0 +1,65 @@
+{
+  "statementId": "raiffeisen-bih-01",
+  "bank": "raiffeisen-bih",
+  "periodStart": "2026-01-01",
+  "periodEnd": "2026-01-31",
+  "currency": "BAM",
+  "transactions": [
+    {
+      "date": "2026-01-01",
+      "amountMinor": 3411,
+      "currency": "BAM",
+      "description": "BINGO MARKET SARAJEVO",
+      "reference": "REF-1101"
+    },
+    {
+      "date": "2026-01-04",
+      "amountMinor": -1178,
+      "currency": "BAM",
+      "description": "SPARKASSE ATM ISPLATA",
+      "reference": null
+    },
+    {
+      "date": "2026-01-07",
+      "amountMinor": -1219,
+      "currency": "BAM",
+      "description": "AIRBNB * RESERVATION",
+      "reference": null
+    },
+    {
+      "date": "2026-01-10",
+      "amountMinor": -1260,
+      "currency": "BAM",
+      "description": "DM DROGERIE MARKT",
+      "reference": "REF-1104"
+    },
+    {
+      "date": "2026-01-13",
+      "amountMinor": -1301,
+      "currency": "BAM",
+      "description": "POS UPLATA KAFIC BAJKA",
+      "reference": null
+    },
+    {
+      "date": "2026-01-16",
+      "amountMinor": 4026,
+      "currency": "BAM",
+      "description": "UBER TRIP",
+      "reference": null
+    },
+    {
+      "date": "2026-01-19",
+      "amountMinor": -1383,
+      "currency": "BAM",
+      "description": "BH TELECOM PRETPLATA",
+      "reference": "REF-1107"
+    },
+    {
+      "date": "2026-01-22",
+      "amountMinor": -1424,
+      "currency": "BAM",
+      "description": "PAYROLL UPLATA",
+      "reference": null
+    }
+  ]
+}

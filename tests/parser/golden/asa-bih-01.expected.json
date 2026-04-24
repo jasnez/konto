@@ -1,0 +1,65 @@
+{
+  "statementId": "asa-bih-01",
+  "bank": "asa-bih",
+  "periodStart": "2026-01-01",
+  "periodEnd": "2026-01-31",
+  "currency": "BAM",
+  "transactions": [
+    {
+      "date": "2026-01-05",
+      "amountMinor": 4233,
+      "currency": "BAM",
+      "description": "AIRBNB * RESERVATION",
+      "reference": "REF-3101"
+    },
+    {
+      "date": "2026-01-08",
+      "amountMinor": -1452,
+      "currency": "BAM",
+      "description": "DM DROGERIE MARKT",
+      "reference": null
+    },
+    {
+      "date": "2026-01-11",
+      "amountMinor": -1493,
+      "currency": "BAM",
+      "description": "POS UPLATA KAFIC BAJKA",
+      "reference": null
+    },
+    {
+      "date": "2026-01-14",
+      "amountMinor": -1534,
+      "currency": "BAM",
+      "description": "UBER TRIP",
+      "reference": "REF-3104"
+    },
+    {
+      "date": "2026-01-17",
+      "amountMinor": -1575,
+      "currency": "BAM",
+      "description": "BH TELECOM PRETPLATA",
+      "reference": null
+    },
+    {
+      "date": "2026-01-20",
+      "amountMinor": 4848,
+      "currency": "BAM",
+      "description": "PAYROLL UPLATA",
+      "reference": null
+    },
+    {
+      "date": "2026-01-23",
+      "amountMinor": -1657,
+      "currency": "BAM",
+      "description": "AMAZON EU SARL",
+      "reference": "REF-3107"
+    },
+    {
+      "date": "2026-01-26",
+      "amountMinor": -1698,
+      "currency": "BAM",
+      "description": "WOLT DOSTAVA",
+      "reference": null
+    }
+  ]
+}

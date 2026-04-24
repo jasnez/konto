@@ -1,0 +1,65 @@
+{
+  "statementId": "wise-01",
+  "bank": "wise",
+  "periodStart": "2026-01-01",
+  "periodEnd": "2026-01-31",
+  "currency": "EUR",
+  "transactions": [
+    {
+      "date": "2026-01-09",
+      "amountMinor": 5055,
+      "currency": "EUR",
+      "description": "POS UPLATA KAFIC BAJKA",
+      "reference": "REF-5101"
+    },
+    {
+      "date": "2026-01-12",
+      "amountMinor": -1726,
+      "currency": "EUR",
+      "description": "UBER TRIP",
+      "reference": null
+    },
+    {
+      "date": "2026-01-15",
+      "amountMinor": -1767,
+      "currency": "EUR",
+      "description": "BH TELECOM PRETPLATA",
+      "reference": null
+    },
+    {
+      "date": "2026-01-18",
+      "amountMinor": -1808,
+      "currency": "EUR",
+      "description": "PAYROLL UPLATA",
+      "reference": "REF-5104"
+    },
+    {
+      "date": "2026-01-21",
+      "amountMinor": -1849,
+      "currency": "EUR",
+      "description": "AMAZON EU SARL",
+      "reference": null
+    },
+    {
+      "date": "2026-01-24",
+      "amountMinor": 5670,
+      "currency": "EUR",
+      "description": "WOLT DOSTAVA",
+      "reference": null
+    },
+    {
+      "date": "2026-01-27",
+      "amountMinor": -1931,
+      "currency": "EUR",
+      "description": "TRANSFER SA DRUGOG RACUNA",
+      "reference": "REF-5107"
+    },
+    {
+      "date": "2026-01-03",
+      "amountMinor": -1972,
+      "currency": "EUR",
+      "description": "APPLE.COM/BILL",
+      "reference": null
+    }
+  ]
+}

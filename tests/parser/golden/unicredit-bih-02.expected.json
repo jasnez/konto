@@ -1,0 +1,93 @@
+{
+  "statementId": "unicredit-bih-02",
+  "bank": "unicredit-bih",
+  "periodStart": "2026-02-01",
+  "periodEnd": "2026-02-28",
+  "currency": "BAM",
+  "transactions": [
+    {
+      "date": "2026-02-04",
+      "amountMinor": 3981,
+      "currency": "BAM",
+      "description": "TRANSFER SA DRUGOG RACUNA",
+      "reference": "REF-2201"
+    },
+    {
+      "date": "2026-02-07",
+      "amountMinor": -1368,
+      "currency": "BAM",
+      "description": "APPLE.COM/BILL",
+      "reference": null
+    },
+    {
+      "date": "2026-02-10",
+      "amountMinor": -1409,
+      "currency": "BAM",
+      "description": "ALTA BENZINSKA STANICA",
+      "reference": null
+    },
+    {
+      "date": "2026-02-13",
+      "amountMinor": -1450,
+      "currency": "BAM",
+      "description": "JYSK SARAJEVO",
+      "reference": "REF-2204"
+    },
+    {
+      "date": "2026-02-16",
+      "amountMinor": -1491,
+      "currency": "BAM",
+      "description": "GLS SHIPPING",
+      "reference": null
+    },
+    {
+      "date": "2026-02-19",
+      "amountMinor": 4596,
+      "currency": "BAM",
+      "description": "MCDONALDS SARAJEVO",
+      "reference": null
+    },
+    {
+      "date": "2026-02-22",
+      "amountMinor": -1573,
+      "currency": "BAM",
+      "description": "DELHAIZE IDEA",
+      "reference": "REF-2207"
+    },
+    {
+      "date": "2026-02-25",
+      "amountMinor": -1614,
+      "currency": "BAM",
+      "description": "BOSNA OSIGURANJE",
+      "reference": null
+    },
+    {
+      "date": "2026-02-01",
+      "amountMinor": -1655,
+      "currency": "BAM",
+      "description": "NETFLIX.COM",
+      "reference": null
+    },
+    {
+      "date": "2026-02-04",
+      "amountMinor": -1696,
+      "currency": "BAM",
+      "description": "BOOKING.COM",
+      "reference": "REF-2210"
+    },
+    {
+      "date": "2026-02-07",
+      "amountMinor": 5211,
+      "currency": "BAM",
+      "description": "BINGO MARKET SARAJEVO",
+      "reference": null
+    },
+    {
+      "date": "2026-02-10",
+      "amountMinor": -1778,
+      "currency": "BAM",
+      "description": "SPARKASSE ATM ISPLATA",
+      "reference": null
+    }
+  ]
+}

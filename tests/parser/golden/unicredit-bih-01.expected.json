@@ -1,0 +1,65 @@
+{
+  "statementId": "unicredit-bih-01",
+  "bank": "unicredit-bih",
+  "periodStart": "2026-01-01",
+  "periodEnd": "2026-01-31",
+  "currency": "BAM",
+  "transactions": [
+    {
+      "date": "2026-01-03",
+      "amountMinor": 3822,
+      "currency": "BAM",
+      "description": "APPLE.COM/BILL",
+      "reference": "REF-2101"
+    },
+    {
+      "date": "2026-01-06",
+      "amountMinor": -1315,
+      "currency": "BAM",
+      "description": "ALTA BENZINSKA STANICA",
+      "reference": null
+    },
+    {
+      "date": "2026-01-09",
+      "amountMinor": -1356,
+      "currency": "BAM",
+      "description": "JYSK SARAJEVO",
+      "reference": null
+    },
+    {
+      "date": "2026-01-12",
+      "amountMinor": -1397,
+      "currency": "BAM",
+      "description": "GLS SHIPPING",
+      "reference": "REF-2104"
+    },
+    {
+      "date": "2026-01-15",
+      "amountMinor": -1438,
+      "currency": "BAM",
+      "description": "MCDONALDS SARAJEVO",
+      "reference": null
+    },
+    {
+      "date": "2026-01-18",
+      "amountMinor": 4437,
+      "currency": "BAM",
+      "description": "DELHAIZE IDEA",
+      "reference": null
+    },
+    {
+      "date": "2026-01-21",
+      "amountMinor": -1520,
+      "currency": "BAM",
+      "description": "BOSNA OSIGURANJE",
+      "reference": "REF-2107"
+    },
+    {
+      "date": "2026-01-24",
+      "amountMinor": -1561,
+      "currency": "BAM",
+      "description": "NETFLIX.COM",
+      "reference": null
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "statementId": "revolut-02",
+  "bank": "revolut",
+  "periodStart": "2026-02-01",
+  "periodEnd": "2026-02-28",
+  "currency": "EUR",
+  "transactions": [
+    {
+      "date": "2026-02-08",
+      "amountMinor": 4803,
+      "currency": "EUR",
+      "description": "ALTA BENZINSKA STANICA",
+      "reference": "REF-4201"
+    },
+    {
+      "date": "2026-02-11",
+      "amountMinor": -1642,
+      "currency": "EUR",
+      "description": "JYSK SARAJEVO",
+      "reference": null
+    },
+    {
+      "date": "2026-02-14",
+      "amountMinor": -1683,
+      "currency": "EUR",
+      "description": "GLS SHIPPING",
+      "reference": null
+    },
+    {
+      "date": "2026-02-17",
+      "amountMinor": -1724,
+      "currency": "EUR",
+      "description": "MCDONALDS SARAJEVO",
+      "reference": "REF-4204"
+    },
+    {
+      "date": "2026-02-20",
+      "amountMinor": -1765,
+      "currency": "EUR",
+      "description": "DELHAIZE IDEA",
+      "reference": null
+    },
+    {
+      "date": "2026-02-23",
+      "amountMinor": 5418,
+      "currency": "EUR",
+      "description": "BOSNA OSIGURANJE",
+      "reference": null
+    },
+    {
+      "date": "2026-02-26",
+      "amountMinor": -1847,
+      "currency": "EUR",
+      "description": "NETFLIX.COM",
+      "reference": "REF-4207"
+    },
+    {
+      "date": "2026-02-02",
+      "amountMinor": -1888,
+      "currency": "EUR",
+      "description": "BOOKING.COM",
+      "reference": null
+    },
+    {
+      "date": "2026-02-05",
+      "amountMinor": -1929,
+      "currency": "EUR",
+      "description": "BINGO MARKET SARAJEVO",
+      "reference": null
+    },
+    {
+      "date": "2026-02-08",
+      "amountMinor": -1970,
+      "currency": "EUR",
+      "description": "SPARKASSE ATM ISPLATA",
+      "reference": "REF-4210"
+    },
+    {
+      "date": "2026-02-11",
+      "amountMinor": 6033,
+      "currency": "EUR",
+      "description": "AIRBNB * RESERVATION",
+      "reference": null
+    },
+    {
+      "date": "2026-02-14",
+      "amountMinor": -2052,
+      "currency": "EUR",
+      "description": "DM DROGERIE MARKT",
+      "reference": null
+    }
+  ]
+}
