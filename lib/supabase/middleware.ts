@@ -3,14 +3,15 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { mustExist } from '@/lib/env';
 import type { Database } from '@/supabase/types';
 
+// Keep this list aligned with directories under app/(app)/. Adding an entry
+// for a route that doesn't exist causes Next's 404 to render inside the authed
+// shell (and an unauthenticated bounce to /prijava before the 404), which is
+// worse UX than a plain 404.
 const PROTECTED_PATHS = [
   '/pocetna',
   '/transakcije',
   '/racuni',
-  '/budzet',
-  '/ciljevi',
   '/uvidi',
-  '/uvoz',
   '/podesavanja',
   '/kategorije',
   '/merchants',

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { EmailOtpType } from '@supabase/supabase-js';
+import { sanitizeNextPath } from '@/lib/auth/safe-next';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   const code = searchParams.get('code');
   const tokenHash = searchParams.get('token_hash');
   const otpType = searchParams.get('type');
-  const next = sanitizeNext(searchParams.get('next'));
+  const next = sanitizeNextPath(searchParams.get('next'));
 
   if (code || (tokenHash && otpType)) {
     const supabase = await createClient();
@@ -41,14 +42,6 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.redirect(`${origin}/prijava?error=true`);
-}
-
-// Only allow relative, in-app paths. Prevents open-redirect via `?next=https://evil`.
-function sanitizeNext(value: string | null): string {
-  if (!value) return '/pocetna';
-  if (!value.startsWith('/')) return '/pocetna';
-  if (value.startsWith('//')) return '/pocetna';
-  return value;
 }
 
 function isEmailOtpType(value: string | null): value is EmailOtpType {

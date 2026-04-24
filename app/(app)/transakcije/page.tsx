@@ -34,6 +34,7 @@ interface RawTransactionRow {
   description: string | null;
   notes: string | null;
   is_transfer: boolean;
+  fx_stale: boolean | null;
   accounts: { id: string; name: string; currency: string };
   categories: { id: string; name: string; icon: string | null; kind: string } | null;
 }
@@ -110,7 +111,7 @@ async function fetchTransactionsUncached(
   let dataQuery = supabase
     .from('transactions')
     .select(
-      'id,transaction_date,original_amount_cents,original_currency,merchant_raw,merchant_id,description,notes,is_transfer,accounts(id,name,currency),categories(id,name,icon,kind)',
+      'id,transaction_date,original_amount_cents,original_currency,merchant_raw,merchant_id,description,notes,is_transfer,fx_stale,accounts(id,name,currency),categories(id,name,icon,kind)',
     )
     .eq('user_id', userId)
     .is('deleted_at', null)
@@ -189,6 +190,7 @@ async function fetchTransactionsUncached(
     description: row.description,
     notes: row.notes,
     is_transfer: row.is_transfer,
+    fx_stale: row.fx_stale === true,
     account: { id: row.accounts.id, name: row.accounts.name, currency: row.accounts.currency },
     category: row.categories
       ? {

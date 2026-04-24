@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { formatMoney } from '@/lib/format/format-money';
@@ -171,7 +171,16 @@ export function TransactionRow({
           </div>
         </div>
 
-        <div className="shrink-0 pl-2 text-right">
+        <div className="flex shrink-0 items-center gap-1.5 pl-2 text-right">
+          {tx.fx_stale ? (
+            <span
+              className="inline-flex items-center text-amber-600 dark:text-amber-400"
+              title="Tečaj za ovu transakciju je zastario — preračun u osnovnu valutu možda nije tačan."
+              aria-label="Tečaj je zastario"
+            >
+              <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+            </span>
+          ) : null}
           <p className={cn('font-medium tabular-nums', amountClassName)}>{formattedAmount}</p>
         </div>
 
