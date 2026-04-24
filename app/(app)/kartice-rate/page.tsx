@@ -95,8 +95,9 @@ export default async function KarticeRatePage() {
 
   const plans = await fetchPlans(user.id);
 
-  function refresh() {
+  async function refresh() {
     'use server';
+    await Promise.resolve();
     revalidatePath('/kartice-rate');
   }
 

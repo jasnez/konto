@@ -44,7 +44,7 @@ function formatDate(iso: string): string {
   return format(parseISO(iso), 'd. MMM yyyy.', { locale: bs });
 }
 
-function PlanCard({ plan, onChanged }: { plan: PlanRow; onChanged: () => void }) {
+function PlanCard({ plan, onChanged }: { plan: PlanRow; onChanged: () => Promise<unknown> }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const postedCount = plan.occurrences.filter((o) => o.state === 'posted').length;
   const progressPct = Math.round((postedCount / plan.installment_count) * 100);
@@ -54,7 +54,7 @@ function PlanCard({ plan, onChanged }: { plan: PlanRow; onChanged: () => void })
     const result = await cancelInstallmentPlan(plan.id);
     if (result.success) {
       toast.success('Plan je otkazan.');
-      onChanged();
+      await onChanged();
     } else {
       toast.error('Greška pri otkazivanju plana.');
     }
@@ -64,7 +64,7 @@ function PlanCard({ plan, onChanged }: { plan: PlanRow; onChanged: () => void })
     const result = await markOccurrencePaid(occurrenceId);
     if (result.success) {
       toast.success('Rata označena kao plaćena.');
-      onChanged();
+      await onChanged();
     } else if (result.error === 'ALREADY_POSTED') {
       toast.info('Rata je već plaćena.');
     } else {
@@ -194,8 +194,7 @@ export function KarticeRateClient({
   onRefresh,
 }: {
   plans: PlanRow[];
-  // Server action from page.tsx — sync but triggers revalidation.
-  onRefresh: () => unknown;
+  onRefresh: () => Promise<unknown>;
 }) {
   if (initialPlans.length === 0) {
     return (
