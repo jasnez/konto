@@ -35,6 +35,10 @@ export const CreateTransactionSchema = z.object({
     .optional()
     .nullable()
     .transform((value) => normalizeOptionalString(value)),
+  merchant_id: z
+    .union([z.uuid(), z.null()])
+    .optional()
+    .transform((value) => normalizeOptionalUuid(value)),
   category_id: z
     .union([z.uuid(), z.literal(''), z.null()])
     .optional()

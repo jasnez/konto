@@ -99,6 +99,7 @@ export default async function TransactionEditPage({ params }: PageProps) {
         currency: tx.original_currency,
         transaction_date: tx.transaction_date,
         merchant_raw: tx.merchant_raw,
+        merchant_id: null,
         category_id: tx.category_id,
         notes: tx.notes,
       }}
