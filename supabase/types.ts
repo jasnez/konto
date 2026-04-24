@@ -1,11 +1,6 @@
-﻿export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: '14.5';
-  };
   graphql_public: {
     Tables: {
       [_ in never]: never;
@@ -211,55 +206,58 @@ export type Database = {
       };
       import_batches: {
         Row: {
-          id: string;
-          user_id: string;
           account_id: string | null;
-          storage_path: string | null;
           checksum: string;
-          original_filename: string;
-          status: 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed';
-          error_message: string | null;
-          transaction_count: number | null;
-          parse_confidence: 'high' | 'medium' | 'low' | null;
-          parse_warnings: Json | null;
-          statement_period_start: string | null;
-          statement_period_end: string | null;
           created_at: string;
+          error_message: string | null;
+          id: string;
+          imported_at: string | null;
+          original_filename: string;
+          parse_confidence: string | null;
+          parse_warnings: Json | null;
+          statement_period_end: string | null;
+          statement_period_start: string | null;
+          status: string;
+          storage_path: string | null;
+          transaction_count: number | null;
           updated_at: string;
+          user_id: string;
         };
         Insert: {
-          id?: string;
-          user_id: string;
           account_id?: string | null;
-          storage_path?: string | null;
           checksum: string;
-          original_filename: string;
-          status?: 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed';
-          error_message?: string | null;
-          transaction_count?: number | null;
-          parse_confidence?: 'high' | 'medium' | 'low' | null;
-          parse_warnings?: Json | null;
-          statement_period_start?: string | null;
-          statement_period_end?: string | null;
           created_at?: string;
+          error_message?: string | null;
+          id?: string;
+          imported_at?: string | null;
+          original_filename: string;
+          parse_confidence?: string | null;
+          parse_warnings?: Json | null;
+          statement_period_end?: string | null;
+          statement_period_start?: string | null;
+          status?: string;
+          storage_path?: string | null;
+          transaction_count?: number | null;
           updated_at?: string;
+          user_id: string;
         };
         Update: {
-          id?: string;
-          user_id?: string;
           account_id?: string | null;
-          storage_path?: string | null;
           checksum?: string;
-          original_filename?: string;
-          status?: 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed';
-          error_message?: string | null;
-          transaction_count?: number | null;
-          parse_confidence?: 'high' | 'medium' | 'low' | null;
-          parse_warnings?: Json | null;
-          statement_period_start?: string | null;
-          statement_period_end?: string | null;
           created_at?: string;
+          error_message?: string | null;
+          id?: string;
+          imported_at?: string | null;
+          original_filename?: string;
+          parse_confidence?: string | null;
+          parse_warnings?: Json | null;
+          statement_period_end?: string | null;
+          statement_period_start?: string | null;
+          status?: string;
+          storage_path?: string | null;
+          transaction_count?: number | null;
           updated_at?: string;
+          user_id?: string;
         };
         Relationships: [
           {
@@ -267,78 +265,6 @@ export type Database = {
             columns: ['account_id'];
             isOneToOne: false;
             referencedRelation: 'accounts';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      parsed_transactions: {
-        Row: {
-          id: string;
-          batch_id: string;
-          user_id: string;
-          transaction_date: string;
-          amount_minor: number;
-          currency: string;
-          raw_description: string;
-          reference: string | null;
-          status: 'pending_review' | 'accepted' | 'rejected' | 'imported';
-          transaction_id: string | null;
-          selected_for_import: boolean;
-          parse_confidence: 'high' | 'medium' | 'low' | null;
-          category_id: string | null;
-          merchant_id: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          batch_id: string;
-          user_id: string;
-          transaction_date: string;
-          amount_minor: number;
-          currency: string;
-          raw_description: string;
-          reference?: string | null;
-          status?: 'pending_review' | 'accepted' | 'rejected' | 'imported';
-          transaction_id?: string | null;
-          selected_for_import?: boolean;
-          parse_confidence?: 'high' | 'medium' | 'low' | null;
-          category_id?: string | null;
-          merchant_id?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          batch_id?: string;
-          user_id?: string;
-          transaction_date?: string;
-          amount_minor?: number;
-          currency?: string;
-          raw_description?: string;
-          reference?: string | null;
-          status?: 'pending_review' | 'accepted' | 'rejected' | 'imported';
-          transaction_id?: string | null;
-          selected_for_import?: boolean;
-          parse_confidence?: 'high' | 'medium' | 'low' | null;
-          category_id?: string | null;
-          merchant_id?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'parsed_transactions_batch_id_fkey';
-            columns: ['batch_id'];
-            isOneToOne: false;
-            referencedRelation: 'import_batches';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'parsed_transactions_transaction_id_fkey';
-            columns: ['transaction_id'];
-            isOneToOne: false;
-            referencedRelation: 'transactions';
             referencedColumns: ['id'];
           },
         ];
@@ -554,6 +480,92 @@ export type Database = {
             columns: ['default_category_id'];
             isOneToOne: false;
             referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      parsed_transactions: {
+        Row: {
+          amount_minor: number;
+          batch_id: string;
+          category_id: string | null;
+          created_at: string;
+          currency: string;
+          id: string;
+          merchant_id: string | null;
+          parse_confidence: string | null;
+          raw_description: string;
+          reference: string | null;
+          selected_for_import: boolean;
+          status: string;
+          transaction_date: string;
+          transaction_id: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          amount_minor: number;
+          batch_id: string;
+          category_id?: string | null;
+          created_at?: string;
+          currency: string;
+          id?: string;
+          merchant_id?: string | null;
+          parse_confidence?: string | null;
+          raw_description: string;
+          reference?: string | null;
+          selected_for_import?: boolean;
+          status?: string;
+          transaction_date: string;
+          transaction_id?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          amount_minor?: number;
+          batch_id?: string;
+          category_id?: string | null;
+          created_at?: string;
+          currency?: string;
+          id?: string;
+          merchant_id?: string | null;
+          parse_confidence?: string | null;
+          raw_description?: string;
+          reference?: string | null;
+          selected_for_import?: boolean;
+          status?: string;
+          transaction_date?: string;
+          transaction_id?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'parsed_transactions_batch_id_fkey';
+            columns: ['batch_id'];
+            isOneToOne: false;
+            referencedRelation: 'import_batches';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'parsed_transactions_category_id_fkey';
+            columns: ['category_id'];
+            isOneToOne: false;
+            referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'parsed_transactions_merchant_id_fkey';
+            columns: ['merchant_id'];
+            isOneToOne: false;
+            referencedRelation: 'merchants';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'parsed_transactions_transaction_id_fkey';
+            columns: ['transaction_id'];
+            isOneToOne: false;
+            referencedRelation: 'transactions';
             referencedColumns: ['id'];
           },
         ];
@@ -855,6 +867,10 @@ export type Database = {
           p_to_fx_stale: boolean;
           p_transaction_date: string;
         };
+        Returns: Json;
+      };
+      finalize_import_batch: {
+        Args: { p_batch_id: string; p_rows: Json };
         Returns: Json;
       };
       get_monthly_summary:

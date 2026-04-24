@@ -21,9 +21,31 @@ export const metadata: Metadata = {
 
 export const maxDuration = 60;
 
+type ConfidenceLevel = 'high' | 'medium' | 'low' | null;
+type BatchStatus = 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed' | 'rejected';
+
 function parseWarningsJson(raw: unknown): string[] {
   if (!raw || !Array.isArray(raw)) return [];
   return raw.filter((x): x is string => typeof x === 'string');
+}
+
+function narrowConfidence(raw: string | null): ConfidenceLevel {
+  if (raw === 'high' || raw === 'medium' || raw === 'low') return raw;
+  return null;
+}
+
+function narrowStatus(raw: string): BatchStatus {
+  if (
+    raw === 'uploaded' ||
+    raw === 'parsing' ||
+    raw === 'ready' ||
+    raw === 'imported' ||
+    raw === 'failed' ||
+    raw === 'rejected'
+  ) {
+    return raw;
+  }
+  return 'failed';
 }
 
 export default async function ImportBatchPage(props: PageProps) {
@@ -51,8 +73,13 @@ export default async function ImportBatchPage(props: PageProps) {
   }
   if (!batch) notFound();
 
-  if (batch.status === 'imported') {
+  const batchStatus: BatchStatus = narrowStatus(batch.status);
+
+  if (batchStatus === 'imported') {
     redirect('/transakcije');
+  }
+  if (batchStatus === 'rejected') {
+    redirect('/import');
   }
 
   const a = batch.accounts;
@@ -64,7 +91,7 @@ export default async function ImportBatchPage(props: PageProps) {
 
   const warnings = parseWarningsJson(batch.parse_warnings);
 
-  if (batch.status === 'failed') {
+  if (batchStatus === 'failed') {
     return (
       <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 md:max-w-5xl md:px-6">
         <p className="text-sm text-muted-foreground">
@@ -126,14 +153,14 @@ export default async function ImportBatchPage(props: PageProps) {
     category_id: r.category_id,
     merchant_id: r.merchant_id,
     selected_for_import: r.selected_for_import,
-    parse_confidence: r.parse_confidence,
+    parse_confidence: narrowConfidence(r.parse_confidence),
   }));
 
-  const showReview = batch.status === 'ready';
+  const showReview = batchStatus === 'ready';
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
-      <ImportBatchLifecycle batchId={batch.id} status={batch.status} />
+      <ImportBatchLifecycle batchId={batch.id} status={batchStatus} />
       <p className="text-sm text-muted-foreground">
         <Link className="text-primary hover:underline" href="/import">
           ← Natrag na uvoz
@@ -144,7 +171,7 @@ export default async function ImportBatchPage(props: PageProps) {
         <h1 className="text-2xl font-bold tracking-tight">Pregled uvoza</h1>
         {!showReview ? (
           <p className="text-base text-muted-foreground">
-            {batch.status === 'uploaded'
+            {batchStatus === 'uploaded'
               ? 'Priprema i obrada PDF-a…'
               : 'AI parsira transakcije iz izvoda. Ovo može potrajati nekoliko sekundi.'}
           </p>
@@ -160,7 +187,7 @@ export default async function ImportBatchPage(props: PageProps) {
             batch={{
               bankLabel,
               fileName: batch.original_filename,
-              parseConfidence: batch.parse_confidence,
+              parseConfidence: narrowConfidence(batch.parse_confidence),
               parseWarnings: warnings,
               periodStart: batch.statement_period_start,
               periodEnd: batch.statement_period_end,
@@ -170,7 +197,7 @@ export default async function ImportBatchPage(props: PageProps) {
       ) : (
         <div className="mt-8 flex min-h-[12rem] items-center justify-center rounded-xl border border-dashed border-border/80 bg-muted/20 px-4 py-12 text-center">
           <p className="text-base text-muted-foreground">
-            {batch.status === 'uploaded' ? 'Pokrećem obradu…' : 'Molimo pričekaj…'}
+            {batchStatus === 'uploaded' ? 'Pokrećem obradu…' : 'Molimo pričekaj…'}
           </p>
         </div>
       )}

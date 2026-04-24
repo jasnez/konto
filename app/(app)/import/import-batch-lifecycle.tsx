@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
 
 interface ImportBatchLifecycleProps {
   batchId: string;
-  status: 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed';
+  status: 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed' | 'rejected';
 }
 
 /**

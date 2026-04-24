@@ -28,13 +28,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { parseMoneyString } from '@/lib/format/amount';
-import { cn } from '@/lib/utils';
 import {
   bulkApplyCategoryToParsedRows,
-  cancelImportBatch,
-  confirmImportBatch,
-  updateParsedTransactionRow,
-} from './actions';
+  finalizeImport,
+  rejectImport,
+  updateParsedTransaction,
+} from '@/lib/server/actions/imports';
+import { cn } from '@/lib/utils';
 
 const CATEGORY_NONE = '__none__';
 
@@ -151,7 +151,7 @@ export function ImportReviewClient({
       }
       pendingByRow.current.delete(rowId);
       void (async () => {
-        const res = await updateParsedTransactionRow({
+        const res = await updateParsedTransaction({
           id: rowId,
           batchId,
           ...pending,
@@ -208,7 +208,7 @@ export function ImportReviewClient({
         prev.map((r) => (r.id === rowId ? { ...r, selected_for_import: checked } : r)),
       );
       void (async () => {
-        const res = await updateParsedTransactionRow({
+        const res = await updateParsedTransaction({
           id: rowId,
           batchId,
           selected_for_import: checked,
@@ -233,7 +233,7 @@ export function ImportReviewClient({
     (rowId: string, categoryId: string | null) => {
       setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, category_id: categoryId } : r)));
       void (async () => {
-        const res = await updateParsedTransactionRow({
+        const res = await updateParsedTransaction({
           id: rowId,
           batchId,
           category_id: categoryId,
@@ -260,7 +260,7 @@ export function ImportReviewClient({
         ),
       );
       void (async () => {
-        const res = await updateParsedTransactionRow({
+        const res = await updateParsedTransaction({
           id: rowId,
           batchId,
           merchant_id: merchantId,
@@ -274,7 +274,7 @@ export function ImportReviewClient({
 
   const onConfirm = useCallback(() => {
     startTransition(async () => {
-      const res = await confirmImportBatch({ batchId });
+      const res = await finalizeImport({ batchId });
       if (!res.success) {
         if (res.error === 'BAD_STATE') {
           toast.error('Uvoz nije spreman za potvrdu.');
@@ -302,7 +302,7 @@ export function ImportReviewClient({
 
   const onCancel = useCallback(() => {
     startTransition(async () => {
-      const res = await cancelImportBatch({ batchId });
+      const res = await rejectImport({ batchId });
       if (!res.success) {
         toast.error('Brisanje uvoza nije uspjelo.');
         return;
