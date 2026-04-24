@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import { NetworkStatusToast } from '@/components/app/network-status-toast';
+import { ServiceWorkerRegister } from '@/components/app/service-worker-register';
 import { HashSessionHandler } from '@/components/auth/hash-session-handler';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
@@ -66,6 +67,7 @@ export default function RootLayout({
         >
           <HashSessionHandler />
           <NetworkStatusToast />
+          <ServiceWorkerRegister />
           {children}
           <Toaster richColors position="top-right" />
         </ThemeProvider>

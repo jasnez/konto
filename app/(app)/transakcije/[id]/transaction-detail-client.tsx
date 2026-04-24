@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Money } from '@/components/money';
 import { formatMoney } from '@/lib/format/format-money';
 
 interface CategoryOption {
@@ -139,8 +140,12 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
 
       <section className="rounded-2xl border bg-card p-5">
         <p className="text-sm text-muted-foreground">{formatDateLabel(tx.transaction_date)}</p>
-        <h1 className="mt-2 text-4xl font-semibold tracking-tight tabular-nums">
-          {originalAmount}
+        <h1 className="mt-2 text-4xl font-semibold tracking-tight">
+          <Money
+            cents={BigInt(tx.original_amount_cents)}
+            currency={tx.original_currency}
+            tone="default"
+          />
         </h1>
         <p className="mt-2 text-base text-muted-foreground">{merchantName}</p>
       </section>

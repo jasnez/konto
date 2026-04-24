@@ -209,6 +209,9 @@ async function applySessionToPage(
 ): Promise<void> {
   const secret = process.env.E2E_AUTH_BYPASS_SECRET ?? 'local-e2e-secret';
   const signInResponse = await page.request.post(`${e2eAppOrigin()}/api/test-auth/login`, {
+    // The route requires this custom header in addition to the shared secret;
+    // it's cheap defense-in-depth against drive-by POSTs.
+    headers: { 'x-e2e-auth': 'konto-playwright' },
     data: {
       accessToken,
       refreshToken,

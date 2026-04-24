@@ -84,6 +84,13 @@ export type DeleteCategoryResult =
   | { success: false; error: 'SYSTEM_CATEGORY' }
   | { success: false; error: 'DATABASE_ERROR' };
 
+export type RestoreCategoryResult =
+  | { success: true }
+  | { success: false; error: 'VALIDATION_ERROR'; details: { _root: string[] } }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'NOT_FOUND' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
 export type ReorderCategoriesResult =
   | { success: true }
   | { success: false; error: 'VALIDATION_ERROR'; details: { _root: string[] } }
@@ -359,6 +366,57 @@ export async function deleteCategory(id: unknown): Promise<DeleteCategoryResult>
 
   if (delErr) {
     console.error('delete_category_error', { userId: user.id, error: delErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidatePath('/kategorije');
+  return { success: true };
+}
+
+export async function restoreCategory(id: unknown): Promise<RestoreCategoryResult> {
+  const idParse = CategoryIdSchema.safeParse(id);
+  if (!idParse.success) {
+    return {
+      success: false,
+      error: 'VALIDATION_ERROR',
+      details: { _root: asErrorTree(z.treeifyError(idParse.error)).errors },
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  const { data: row, error: selErr } = await supabase
+    .from('categories')
+    .select('id, deleted_at')
+    .eq('id', idParse.data)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (selErr) {
+    console.error('restore_category_select', { userId: user.id, error: selErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  if (!row) {
+    return { success: false, error: 'NOT_FOUND' };
+  }
+  if (!row.deleted_at) {
+    return { success: true };
+  }
+
+  const { error: upErr } = await supabase
+    .from('categories')
+    .update({ deleted_at: null })
+    .eq('id', idParse.data)
+    .eq('user_id', user.id);
+
+  if (upErr) {
+    console.error('restore_category_error', { userId: user.id, error: upErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 

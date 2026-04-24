@@ -13,7 +13,11 @@ import {
   DashboardMetricsSkeleton,
   DashboardRecentTransactionsSkeleton,
 } from '@/components/dashboard/dashboard-skeletons';
-import { getMonthlySummary, type MonthlySummary } from '@/lib/queries/summary';
+import {
+  getMonthlySummary,
+  resolveSummaryDateParts,
+  type MonthlySummary,
+} from '@/lib/queries/summary';
 import { safeIanaTimeZone } from '@/lib/safe-timezone';
 import { createClient } from '@/lib/supabase/server';
 import type { Database } from '@/supabase/types';
@@ -159,11 +163,12 @@ export default async function PocetnaPage() {
   const greeting = getGreetingPart(safeIanaTimeZone(profile?.timezone));
   const showMotivation = !profile?.onboarding_completed_at;
 
-  const now = new Date();
-  const summaryPromise = getMonthlySummary(supabase, user.id, baseCurrency, {
-    year: now.getFullYear(),
-    month: now.getMonth() + 1,
-  });
+  const summaryPromise = getMonthlySummary(
+    supabase,
+    user.id,
+    baseCurrency,
+    resolveSummaryDateParts(profile?.timezone),
+  );
   const recentPromise = getRecentTransactions(supabase, user.id);
 
   return (

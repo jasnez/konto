@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { BAM_EUR_RATE } from '@/lib/fx/constants';
+import { safeIanaTimeZone } from '@/lib/safe-timezone';
 import type { Database } from '@/supabase/types';
 
 interface MonthlySummaryRpcResult {
@@ -149,11 +150,47 @@ function fromRpcRow(payload: Partial<MonthlySummaryRpcResult>): MonthlySummary {
   };
 }
 
+export interface GetMonthlySummaryOptions {
+  year: number;
+  month: number;
+  /**
+   * User's local date (YYYY-MM-DD) in their profile timezone. Forwarded to
+   * the RPC so avg-daily-spend and latest-FX cutoff are evaluated against
+   * the user's "today", not the DB's UTC clock. Optional: when omitted the
+   * RPC falls back to `current_date` (UTC) — safe but off-by-one near month
+   * turns for UTC+N users.
+   */
+  todayDate?: string;
+}
+
+/**
+ * Compute year/month/todayDate in a given IANA timezone. Use this at the
+ * call site so we never pass the server's UTC clock to the RPC.
+ */
+export function resolveSummaryDateParts(
+  timezone: string | null | undefined,
+  now: Date = new Date(),
+): { year: number; month: number; todayDate: string } {
+  const tz = safeIanaTimeZone(timezone);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  const year = Number(get('year'));
+  const month = Number(get('month'));
+  const day = get('day');
+  return { year, month, todayDate: `${String(year)}-${String(month).padStart(2, '0')}-${day}` };
+}
+
 export async function getMonthlySummary(
   supabase: SummarySupabaseClient,
   userId: string,
   baseCurrency: string,
-  options: { year: number; month: number },
+  options: GetMonthlySummaryOptions,
 ): Promise<MonthlySummary> {
   if (userId.trim().length === 0) {
     throw new Error('getMonthlySummary requires a valid userId');
@@ -163,6 +200,7 @@ export async function getMonthlySummary(
     p_year: options.year,
     p_month: options.month,
     p_base_currency: baseCurrency,
+    ...(options.todayDate != null ? { p_today_date: options.todayDate } : {}),
   });
 
   if (error) {

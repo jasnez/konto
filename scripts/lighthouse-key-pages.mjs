@@ -166,7 +166,10 @@ async function e2eCookieHeader() {
   const secret = process.env.E2E_AUTH_BYPASS_SECRET ?? 'local-e2e-secret';
   const loginRes = await fetch(`${url}/api/test-auth/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-e2e-auth': 'konto-playwright',
+    },
     body: JSON.stringify({ accessToken, refreshToken, secret }),
   });
 

@@ -26,6 +26,7 @@ export interface TransactionListItem {
   description: string | null;
   notes: string | null;
   is_transfer: boolean;
+  fx_stale: boolean;
   account: TransactionAccountRef | null;
   category: TransactionCategoryRef | null;
   merchant: TransactionMerchantRef | null;

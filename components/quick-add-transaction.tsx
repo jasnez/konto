@@ -2,12 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format } from 'date-fns';
-import { bs } from 'date-fns/locale';
 import { CalendarDays, Loader2, MessageSquareMore } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { z } from 'zod';
 import { createMerchant } from '@/app/(app)/merchants/actions';
 import { createTransaction } from '@/app/(app)/transakcije/actions';
 import { AccountSelect, type AccountOption } from '@/components/account-select';
@@ -39,126 +36,18 @@ import {
 } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { CreateTransactionSchema } from '@/lib/schemas/transaction';
 import { cn } from '@/lib/utils';
-
-const LAST_USED_STORAGE_KEY = 'konto:quick-add:last-used';
-
-interface LastUsedValues {
-  account_id: string | null;
-  category_id: string | null;
-  merchant_raw: string | null;
-  kind: TransactionKind;
-}
-
-interface RetryDraft {
-  values: QuickAddFormValues;
-  kind: TransactionKind;
-}
-
-function getTodayIsoDate(): string {
-  return format(new Date(), 'yyyy-MM-dd', { locale: bs });
-}
-
-function normalizeAmountForKind(amountCents: bigint, kind: TransactionKind): bigint {
-  const abs = amountCents < 0n ? -amountCents : amountCents;
-  return kind === 'income' ? abs : -abs;
-}
-
-function toCanonicalMerchant(value: string): string {
-  return value.trim().toLowerCase().replace(/\s+/gu, ' ');
-}
-
-function readLastUsed(): LastUsedValues | null {
-  try {
-    const raw = window.localStorage.getItem(LAST_USED_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object') return null;
-
-    const maybePayload = parsed as Partial<LastUsedValues>;
-    if (
-      maybePayload.kind !== 'expense' &&
-      maybePayload.kind !== 'income' &&
-      maybePayload.kind !== 'transfer'
-    ) {
-      return null;
-    }
-
-    return {
-      account_id: maybePayload.account_id ?? null,
-      category_id: maybePayload.category_id ?? null,
-      merchant_raw: maybePayload.merchant_raw ?? null,
-      kind: maybePayload.kind,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function writeLastUsed(payload: LastUsedValues) {
-  try {
-    window.localStorage.setItem(LAST_USED_STORAGE_KEY, JSON.stringify(payload));
-  } catch {
-    // localStorage can be blocked in private mode.
-  }
-}
-
-function useIsMobileBreakpoint() {
-  // Avoid first render as "desktop" on real mobile: opens the wrong host (Dialog vs Sheet) before effect runs.
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches,
-  );
-
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 767px)');
-    const onChange = () => {
-      setIsMobile(media.matches);
-    };
-    onChange();
-    media.addEventListener('change', onChange);
-    return () => {
-      media.removeEventListener('change', onChange);
-    };
-  }, []);
-
-  return isMobile;
-}
-
-function buildDefaults(
-  accounts: AccountOption[],
-  categories: CategoryOption[],
-  fallbackKind: TransactionKind,
-): { values: QuickAddFormValues; kind: TransactionKind } {
-  const today = getTodayIsoDate();
-  const lastUsed = readLastUsed();
-  const firstAccountId = accounts.at(0)?.id ?? '';
-  const accountId =
-    lastUsed?.account_id && accounts.some((account) => account.id === lastUsed.account_id)
-      ? lastUsed.account_id
-      : firstAccountId;
-  const accountCurrency = accounts.find((account) => account.id === accountId)?.currency ?? 'BAM';
-  const kind = lastUsed?.kind ?? fallbackKind;
-  const categoryId =
-    (lastUsed?.category_id && categories.some((category) => category.id === lastUsed.category_id)
-      ? lastUsed.category_id
-      : null) ?? null;
-
-  return {
-    kind,
-    values: {
-      account_id: accountId,
-      amount_cents: normalizeAmountForKind(0n, kind),
-      currency: accountCurrency,
-      transaction_date: today,
-      merchant_raw: lastUsed?.merchant_raw ?? null,
-      category_id: categoryId,
-      notes: null,
-    },
-  };
-}
-
-type QuickAddFormValues = z.infer<typeof CreateTransactionSchema>;
+import {
+  buildDefaults,
+  getTodayIsoDate,
+  normalizeAmountForKind,
+  type QuickAddFormValues,
+  type RetryDraft,
+  toCanonicalMerchant,
+  writeLastUsed,
+} from './quick-add-transaction-draft';
 
 export interface QuickAddTransactionProps {
   open: boolean;
@@ -173,7 +62,7 @@ export function QuickAddTransaction({
   accounts,
   categories,
 }: QuickAddTransactionProps) {
-  const isMobile = useIsMobileBreakpoint();
+  const isMobile = useIsMobile();
   const amountInputRef = useRef<HTMLInputElement | null>(null);
   const merchantInputRef = useRef<HTMLInputElement | null>(null);
   const createdMerchantsRef = useRef<Set<string>>(new Set());

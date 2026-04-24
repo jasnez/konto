@@ -39,8 +39,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { CategoryInput } from '@/lib/categories/validation';
-import { deleteCategory, reorderCategories } from './actions';
+import { deleteCategory, reorderCategories, restoreCategory } from './actions';
 import { CategoryFormDialog } from './category-form-dialog';
 import type { CategoryListItem } from './types';
 
@@ -181,19 +182,7 @@ export function CategoriesClient({ categories }: { categories: CategoryListItem[
   const [editing, setEditing] = useState<CategoryListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CategoryListItem | null>(null);
   const [reorderMode, setReorderMode] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)');
-    const apply = () => {
-      setIsDesktop(mq.matches);
-    };
-    apply();
-    mq.addEventListener('change', apply);
-    return () => {
-      mq.removeEventListener('change', apply);
-    };
-  }, []);
+  const isDesktop = !useIsMobile();
 
   useEffect(() => {
     if (!isDesktop) {
@@ -277,11 +266,26 @@ export function CategoriesClient({ categories }: { categories: CategoryListItem[
 
   async function confirmDelete() {
     if (!deleteTarget) return;
-    const result = await deleteCategory(deleteTarget.id);
+    const target = deleteTarget;
     setDeleteTarget(null);
+    const result = await deleteCategory(target.id);
     if (result.success) {
-      toast.success('Kategorija je obrisana.');
       router.refresh();
+      toast.success('Kategorija je obrisana.', {
+        action: {
+          label: 'Vrati',
+          onClick: () => {
+            void restoreCategory(target.id).then((r) => {
+              if (r.success) {
+                router.refresh();
+              } else {
+                toast.error('Vraćanje nije uspjelo.');
+              }
+            });
+          },
+        },
+        duration: 8000,
+      });
       return;
     }
     if (result.error === 'SYSTEM_CATEGORY') {
@@ -407,8 +411,8 @@ export function CategoriesClient({ categories }: { categories: CategoryListItem[
           <AlertDialogHeader>
             <AlertDialogTitle>Obrisati kategoriju?</AlertDialogTitle>
             <AlertDialogDescription>
-              Ovo je trajno za tvoje podatke — kategorija će nestati s liste. Transakcije koje su je
-              koristile ostaju, ali bez ove kategorije.
+              Kategorija će nestati s liste. Transakcije koje su je koristile ostaju, ali bez ove
+              kategorije. Možeš je odmah vratiti putem obavijesti.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

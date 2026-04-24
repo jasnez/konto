@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { AlertTriangle, Pencil, Trash2 } from 'lucide-react';
+import { Money, type MoneyTone } from '@/components/money';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { formatMoney } from '@/lib/format/format-money';
 import { cn } from '@/lib/utils';
 import type { TransactionListItem } from '@/app/(app)/transakcije/types';
 
@@ -49,14 +49,7 @@ export function TransactionRow({
   const accountLabel = tx.account?.name ?? 'Račun';
   const categoryIcon = tx.category ? tx.category.icon : null;
   const amount = BigInt(tx.original_amount_cents);
-  const formattedAmount = formatMoney(amount, tx.original_currency, 'bs-BA');
-  const amountClassName = tx.is_transfer
-    ? 'text-blue-600 dark:text-blue-400'
-    : amount > 0n
-      ? 'text-green-600 dark:text-green-400'
-      : amount < 0n
-        ? 'text-red-600 dark:text-red-400'
-        : 'text-muted-foreground';
+  const amountTone: MoneyTone = tx.is_transfer ? 'transfer' : 'auto';
 
   function clearLongPressTimer() {
     if (longPressTimer.current !== null) {
@@ -171,8 +164,22 @@ export function TransactionRow({
           </div>
         </div>
 
-        <div className="shrink-0 pl-2 text-right">
-          <p className={cn('font-medium tabular-nums', amountClassName)}>{formattedAmount}</p>
+        <div className="flex shrink-0 items-center gap-1.5 pl-2 text-right">
+          {tx.fx_stale ? (
+            <span
+              className="inline-flex items-center text-amber-600 dark:text-amber-400"
+              title="Tečaj za ovu transakciju je zastario — preračun u osnovnu valutu možda nije tačan."
+              aria-label="Tečaj je zastario"
+            >
+              <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+            </span>
+          ) : null}
+          <Money
+            cents={amount}
+            currency={tx.original_currency}
+            tone={amountTone}
+            className="font-medium"
+          />
         </div>
 
         <div className="ml-2 hidden shrink-0 items-center gap-1 opacity-0 transition-opacity md:flex md:group-hover:opacity-100">
