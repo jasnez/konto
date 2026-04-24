@@ -177,6 +177,97 @@ export type Database = {
           },
         ];
       };
+      categorization_rules: {
+        Row: {
+          applied_count: number;
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          match_account_id: string | null;
+          match_amount_max_cents: number | null;
+          match_amount_min_cents: number | null;
+          match_amount_sign: string | null;
+          match_description_pattern: string | null;
+          match_merchant_pattern: string | null;
+          match_merchant_pattern_type: string | null;
+          name: string | null;
+          priority: number;
+          set_category_id: string | null;
+          set_is_excluded: boolean | null;
+          set_is_transfer: boolean | null;
+          set_merchant_id: string | null;
+          set_tags: string[] | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          applied_count?: number;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          match_account_id?: string | null;
+          match_amount_max_cents?: number | null;
+          match_amount_min_cents?: number | null;
+          match_amount_sign?: string | null;
+          match_description_pattern?: string | null;
+          match_merchant_pattern?: string | null;
+          match_merchant_pattern_type?: string | null;
+          name?: string | null;
+          priority?: number;
+          set_category_id?: string | null;
+          set_is_excluded?: boolean | null;
+          set_is_transfer?: boolean | null;
+          set_merchant_id?: string | null;
+          set_tags?: string[] | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          applied_count?: number;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          match_account_id?: string | null;
+          match_amount_max_cents?: number | null;
+          match_amount_min_cents?: number | null;
+          match_amount_sign?: string | null;
+          match_description_pattern?: string | null;
+          match_merchant_pattern?: string | null;
+          match_merchant_pattern_type?: string | null;
+          name?: string | null;
+          priority?: number;
+          set_category_id?: string | null;
+          set_is_excluded?: boolean | null;
+          set_is_transfer?: boolean | null;
+          set_merchant_id?: string | null;
+          set_tags?: string[] | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'categorization_rules_match_account_id_fkey';
+            columns: ['match_account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'categorization_rules_set_category_id_fkey';
+            columns: ['set_category_id'];
+            isOneToOne: false;
+            referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'categorization_rules_set_merchant_id_fkey';
+            columns: ['set_merchant_id'];
+            isOneToOne: false;
+            referencedRelation: 'merchants';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       fx_rates: {
         Row: {
           base: string;
@@ -891,7 +982,15 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: undefined;
       };
+      normalize_for_categorization: {
+        Args: { p_input: string };
+        Returns: string;
+      };
       restore_default_categories_for_user: { Args: never; Returns: undefined };
+      run_categorization_cascade: {
+        Args: { p_amount_minor: number; p_description: string };
+        Returns: Json;
+      };
       search_merchants: {
         Args: { p_limit?: number; p_query: string };
         Returns: {
