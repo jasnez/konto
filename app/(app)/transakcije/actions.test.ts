@@ -240,7 +240,7 @@ describe('transaction actions', () => {
             eq: () => ({
               maybeSingle: () =>
                 Promise.resolve({
-                  data: { id: 'tx1', account_id: 'acc1', deleted_at: null },
+                  data: { id: 'tx1', account_id: 'acc1', transfer_pair_id: null, deleted_at: null },
                   error: null,
                 }),
             }),
@@ -250,7 +250,7 @@ describe('transaction actions', () => {
           updatePayload = payload;
           return {
             eq: () => ({
-              eq: () => ({
+              in: () => ({
                 is: () => Promise.resolve({ data: null, error: null }),
               }),
             }),
