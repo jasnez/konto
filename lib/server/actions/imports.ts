@@ -8,6 +8,11 @@ import { maybeCreateAlias, recordCorrection } from '@/lib/categorization/learn';
 import { computeDedupHash } from '@/lib/dedup';
 import { convertToBase } from '@/lib/fx/convert';
 import { createClient } from '@/lib/supabase/server';
+import {
+  checkRateLimit,
+  IMPORT_UPLOAD_MAX,
+  IMPORT_UPLOAD_WINDOW_SEC,
+} from '@/lib/server/rate-limit';
 import type { Database } from '@/supabase/types';
 
 const MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024;
@@ -75,6 +80,7 @@ export type UploadStatementResult =
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'DUPLICATE'; batchId: string }
+  | { success: false; error: 'RATE_LIMITED' }
   | { success: false; error: 'STORAGE_ERROR' }
   | { success: false; error: 'DATABASE_ERROR' };
 
@@ -130,6 +136,17 @@ export async function uploadStatement(formData: FormData): Promise<UploadStateme
   }
   if (existing?.id) {
     return { success: false, error: 'DUPLICATE', batchId: existing.id };
+  }
+
+  const allowUpload = await checkRateLimit(
+    supabase,
+    user.id,
+    'upload',
+    IMPORT_UPLOAD_MAX,
+    IMPORT_UPLOAD_WINDOW_SEC,
+  );
+  if (!allowUpload) {
+    return { success: false, error: 'RATE_LIMITED' };
   }
 
   const path = `${user.id}/${randomUUID()}.pdf`;

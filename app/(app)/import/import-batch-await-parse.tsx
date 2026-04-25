@@ -3,6 +3,7 @@
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const PARSE_POLL_MS = 3000;
@@ -29,6 +30,11 @@ export function ImportBatchAwaitParse({ batchId, status }: ImportBatchAwaitParse
       const res = await fetch(`/api/imports/${batchId}/parse`, { method: 'POST' });
       if (res.status === 401) {
         parseStarted.current = false;
+        return;
+      }
+      if (res.status === 429) {
+        parseStarted.current = false;
+        toast.error('Previše pokušaja parsiranja. Pokušaj za 10 minuta.');
         return;
       }
       router.refresh();

@@ -49,10 +49,12 @@ const goldenDir = path.join(repoRoot, 'tests', 'parser', 'golden');
 const reportPath = path.join(repoRoot, 'tests', 'parser', 'REPORT.md');
 
 const RUN_BENCHMARK = process.env.RUN_PARSER_BENCHMARK === '1';
+/** Real LLM calls need a key; CI often omits the repo secret — skip instead of fail. */
+const HAS_GEMINI_KEY = Boolean(process.env.GEMINI_API_KEY?.trim());
 const MIN_PER_BANK_F1 = 0.9;
 const MIN_OVERALL_F1 = 0.93;
 
-const runDescribe = RUN_BENCHMARK ? describe : describe.skip;
+const runDescribe = RUN_BENCHMARK && HAS_GEMINI_KEY ? describe : describe.skip;
 
 const benchmarkResults: BenchResult[] = [];
 

@@ -762,6 +762,27 @@ export type Database = {
           },
         ];
       };
+      rate_limits: {
+        Row: {
+          action: string;
+          created_at: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          action: string;
+          created_at?: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          action?: string;
+          created_at?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       transactions: {
         Row: {
           account_id: string;
@@ -1002,6 +1023,15 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      check_rate_limit_and_record: {
+        Args: {
+          p_action: string;
+          p_limit: number;
+          p_user_id: string;
+          p_window_seconds: number;
+        };
+        Returns: boolean;
+      };
       count_receipt_scans_today: { Args: never; Returns: number };
       create_transfer_pair: {
         Args: {

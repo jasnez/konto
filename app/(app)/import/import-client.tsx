@@ -37,6 +37,8 @@ function translateResult(result: UploadStatementResult): string {
       return 'Baza trenutno nije dostupna. Pokušaj za minut.';
     case 'DUPLICATE':
       return 'Ovaj izvod je već uvezen.';
+    case 'RATE_LIMITED':
+      return 'Dnevni limit uploada je dostignut. Pokušaj sutra.';
     case 'VALIDATION_ERROR':
       return result.details._root[0] ?? 'Podaci nisu validni.';
     default:

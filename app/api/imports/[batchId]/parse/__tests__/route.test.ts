@@ -40,6 +40,8 @@ function buildSupabaseMock(options: {
   downloadData?: Blob | null;
   downloadError?: { message: string } | null;
   insertError?: { message: string } | null;
+  /** false = rate limit exceeded (F2-E5-T2). */
+  allowParse?: boolean;
 }) {
   const updateCalls: UpdateCall[] = [];
   const insertCalls: InsertCall[] = [];
@@ -48,17 +50,23 @@ function buildSupabaseMock(options: {
     data: options.downloadData ?? null,
     error: options.downloadError ?? null,
   });
+  const allowParse = options.allowParse ?? true;
+  const rpc = vi
+    .fn()
+    .mockResolvedValue(allowParse ? { data: true, error: null } : { data: false, error: null });
 
   const from = vi.fn((table: string) => {
     if (table === 'import_batches') {
       return {
         select: () => ({
           eq: () => ({
-            maybeSingle: () =>
-              Promise.resolve({
-                data: options.batch,
-                error: options.batchError ?? null,
-              }),
+            eq: () => ({
+              maybeSingle: () =>
+                Promise.resolve({
+                  data: options.batch,
+                  error: options.batchError ?? null,
+                }),
+            }),
           }),
         }),
         update: (payload: Record<string, unknown>) => {
@@ -88,10 +96,11 @@ function buildSupabaseMock(options: {
   const client = {
     auth: { getUser: () => Promise.resolve({ data: { user: options.user } }) },
     from,
+    rpc,
     storage: { from: vi.fn(() => ({ download })) },
   };
 
-  return { client, updateCalls, insertCalls, download };
+  return { client, updateCalls, insertCalls, download, rpc };
 }
 
 async function invoke(batchId: string) {
@@ -242,6 +251,22 @@ describe('POST /api/imports/[batchId]/parse', () => {
     const res = await invoke('batch-1');
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: 'already_processed' });
+    expect(updateCalls).toHaveLength(0);
+  });
+
+  it('429 kada je parse rate limit prekoračen', async () => {
+    const { client, updateCalls, download } = buildSupabaseMock({
+      user: { id: 'user-1' },
+      batch: baseBatch,
+      downloadData: fakePdf(),
+      allowParse: false,
+    });
+    vi.mocked(createClient).mockResolvedValue(client as never);
+
+    const res = await invoke('batch-1');
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: 'rate_limited' });
+    expect(download).not.toHaveBeenCalled();
     expect(updateCalls).toHaveLength(0);
   });
 

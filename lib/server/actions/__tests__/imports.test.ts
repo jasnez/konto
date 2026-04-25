@@ -63,6 +63,7 @@ const getUser = vi.fn();
 const from = vi.fn();
 const upload = vi.fn();
 const remove = vi.fn();
+const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
 
 function makePdfFile(content: string, name = 'statement.pdf') {
   return new File([content], name, { type: 'application/pdf' });
@@ -75,10 +76,13 @@ describe('uploadStatement', () => {
     from.mockReset();
     upload.mockResolvedValue({ error: null });
     remove.mockResolvedValue({ error: null });
+    rpc.mockReset();
+    rpc.mockResolvedValue({ data: true, error: null });
 
     vi.mocked(createClient).mockResolvedValue({
       auth: { getUser },
       from,
+      rpc,
       storage: {
         from: vi.fn(() => ({
           upload,

@@ -5,6 +5,7 @@ import { ocrFallback } from '@/lib/parser/ocr-fallback';
 import { parseStatementWithLLM } from '@/lib/parser/llm-parse';
 import { redactPII } from '@/lib/parser/redact-pii';
 import { createClient } from '@/lib/supabase/server';
+import { checkRateLimit, IMPORT_PARSE_MAX, IMPORT_PARSE_WINDOW_SEC } from '@/lib/server/rate-limit';
 import type { Database } from '@/supabase/types';
 
 /**
@@ -27,6 +28,7 @@ type ParseErrorCode =
   | 'unauth'
   | 'not_found'
   | 'already_processed'
+  | 'rate_limited'
   | 'pdf_not_found'
   | 'no_text_extracted'
   | 'parse_failed';
@@ -50,6 +52,7 @@ export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
     .from('import_batches')
     .select('id, account_id, storage_path, status, accounts(institution)')
     .eq('id', batchId)
+    .eq('user_id', user.id)
     .maybeSingle();
 
   if (batchErr) {
@@ -67,6 +70,17 @@ export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
       .eq('id', batch.id)
       .eq('user_id', user.id);
     return jsonError('pdf_not_found', 404);
+  }
+
+  const allowParse = await checkRateLimit(
+    supabase,
+    user.id,
+    'parse',
+    IMPORT_PARSE_MAX,
+    IMPORT_PARSE_WINDOW_SEC,
+  );
+  if (!allowParse) {
+    return jsonError('rate_limited', 429);
   }
 
   // Mark as parsing so the UI (and re-entrant requests) know work is in flight.
