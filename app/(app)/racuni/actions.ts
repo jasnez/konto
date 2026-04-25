@@ -246,7 +246,7 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
         userId: user.id,
         error: error instanceof Error ? error.message : 'unknown',
       });
-      await supabase.from('accounts').delete().eq('id', newId);
+      await supabase.from('accounts').delete().eq('id', newId).eq('user_id', user.id);
       return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
     }
 
