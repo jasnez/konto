@@ -46,6 +46,7 @@ export default async function UrediRacunPage({ params }: PageProps) {
     currency,
     icon: acc.icon,
     color: acc.color,
+    include_in_net_worth: acc.include_in_net_worth,
   };
 
   return (

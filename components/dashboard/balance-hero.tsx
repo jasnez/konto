@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 
 interface BalanceHeroProps {
   totalBalanceCents: bigint;
+  totalLiabilitiesCents: bigint;
   baseCurrency: string;
   netChangePercent: number;
 }
@@ -18,6 +19,7 @@ function formatPercent(value: number): string {
 
 export function BalanceHero({
   totalBalanceCents,
+  totalLiabilitiesCents,
   baseCurrency,
   netChangePercent,
 }: BalanceHeroProps) {
@@ -25,10 +27,18 @@ export function BalanceHero({
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 p-4 sm:p-6">
         <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">Ukupno stanje</p>
+          <p className="text-sm text-muted-foreground">Stanje (uključeni računi)</p>
           <CardTitle className="text-3xl font-semibold tracking-tight sm:text-4xl">
             <Money cents={totalBalanceCents} currency={baseCurrency} tone="default" />
           </CardTitle>
+          {totalLiabilitiesCents > 0n ? (
+            <div className="pt-2">
+              <p className="text-sm text-muted-foreground">Zaduženja (krediti i kartice)</p>
+              <p className="text-xl font-semibold tabular-nums tracking-tight sm:text-2xl">
+                <Money cents={totalLiabilitiesCents} currency={baseCurrency} tone="expense" />
+              </p>
+            </div>
+          ) : null}
         </div>
         <Link
           href="/racuni"

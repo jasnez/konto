@@ -6,6 +6,7 @@ interface AccountRow {
   current_balance_cents: number;
   currency: string;
   include_in_net_worth: boolean;
+  type?: string;
 }
 
 function makeAccountFromMock(accountRows: AccountRow[], err: { message: string } | null = null) {
@@ -42,6 +43,7 @@ describe('getMonthlySummary', () => {
     const { supabase, rpcMock } = createSupabaseRpcMock(
       {
         total_balance: '362340',
+        total_liabilities: '5000',
         month_income: '220000',
         month_expense: '145500',
         month_net: '74500',
@@ -57,6 +59,7 @@ describe('getMonthlySummary', () => {
 
     expect(summary).toEqual({
       totalBalance: 362340n,
+      totalLiabilities: 5000n,
       monthIncome: 220000n,
       monthExpense: 145500n,
       monthNet: 74500n,
@@ -76,6 +79,7 @@ describe('getMonthlySummary', () => {
     const { supabase, rpcMock } = createSupabaseRpcMock(
       {
         total_balance: '0',
+        total_liabilities: '0',
         month_income: '0',
         month_expense: '0',
         month_net: '0',
@@ -105,6 +109,7 @@ describe('getMonthlySummary', () => {
     const { supabase } = createSupabaseRpcMock(
       {
         total_balance: '500000',
+        total_liabilities: '0',
         month_income: '120000',
         month_expense: '30000',
         month_net: '90000',
@@ -132,6 +137,7 @@ describe('getMonthlySummary', () => {
     const { supabase } = createSupabaseRpcMock(
       {
         total_balance: '362145',
+        total_liabilities: '0',
         month_income: '0',
         month_expense: '0',
         month_net: '0',
@@ -146,25 +152,66 @@ describe('getMonthlySummary', () => {
     const summary = await getMonthlySummary(supabase, 'user-1', 'BAM', { year: 2026, month: 4 });
 
     expect(summary.totalBalance).toBe(362145n);
+    expect(summary.totalLiabilities).toBe(0n);
   });
 
   it('on rpc error uses sum of accounts for total, monthly fields zero', async () => {
     const { supabase } = createSupabaseRpcMock(null, { message: 'function not found' }, [
-      { current_balance_cents: 22_059, currency: 'BAM', include_in_net_worth: true },
-      { current_balance_cents: 26_303, currency: 'BAM', include_in_net_worth: true },
+      {
+        current_balance_cents: 22_059,
+        currency: 'BAM',
+        include_in_net_worth: true,
+        type: 'checking',
+      },
+      {
+        current_balance_cents: 26_303,
+        currency: 'BAM',
+        include_in_net_worth: true,
+        type: 'savings',
+      },
     ]);
 
     const summary = await getMonthlySummary(supabase, 'u1', 'BAM', { year: 2026, month: 4 });
 
     expect(summary.totalBalance).toBe(22059n + 26303n);
+    expect(summary.totalLiabilities).toBe(0n);
     expect(summary.monthIncome).toBe(0n);
     expect(summary.monthExpense).toBe(0n);
+  });
+
+  it('on rpc error sums liabilities for loan and credit_card with negative balance', async () => {
+    const { supabase } = createSupabaseRpcMock(null, { message: 'function not found' }, [
+      {
+        current_balance_cents: 10_000,
+        currency: 'BAM',
+        include_in_net_worth: true,
+        type: 'checking',
+      },
+      {
+        current_balance_cents: -50_000,
+        currency: 'BAM',
+        include_in_net_worth: false,
+        type: 'loan',
+      },
+      {
+        current_balance_cents: -2_000,
+        currency: 'BAM',
+        include_in_net_worth: false,
+        type: 'credit_card',
+      },
+    ]);
+
+    const summary = await getMonthlySummary(supabase, 'u1', 'BAM', { year: 2026, month: 4 });
+
+    expect(summary.totalBalance).toBe(10_000n);
+    expect(summary.totalLiabilities).toBe(52_000n);
   });
 
   it('when rpc returns 0 but accounts have balance, total comes from accounts', async () => {
     const { supabase } = createSupabaseRpcMock(
       {
         total_balance: '0',
+        total_liabilities: '0',
         month_income: '0',
         month_expense: '0',
         month_net: '0',
@@ -173,7 +220,7 @@ describe('getMonthlySummary', () => {
         avg_daily_spend: '0',
       },
       null,
-      [{ current_balance_cents: 84_01, currency: 'BAM', include_in_net_worth: true }],
+      [{ current_balance_cents: 84_01, currency: 'BAM', include_in_net_worth: true, type: 'cash' }],
     );
 
     const summary = await getMonthlySummary(supabase, 'u1', 'BAM', { year: 2026, month: 4 });

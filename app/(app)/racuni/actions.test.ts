@@ -53,6 +53,7 @@ describe('CreateAccountSchema', () => {
       type: 'cash',
       currency: 'BAM',
       initial_balance_cents: '0',
+      include_in_net_worth: true,
     });
     expect(r.success).toBe(false);
   });
@@ -79,6 +80,7 @@ describe('createAccount', () => {
       type: 'cash',
       currency: 'BAM',
       initial_balance_cents: '0',
+      include_in_net_worth: true,
     });
     expect(result).toEqual({ success: false, error: 'UNAUTHORIZED' });
     expect(from).not.toHaveBeenCalled();
@@ -90,6 +92,7 @@ describe('createAccount', () => {
       type: 'cash',
       currency: 'BAM',
       initial_balance_cents: '0',
+      include_in_net_worth: true,
     });
     expect(result).toEqual(expect.objectContaining({ success: false, error: 'VALIDATION_ERROR' }));
     if (!result.success && result.error === 'VALIDATION_ERROR') {
@@ -127,10 +130,52 @@ describe('createAccount', () => {
       initial_balance_cents: '0',
       icon: null,
       color: null,
+      include_in_net_worth: true,
     });
 
     expect(result).toEqual({ success: true, data: { id: 'acc-new-id' } });
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/racuni');
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/pocetna');
+  });
+
+  it('success: passes include_in_net_worth false to insert for loan', async () => {
+    const insertMock = vi.fn().mockReturnValue({
+      select: () => ({
+        single: () => Promise.resolve({ data: { id: 'loan-1' }, error: null }),
+      }),
+    });
+    let fromAccounts = 0;
+    from.mockImplementation((table: string) => {
+      if (table === 'accounts') {
+        fromAccounts += 1;
+        if (fromAccounts === 1) {
+          return fluent({ data: null, error: null });
+        }
+        if (fromAccounts === 2) {
+          return {
+            ...fluent({ data: { id: 'loan-1' }, error: null }),
+            insert: insertMock,
+          };
+        }
+      }
+      throw new Error(`unexpected from(${table})`);
+    });
+
+    const result = await createAccount({
+      name: 'Stambeni',
+      type: 'loan',
+      institution: null,
+      currency: 'BAM',
+      initial_balance_cents: '0',
+      icon: null,
+      color: null,
+      include_in_net_worth: false,
+    });
+
+    expect(result).toEqual({ success: true, data: { id: 'loan-1' } });
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'loan', include_in_net_worth: false }),
+    );
   });
 
   it('creates opening transaction with FX conversion when initial balance is non-zero', async () => {
@@ -181,6 +226,7 @@ describe('createAccount', () => {
       initial_balance_cents: '10000',
       icon: null,
       color: null,
+      include_in_net_worth: true,
     });
 
     expect(result).toEqual({ success: true, data: { id: 'acc-open-1' } });

@@ -37,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
 const defaultCreate: CreateAccountFormValues = {
@@ -47,6 +48,7 @@ const defaultCreate: CreateAccountFormValues = {
   initial_balance_cents: '0',
   icon: '💳',
   color: null,
+  include_in_net_worth: true,
 };
 
 type AccountFormProps =
@@ -99,6 +101,8 @@ function CreateAccountForm() {
         form.setError('initial_balance_cents', { message: d.initial_balance_cents[0] });
       if (d.icon?.[0]) form.setError('icon', { message: d.icon[0] });
       if (d.color?.[0]) form.setError('color', { message: d.color[0] });
+      if (d.include_in_net_worth?.[0])
+        form.setError('include_in_net_worth', { message: d.include_in_net_worth[0] });
       return;
     }
     if (result.error === 'UNAUTHORIZED') {
@@ -176,6 +180,7 @@ function EditAccountForm({
       currency: values.currency,
       icon: values.icon,
       color: values.color,
+      include_in_net_worth: values.include_in_net_worth,
     });
     if (res.success) {
       toast.success('Račun je ažuriran.');
@@ -193,6 +198,8 @@ function EditAccountForm({
       if ('currency' in d && d.currency?.[0]) form.setError('currency', { message: d.currency[0] });
       if ('icon' in d && d.icon?.[0]) form.setError('icon', { message: d.icon[0] });
       if ('color' in d && d.color?.[0]) form.setError('color', { message: d.color[0] });
+      if ('include_in_net_worth' in d && d.include_in_net_worth?.[0])
+        form.setError('include_in_net_worth', { message: d.include_in_net_worth[0] });
       return;
     }
     if (res.error === 'UNAUTHORIZED') {
@@ -317,7 +324,13 @@ function AccountFormFields(props: FieldsProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Tip</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select
+                onValueChange={(v) => {
+                  field.onChange(v);
+                  form.setValue('include_in_net_worth', v === 'loan' ? false : true);
+                }}
+                value={field.value}
+              >
                 <FormControl>
                   <SelectTrigger className="h-11 min-h-[44px] text-base">
                     <SelectValue placeholder="Tip računa" />
@@ -377,6 +390,33 @@ function AccountFormFields(props: FieldsProps) {
                   ))}
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="include_in_net_worth"
+          render={({ field }) => (
+            <FormItem className="rounded-lg border p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <FormLabel className="text-base">Uključi u brojku na početnoj</FormLabel>
+                  <FormDescription>
+                    Zbroj uključenih računa na početnoj stranici. Za dugoročni kredit to možeš
+                    isključiti — dug i dalje vidiš u zasebnom redu „Zaduženja”.
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    className="shrink-0"
+                    aria-label="Uključi u brojku na početnoj"
+                  />
+                </FormControl>
+              </div>
               <FormMessage />
             </FormItem>
           )}

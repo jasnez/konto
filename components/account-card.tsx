@@ -58,6 +58,9 @@ export function AccountCard({ account }: AccountCardProps) {
                 {formatMinorUnits(bal, account.currency)}
               </p>
               <p className="text-xs text-muted-foreground">{account.currency}</p>
+              {!account.include_in_net_worth ? (
+                <p className="text-xs text-muted-foreground">Nije u zbrojku na početnoj</p>
+              ) : null}
             </div>
           </div>
         </CardContent>

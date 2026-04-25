@@ -1,6 +1,11 @@
-﻿export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: '14.5';
+  };
   graphql_public: {
     Tables: {
       [_ in never]: never;
@@ -709,6 +714,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      rate_limits: {
+        Row: {
+          action: string;
+          created_at: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          action: string;
+          created_at?: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          action?: string;
+          created_at?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       receipt_scans: {
         Row: {
           created_at: string;
@@ -761,27 +787,6 @@ export type Database = {
             referencedColumns: ['id'];
           },
         ];
-      };
-      rate_limits: {
-        Row: {
-          action: string;
-          created_at: string;
-          id: string;
-          user_id: string;
-        };
-        Insert: {
-          action: string;
-          created_at?: string;
-          id?: string;
-          user_id: string;
-        };
-        Update: {
-          action?: string;
-          created_at?: string;
-          id?: string;
-          user_id?: string;
-        };
-        Relationships: [];
       };
       transactions: {
         Row: {
@@ -1062,10 +1067,6 @@ export type Database = {
         Args: { p_batch_id: string; p_dedup_skipped?: number; p_rows: Json };
         Returns: Json;
       };
-      import_dedup_filter: {
-        Args: { p_account_id: string; p_rows: Json };
-        Returns: number[];
-      };
       get_monthly_summary:
         | {
             Args: { p_base_currency: string; p_month: number; p_year: number };
@@ -1080,6 +1081,10 @@ export type Database = {
             };
             Returns: Json;
           };
+      import_dedup_filter: {
+        Args: { p_account_id: string; p_rows: Json };
+        Returns: number[];
+      };
       insert_default_categories: {
         Args: { p_user_id: string };
         Returns: undefined;

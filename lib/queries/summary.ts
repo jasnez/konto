@@ -5,6 +5,7 @@ import type { Database } from '@/supabase/types';
 
 interface MonthlySummaryRpcResult {
   total_balance: number | string | null;
+  total_liabilities: number | string | null;
   month_income: number | string | null;
   month_expense: number | string | null;
   month_net: number | string | null;
@@ -15,6 +16,8 @@ interface MonthlySummaryRpcResult {
 
 export interface MonthlySummary {
   totalBalance: bigint;
+  /** U baznoj valuti: zbroj duga s kredita (loan, credit_card) gdje je saldo < 0, kao pozitivna cifra. */
+  totalLiabilities: bigint;
   monthIncome: bigint;
   monthExpense: bigint;
   monthNet: bigint;
@@ -64,6 +67,7 @@ function isRpcJsonObject(d: unknown): d is Record<string, unknown> {
 
 const EMPTY_MONTHLY_SUMMARY: MonthlySummary = {
   totalBalance: 0n,
+  totalLiabilities: 0n,
   monthIncome: 0n,
   monthExpense: 0n,
   monthNet: 0n,
@@ -138,9 +142,46 @@ async function sumNetWorthFromAccounts(
   return total;
 }
 
+/** Zbroj apsolutnog duga (loan, credit_card, negativan saldo), u baznoj valuti. */
+async function sumLiabilitiesFromAccounts(
+  supabase: Pick<SupabaseClient<Database>, 'from'>,
+  userId: string,
+  baseCurrency: string,
+): Promise<bigint> {
+  const { data, error } = await supabase
+    .from('accounts')
+    .select('current_balance_cents, currency, type')
+    .eq('user_id', userId)
+    .is('deleted_at', null);
+
+  if (error) {
+    console.error('[getMonthlySummary] sumLiabilitiesFromAccounts:', error.message);
+    return 0n;
+  }
+
+  const base = baseCurrency.trim().toUpperCase();
+  let total = 0n;
+  for (const row of data) {
+    if (row.type !== 'loan' && row.type !== 'credit_card') {
+      continue;
+    }
+    const cents = BigInt(Math.trunc(row.current_balance_cents));
+    if (cents >= 0n) {
+      continue;
+    }
+    const cur = row.currency.toUpperCase();
+    const converted = convertCentsToBase(cents, cur, base);
+    if (converted < 0n) {
+      total += -converted;
+    }
+  }
+  return total;
+}
+
 function fromRpcRow(payload: Partial<MonthlySummaryRpcResult>): MonthlySummary {
   return {
     totalBalance: toBigInt(payload.total_balance),
+    totalLiabilities: toBigInt(payload.total_liabilities),
     monthIncome: toBigInt(payload.month_income),
     monthExpense: toBigInt(payload.month_expense),
     monthNet: toBigInt(payload.month_net),
@@ -205,15 +246,21 @@ export async function getMonthlySummary(
 
   if (error) {
     console.error('[getMonthlySummary] get_monthly_summary:', error.message);
-    const total = await sumNetWorthFromAccounts(supabase, userId, baseCurrency);
-    return { ...EMPTY_MONTHLY_SUMMARY, totalBalance: total };
+    const [total, liab] = await Promise.all([
+      sumNetWorthFromAccounts(supabase, userId, baseCurrency),
+      sumLiabilitiesFromAccounts(supabase, userId, baseCurrency),
+    ]);
+    return { ...EMPTY_MONTHLY_SUMMARY, totalBalance: total, totalLiabilities: liab };
   }
 
   const payload = parseRpcPayload(data);
   if (payload == null) {
     console.error('[getMonthlySummary] nevažeći odgovor od RPC (data null ili JSON).');
-    const total = await sumNetWorthFromAccounts(supabase, userId, baseCurrency);
-    return { ...EMPTY_MONTHLY_SUMMARY, totalBalance: total };
+    const [total, liab] = await Promise.all([
+      sumNetWorthFromAccounts(supabase, userId, baseCurrency),
+      sumLiabilitiesFromAccounts(supabase, userId, baseCurrency),
+    ]);
+    return { ...EMPTY_MONTHLY_SUMMARY, totalBalance: total, totalLiabilities: liab };
   }
 
   let out = fromRpcRow(payload);

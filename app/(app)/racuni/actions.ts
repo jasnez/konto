@@ -36,6 +36,7 @@ function buildCreateAccountErrorDetails(error: z.ZodError) {
     initial_balance_cents: t.properties?.initial_balance_cents?.errors,
     icon: t.properties?.icon?.errors,
     color: t.properties?.color?.errors,
+    include_in_net_worth: t.properties?.include_in_net_worth?.errors,
   };
 }
 
@@ -140,7 +141,16 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
     return { success: false, error: 'UNAUTHORIZED' };
   }
 
-  const { name, type, institution, currency, initial_balance_cents, icon, color } = parsed.data;
+  const {
+    name,
+    type,
+    institution,
+    currency,
+    initial_balance_cents,
+    icon,
+    color,
+    include_in_net_worth,
+  } = parsed.data;
 
   const { data: lastAccount } = await supabase
     .from('accounts')
@@ -167,6 +177,7 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
       current_balance_cents: centsToDbInt(current),
       icon: icon ?? null,
       color: color ?? null,
+      include_in_net_worth,
       sort_order: nextOrder,
     })
     .select('id')
@@ -265,6 +276,7 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
   }
 
   revalidatePath('/racuni');
+  revalidatePath('/pocetna');
   revalidatePath(`/racuni/${newId}`);
   return { success: true, data: { id: newId } };
 }
@@ -338,6 +350,7 @@ export async function updateAccount(id: unknown, input: unknown): Promise<Update
   }
 
   revalidatePath('/racuni');
+  revalidatePath('/pocetna');
   revalidatePath(`/racuni/${idParse.data}`);
   revalidatePath(`/racuni/${idParse.data}/uredi`);
   return { success: true };

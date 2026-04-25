@@ -59,6 +59,7 @@ export const CreateAccountFormSchema = z.object({
   icon: sharedFieldShape.icon,
   color: sharedFieldShape.color,
   initial_balance_cents: initialCentsStringForm,
+  include_in_net_worth: z.boolean(),
 });
 
 /**
@@ -72,6 +73,7 @@ export const CreateAccountSchema = z.object({
   icon: sharedFieldShape.icon,
   color: sharedFieldShape.color,
   initial_balance_cents: initialCentsStringServer,
+  include_in_net_worth: z.boolean(),
 });
 
 export type CreateAccountInput = z.infer<typeof CreateAccountSchema>;

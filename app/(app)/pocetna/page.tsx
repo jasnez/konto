@@ -118,6 +118,7 @@ async function HeroSection({
   return (
     <BalanceHero
       totalBalanceCents={summary.totalBalance}
+      totalLiabilitiesCents={summary.totalLiabilities}
       baseCurrency={baseCurrency}
       netChangePercent={summary.netChangePercent}
     />
