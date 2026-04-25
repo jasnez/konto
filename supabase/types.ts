@@ -938,6 +938,62 @@ export type Database = {
           },
         ];
       };
+      user_corrections: {
+        Row: {
+          confidence_before: number | null;
+          created_at: string;
+          description_normalized: string | null;
+          description_raw: string | null;
+          field: string;
+          id: string;
+          new_value: string | null;
+          new_value_json: Json | null;
+          old_value: string | null;
+          old_value_json: Json | null;
+          source_before: string | null;
+          transaction_id: string | null;
+          user_id: string;
+        };
+        Insert: {
+          confidence_before?: number | null;
+          created_at?: string;
+          description_normalized?: string | null;
+          description_raw?: string | null;
+          field: string;
+          id?: string;
+          new_value?: string | null;
+          new_value_json?: Json | null;
+          old_value?: string | null;
+          old_value_json?: Json | null;
+          source_before?: string | null;
+          transaction_id?: string | null;
+          user_id: string;
+        };
+        Update: {
+          confidence_before?: number | null;
+          created_at?: string;
+          description_normalized?: string | null;
+          description_raw?: string | null;
+          field?: string;
+          id?: string;
+          new_value?: string | null;
+          new_value_json?: Json | null;
+          old_value?: string | null;
+          old_value_json?: Json | null;
+          source_before?: string | null;
+          transaction_id?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_corrections_transaction_id_fkey';
+            columns: ['transaction_id'];
+            isOneToOne: false;
+            referencedRelation: 'transactions';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;

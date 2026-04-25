@@ -3,6 +3,8 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import type { CategorizationSource } from '@/lib/categorization/cascade';
+import { maybeCreateAlias, recordCorrection } from '@/lib/categorization/learn';
 import { computeDedupHash } from '@/lib/dedup';
 import { convertToBase } from '@/lib/fx/convert';
 import { createClient } from '@/lib/supabase/server';
@@ -203,11 +205,24 @@ const UpdateParsedTransactionSchema = z
   );
 
 export type UpdateParsedTransactionResult =
-  | { success: true }
+  | { success: true; data?: { aliasCreated?: boolean } }
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
   | { success: false; error: 'UNAUTHORIZED' }
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'DATABASE_ERROR' };
+
+const LEARNABLE_SOURCES = new Set<CategorizationSource>(['alias_fuzzy', 'history', 'llm', 'none']);
+
+function isCategorizationSource(value: unknown): value is CategorizationSource {
+  return (
+    value === 'rule' ||
+    value === 'alias_exact' ||
+    value === 'alias_fuzzy' ||
+    value === 'history' ||
+    value === 'llm' ||
+    value === 'none'
+  );
+}
 
 export async function updateParsedTransaction(
   input: unknown,
@@ -231,10 +246,14 @@ export async function updateParsedTransaction(
 
   const p = parsed.data;
 
-  // Explicit ownership check (defence in depth on top of RLS).
+  // Explicit ownership check (defence in depth on top of RLS). We also pull
+  // the fields the learning loop (F2-E4-T3) needs so we can decide whether
+  // to record a correction without a second round-trip.
   const { data: row, error: loadErr } = await supabase
     .from('parsed_transactions')
-    .select('id, batch_id, user_id, status')
+    .select(
+      'id, batch_id, user_id, status, raw_description, category_id, categorization_source, categorization_confidence',
+    )
     .eq('id', p.id)
     .eq('batch_id', p.batchId)
     .maybeSingle();
@@ -311,8 +330,49 @@ export async function updateParsedTransaction(
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
+  // Learning loop (F2-E4-T3): when the user genuinely overrides a
+  // non-deterministic suggestion, ledger the correction and check whether
+  // we have enough evidence to materialise an alias. We deliberately:
+  //   - skip 'rule' / 'alias_exact' (the user is overriding a rule of their
+  //     own — there's nothing to learn beyond editing the rule),
+  //   - skip when the category didn't actually change (no signal),
+  //   - run after the parsed_transactions write so a learning failure can
+  //     never roll back the user-visible change.
+  let aliasCreated = false;
+  const sourceBefore: CategorizationSource | null = isCategorizationSource(
+    row.categorization_source,
+  )
+    ? row.categorization_source
+    : null;
+  if (
+    p.category_id !== undefined &&
+    p.category_id !== null &&
+    p.category_id !== row.category_id &&
+    (sourceBefore === null || LEARNABLE_SOURCES.has(sourceBefore)) &&
+    typeof row.raw_description === 'string' &&
+    row.raw_description.trim().length > 0
+  ) {
+    const { normalizedDescription, ok } = await recordCorrection(supabase, {
+      userId: user.id,
+      originalDescription: row.raw_description,
+      newCategoryId: p.category_id,
+      oldCategoryId: row.category_id ?? null,
+      sourceBefore,
+      confidenceBefore:
+        typeof row.categorization_confidence === 'number' ? row.categorization_confidence : null,
+    });
+    if (ok && normalizedDescription.length > 0) {
+      const aliasResult = await maybeCreateAlias(supabase, {
+        userId: user.id,
+        description: row.raw_description,
+        categoryId: p.category_id,
+      });
+      aliasCreated = aliasResult.created;
+    }
+  }
+
   revalidatePath(`/import/${p.batchId}`);
-  return { success: true };
+  return aliasCreated ? { success: true, data: { aliasCreated: true } } : { success: true };
 }
 
 // ------------------------------------------------------------------

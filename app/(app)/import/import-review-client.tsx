@@ -300,7 +300,13 @@ export function ImportReviewClient({
           batchId,
           category_id: categoryId,
         });
-        if (!res.success) toast.error('Kategorija nije snimljena.');
+        if (!res.success) {
+          toast.error('Kategorija nije snimljena.');
+          return;
+        }
+        if (res.data?.aliasCreated === true) {
+          toast.success('Naučio sam — sljedeći put ću ovo automatski kategorisati.');
+        }
       })();
     },
     [batchId],
@@ -331,7 +337,13 @@ export function ImportReviewClient({
           merchant_id: merchantId,
           ...(categoryId ? { category_id: categoryId } : {}),
         });
-        if (!res.success) toast.error('Trgovac nije snimljen.');
+        if (!res.success) {
+          toast.error('Trgovac nije snimljen.');
+          return;
+        }
+        if (res.data?.aliasCreated === true) {
+          toast.success('Naučio sam — sljedeći put ću ovo automatski kategorisati.');
+        }
       })();
     },
     [batchId],

@@ -47,6 +47,7 @@ function makeBuilder<T>(
     'limit',
     'range',
     'filter',
+    'ilike',
     'select',
   ] as const;
   for (const name of chainable) {
@@ -93,6 +94,10 @@ interface ParsedOwnership {
   batch_id: string;
   user_id: string;
   status: string;
+  raw_description?: string;
+  category_id?: string | null;
+  categorization_source?: string | null;
+  categorization_confidence?: number | null;
 }
 
 interface SupabaseStubOptions {
@@ -108,6 +113,16 @@ interface SupabaseStubOptions {
   togglePartialUpdated?: { id: string }[];
   categoryOwner?: { id: string } | null;
   merchantOwner?: { id: string } | null;
+  /** Rows returned by the `user_corrections` SELECT in `maybeCreateAlias`. */
+  correctionRows?: { new_value: string | null }[];
+  /** Rows returned by the `merchant_aliases` SELECT (existing alias check). */
+  aliasRows?: { id: string; merchant_id: string; pattern: string }[];
+  /** Rows returned by the `merchants` SELECT (existing-merchant lookup). */
+  existingMerchants?: { id: string; default_category_id: string | null }[];
+  /** Row returned by the `merchants` insert .single(). */
+  insertedMerchant?: { id: string };
+  /** Row returned by the `merchant_aliases` insert .single(). */
+  insertedAlias?: { id: string };
 }
 
 interface SupabaseStub {
@@ -117,6 +132,9 @@ interface SupabaseStub {
   parsedUpdatePayloads: Record<string, unknown>[];
   parsedDeleteCalls: number;
   batchUpdatePayloads: Record<string, unknown>[];
+  correctionInserts: Record<string, unknown>[];
+  merchantInserts: Record<string, unknown>[];
+  aliasInserts: Record<string, unknown>[];
 }
 
 function buildSupabase(options: SupabaseStubOptions): SupabaseStub {
@@ -132,6 +150,9 @@ function buildSupabase(options: SupabaseStubOptions): SupabaseStub {
 
   const parsedUpdatePayloads: Record<string, unknown>[] = [];
   const batchUpdatePayloads: Record<string, unknown>[] = [];
+  const correctionInserts: Record<string, unknown>[] = [];
+  const merchantInserts: Record<string, unknown>[] = [];
+  const aliasInserts: Record<string, unknown>[] = [];
   let parsedDeleteCalls = 0;
 
   const from = (table: string): unknown => {
@@ -203,12 +224,66 @@ function buildSupabase(options: SupabaseStubOptions): SupabaseStub {
     }
 
     if (table === 'merchants') {
+      // The action uses .maybeSingle() for the ownership check; the
+      // learning loop uses an awaitable .limit(1) for the canonical-name
+      // lookup, and .insert(...).select().single() for fresh creates.
+      return {
+        select: () =>
+          makeBuilder(
+            { data: options.existingMerchants ?? [], error: null },
+            {
+              maybeSingle: { data: options.merchantOwner ?? null, error: null },
+            },
+          ),
+        insert: (payload: Record<string, unknown>) => {
+          merchantInserts.push(payload);
+          return makeBuilder(
+            { data: null, error: null },
+            {
+              single: {
+                data: options.insertedMerchant ?? { id: 'merchant-new' },
+                error: null,
+              },
+            },
+          );
+        },
+        update: () => makeBuilder({ data: null, error: null }),
+      };
+    }
+
+    if (table === 'merchant_aliases') {
       return {
         select: () =>
           makeBuilder({
-            data: options.merchantOwner ?? null,
+            data: options.aliasRows ?? [],
             error: null,
           }),
+        insert: (payload: Record<string, unknown>) => {
+          aliasInserts.push(payload);
+          return makeBuilder(
+            { data: null, error: null },
+            {
+              single: {
+                data: options.insertedAlias ?? { id: 'alias-new' },
+                error: null,
+              },
+            },
+          );
+        },
+      };
+    }
+
+    if (table === 'user_corrections') {
+      return {
+        select: () =>
+          makeBuilder({
+            data: options.correctionRows ?? [],
+            error: null,
+          }),
+        insert: (payload: Record<string, unknown>) => {
+          correctionInserts.push(payload);
+          return makeBuilder({ data: null, error: null });
+        },
       };
     }
 
@@ -233,6 +308,9 @@ function buildSupabase(options: SupabaseStubOptions): SupabaseStub {
       return parsedDeleteCalls;
     },
     batchUpdatePayloads,
+    correctionInserts,
+    merchantInserts,
+    aliasInserts,
   };
 }
 
@@ -681,6 +759,121 @@ describe('updateParsedTransaction', () => {
 
     expect(result).toEqual({ success: false, error: 'NOT_FOUND' });
     expect(stub.parsedUpdatePayloads).toHaveLength(0);
+  });
+
+  // ─── Learning loop wiring (F2-E4-T3) ────────────────────────────────
+
+  it('records a correction when the user overrides a non-deterministic suggestion', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      parsedRow: {
+        id: PARSED_ID_A,
+        batch_id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'pending_review',
+        raw_description: 'KONZUM, BL.',
+        category_id: null,
+        categorization_source: 'history',
+        categorization_confidence: 0.65,
+      },
+      categoryOwner: { id: CATEGORY_ID },
+      // Below the 3-correction threshold, so no alias creation.
+      correctionRows: [],
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+
+    const result = await updateParsedTransaction({
+      id: PARSED_ID_A,
+      batchId: BATCH_ID,
+      category_id: CATEGORY_ID,
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(stub.correctionInserts).toHaveLength(1);
+    expect(stub.correctionInserts[0]).toEqual(
+      expect.objectContaining({
+        user_id: USER_ID,
+        field: 'category',
+        description_normalized: 'konzum bl',
+        new_value: CATEGORY_ID,
+        source_before: 'history',
+        confidence_before: 0.65,
+      }),
+    );
+    expect(stub.merchantInserts).toHaveLength(0);
+    expect(stub.aliasInserts).toHaveLength(0);
+  });
+
+  it('does NOT learn from overrides on rule/alias_exact suggestions', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      parsedRow: {
+        id: PARSED_ID_A,
+        batch_id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'pending_review',
+        raw_description: 'KONZUM BL',
+        category_id: null,
+        categorization_source: 'rule', // user is overriding their own rule
+        categorization_confidence: 1,
+      },
+      categoryOwner: { id: CATEGORY_ID },
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+
+    const result = await updateParsedTransaction({
+      id: PARSED_ID_A,
+      batchId: BATCH_ID,
+      category_id: CATEGORY_ID,
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(stub.correctionInserts).toHaveLength(0);
+  });
+
+  it('reports aliasCreated=true after the third matching correction', async () => {
+    // Two prior corrections to the same category; this update is #3 which
+    // gets recorded *before* maybeCreateAlias runs and sees three matches
+    // — but our stub returns the corrections as the SELECT result, so we
+    // emulate the "post-insert state" by returning three rows.
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      parsedRow: {
+        id: PARSED_ID_A,
+        batch_id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'pending_review',
+        raw_description: 'KONZUM BL',
+        category_id: null,
+        categorization_source: 'history',
+        categorization_confidence: 0.7,
+      },
+      categoryOwner: { id: CATEGORY_ID },
+      correctionRows: [
+        { new_value: CATEGORY_ID },
+        { new_value: CATEGORY_ID },
+        { new_value: CATEGORY_ID },
+      ],
+      insertedMerchant: { id: 'merchant-konzum' },
+      insertedAlias: { id: 'alias-konzum' },
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+
+    const result = await updateParsedTransaction({
+      id: PARSED_ID_A,
+      batchId: BATCH_ID,
+      category_id: CATEGORY_ID,
+    });
+
+    expect(result).toEqual({ success: true, data: { aliasCreated: true } });
+    expect(stub.aliasInserts).toHaveLength(1);
+    expect(stub.aliasInserts[0]).toEqual(
+      expect.objectContaining({
+        user_id: USER_ID,
+        merchant_id: 'merchant-konzum',
+        pattern_type: 'contains',
+      }),
+    );
   });
 });
 
