@@ -54,6 +54,29 @@ export default async function PodesavanjaPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Pomoć i sigurnost</CardTitle>
+          <CardDescription>
+            Uputstvo za uvoz, česta pitanja i kako tretiramo podatke.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Link
+            href="/help"
+            className="inline-flex h-11 min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Pomoć (FAQ)
+          </Link>
+          <Link
+            href="/sigurnost"
+            className="inline-flex h-11 min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Sigurnost i privatnost
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Profil</CardTitle>
           <CardDescription>
             Osnovno o tebi i preferencije za valutu i jezik. Ovo nikad ne dijelimo sa trećim
@@ -79,9 +102,9 @@ export default async function PodesavanjaPage() {
         <CardHeader>
           <CardTitle>Kategorije</CardTitle>
           <CardDescription>
-            Ako ti nedostaju standardne kategorije (npr. nalog je kreiran prije ažuriranja aplikacije),
-            možeš ih ponovo uvesti. Ovo ne briše tvoje postojeće kategorije — samo dodaje one koje još
-            nemaju isti slug.
+            Ako ti nedostaju standardne kategorije (npr. nalog je kreiran prije ažuriranja
+            aplikacije), možeš ih ponovo uvesti. Ovo ne briše tvoje postojeće kategorije — samo
+            dodaje one koje još nemaju isti slug.
           </CardDescription>
         </CardHeader>
         <CardContent>

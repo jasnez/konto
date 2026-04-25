@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import { HelpCircle } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import type { AccountOption } from '@/components/account-select';
@@ -112,10 +114,22 @@ export default async function ImportPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 px-4 py-6 md:px-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">Uvezi izvod</h1>
-        <p className="text-base text-muted-foreground">
-          Odaberi račun, zatim prevuci bankarski PDF ili ga izaberi s uređaja.
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight">Uvezi izvod</h1>
+          <p className="text-base text-muted-foreground">
+            Odaberi račun, zatim prevuci bankarski PDF ili ga izaberi s uređaja.
+          </p>
+        </div>
+        <p>
+          <Link
+            href="/help#uvoz-pdf"
+            className="inline-flex min-h-11 min-w-0 items-center gap-1.5 rounded-md text-sm font-medium text-primary hover:underline"
+            title="Kratko u Pomoći: koraci, podrška banaka, učenje kategorija."
+          >
+            <HelpCircle className="h-4 w-4 shrink-0" aria-hidden />
+            Kako funkcioniše uvoz?
+          </Link>
         </p>
       </div>
 

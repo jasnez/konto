@@ -12,6 +12,15 @@
 
 Detaljna arhitektura i odluke: [dokumentacija u `/docs/`](./docs/00-README.md) i [ADRs u `docs/decisions/`](./docs/decisions/).
 
+## Faza 2 (produkt)
+
+Kratki pregled korisničkih mogućnosti u toku (PFM, bez direktne bankovne konekcije u ovom obimu):
+
+- **Uvoz bankarskog PDF-a** — upload u zaštićeno skladište, ekstrakcija teksta, PII redakcija, parsiranje preko **Gemini 2.5 Flash-Lite** (Google Generative Language API), ručni pregled i uvođenje transakcija u nalog. Zadržavanje PDF-a u skladištu usklađeno s ograničenjem (npr. 24h) i obris nakon uvođenja.
+- **Pomoć u aplikaciji** — rute `/help` (FAQ) i `/sigurnost` (sigurnost i privatnost, uključujući uvoz PDF-a).
+
+Detaljna mapa zadataka: [`docs/06-backlog.md`](./docs/06-backlog.md).
+
 ## Zahtjevi
 
 - [Node.js](https://nodejs.org/) (LTS)

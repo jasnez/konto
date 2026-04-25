@@ -10,6 +10,7 @@ import {
   Wallet,
   CreditCard,
   FileUp,
+  HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -54,6 +55,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: FileUp,
     desktopOnly: true,
   },
+  { href: '/help', label: 'Pomoć', mobileLabel: 'Pomoć', icon: HelpCircle, desktopOnly: true },
   { href: '/uvidi', label: 'Uvidi', mobileLabel: 'Uvidi', icon: PieChart, desktopOnly: true },
   { href: '/podesavanja', label: 'Podešavanja', mobileLabel: 'Više', icon: Settings },
 ];
@@ -74,6 +76,8 @@ export function isActive(pathname: string, href: string): boolean {
 }
 
 export function getPageTitleForPath(pathname: string): string {
+  if (pathname === '/sigurnost' || pathname.startsWith('/sigurnost/'))
+    return 'Sigurnost i privatnost';
   const match = NAV_ITEMS.find((item) => isActive(pathname, item.href));
   return match?.label ?? 'Konto';
 }
