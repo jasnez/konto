@@ -48,7 +48,7 @@ test('račun: kreiraj → uredi → obriši', async ({ page }, testInfo) => {
     await page.getByRole('button', { name: 'Meni za račun' }).first().click();
     await page.getByRole('menuitem', { name: 'Obriši' }).click();
     const confirmDelete = page
-      .getByRole('alertdialog', { name: 'Obrisati račun?' })
+      .getByRole('alertdialog', { name: /Obrisati račun/u })
       .getByRole('button', { name: 'Obriši' });
     if (isMobileSafari) {
       await clickDomButton(confirmDelete);

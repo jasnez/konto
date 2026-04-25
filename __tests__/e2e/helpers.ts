@@ -303,6 +303,8 @@ export async function e2eSeedImportBatchReady(input: {
       parse_confidence: parseConfidence,
       merchant_id: null as string | null,
       category_id: null as string | null,
+      categorization_source: 'none' as const,
+      categorization_confidence: 0,
       selected_for_import: true,
     }));
 
@@ -329,4 +331,47 @@ export async function e2eSeedImportBatchReady(input: {
   if (uErr) {
     throw new Error(`e2eSeedImportBatchReady update batch: ${uErr.message}`);
   }
+}
+
+/**
+ * Dva računa na /import da odabir računa bude stvaran (E2E import flow).
+ * Idempotentno: ne radi ništa ako korisnik već ima ≥2 neobrisanih računa.
+ */
+export async function ensureTwoE2EAccountsForImport(userId: string): Promise<void> {
+  const admin = makeAdminClient();
+  const { data: rows, error: listErr } = await admin
+    .from('accounts')
+    .select('id')
+    .eq('user_id', userId)
+    .is('deleted_at', null);
+  if (listErr) throw listErr;
+  if (rows.length >= 2) return;
+  const { error } = await admin.from('accounts').insert({
+    user_id: userId,
+    name: 'E2E Štedni',
+    type: 'savings',
+    currency: 'BAM',
+  });
+  if (error) throw error;
+}
+
+/**
+ * Eksplicitno uklanjanje uvozne sesije (korak cleanup u sporom import E2E).
+ */
+export async function e2eDeleteImportBatchById(batchId: string, userId: string): Promise<void> {
+  const admin = makeAdminClient();
+  const { error } = await admin
+    .from('import_batches')
+    .delete()
+    .eq('id', batchId)
+    .eq('user_id', userId);
+  if (error) {
+    console.error('e2eDeleteImportBatchById', { batchId, userId, message: error.message });
+  }
+}
+
+/** Spori import E2E u GitHub CI samo na `main` (ne na pull request). */
+export function e2eShouldRunSlowImportOnCi(): boolean {
+  if (!process.env.CI) return true;
+  return process.env.GITHUB_REF === 'refs/heads/main';
 }
