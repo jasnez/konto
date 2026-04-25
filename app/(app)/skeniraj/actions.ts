@@ -240,7 +240,8 @@ export async function analyzeReceipt(input: unknown): Promise<AnalyzeReceiptResu
   await supabase
     .from('receipt_scans')
     .update({ status: 'processing', error_message: null })
-    .eq('id', scan.id);
+    .eq('id', scan.id)
+    .eq('user_id', user.id);
 
   const { data: blob, error: dlErr } = await supabase.storage
     .from('receipts')
@@ -252,7 +253,8 @@ export async function analyzeReceipt(input: unknown): Promise<AnalyzeReceiptResu
         status: 'error',
         error_message: dlErr.message,
       })
-      .eq('id', scan.id);
+      .eq('id', scan.id)
+      .eq('user_id', user.id);
     return { success: false, error: 'STORAGE_ERROR' };
   }
 
@@ -269,7 +271,8 @@ export async function analyzeReceipt(input: unknown): Promise<AnalyzeReceiptResu
         extracted_json: extractedJson,
         extracted_at: new Date().toISOString(),
       })
-      .eq('id', scan.id);
+      .eq('id', scan.id)
+      .eq('user_id', user.id);
     return {
       success: false,
       error: 'LLM_ERROR',
@@ -285,7 +288,8 @@ export async function analyzeReceipt(input: unknown): Promise<AnalyzeReceiptResu
       extracted_at: new Date().toISOString(),
       error_message: null,
     })
-    .eq('id', scan.id);
+    .eq('id', scan.id)
+    .eq('user_id', user.id);
   if (upErr) {
     console.error('receipt_scan_update_error', { userId: user.id, error: upErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
@@ -430,7 +434,11 @@ export async function createTransactionFromReceipt(
   }
 
   // Link scan → transaction for fast detail-page lookup.
-  await supabase.from('receipt_scans').update({ transaction_id: tx.id }).eq('id', data.scan_id);
+  await supabase
+    .from('receipt_scans')
+    .update({ transaction_id: tx.id })
+    .eq('id', data.scan_id)
+    .eq('user_id', user.id);
 
   revalidatePath('/transakcije');
   revalidatePath(`/racuni/${data.account_id}`);

@@ -13,6 +13,11 @@ import {
   type CreateTransactionInputSchema,
 } from '@/lib/schemas/transaction';
 import { createClient } from '@/lib/supabase/server';
+import {
+  ensureOwnedAccount,
+  ensureOwnedCategory,
+  ensureOwnedMerchant,
+} from '@/lib/server/db/ensure-owned';
 import type { Database } from '@/supabase/types';
 
 type TransactionUpdate = Database['public']['Tables']['transactions']['Update'];
@@ -120,83 +125,6 @@ function shiftIsoDateByDays(date: string, deltaDays: number): string {
 
 function buildDuplicateWindowStart(transactionDate: string): string {
   return shiftIsoDateByDays(transactionDate, -30);
-}
-
-async function ensureOwnedAccount(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-  accountId: string,
-): Promise<{ ok: true; currency: string } | { ok: false; error: 'FORBIDDEN' | 'DATABASE_ERROR' }> {
-  const { data: account, error } = await supabase
-    .from('accounts')
-    .select('id,currency')
-    .eq('id', accountId)
-    .eq('user_id', userId)
-    .is('deleted_at', null)
-    .maybeSingle();
-
-  if (error) {
-    return { ok: false, error: 'DATABASE_ERROR' };
-  }
-  if (!account) {
-    return { ok: false, error: 'FORBIDDEN' };
-  }
-
-  return { ok: true, currency: account.currency };
-}
-
-async function ensureOwnedCategory(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-  categoryId: string | null,
-): Promise<{ ok: true } | { ok: false; error: 'FORBIDDEN' | 'DATABASE_ERROR' }> {
-  if (!categoryId) {
-    return { ok: true };
-  }
-
-  const { data: category, error } = await supabase
-    .from('categories')
-    .select('id')
-    .eq('id', categoryId)
-    .eq('user_id', userId)
-    .is('deleted_at', null)
-    .maybeSingle();
-
-  if (error) {
-    return { ok: false, error: 'DATABASE_ERROR' };
-  }
-  if (!category) {
-    return { ok: false, error: 'FORBIDDEN' };
-  }
-
-  return { ok: true };
-}
-
-async function ensureOwnedMerchant(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-  merchantId: string | null,
-): Promise<{ ok: true } | { ok: false; error: 'FORBIDDEN' | 'DATABASE_ERROR' }> {
-  if (!merchantId) {
-    return { ok: true };
-  }
-
-  const { data: merchant, error } = await supabase
-    .from('merchants')
-    .select('id')
-    .eq('id', merchantId)
-    .eq('user_id', userId)
-    .is('deleted_at', null)
-    .maybeSingle();
-
-  if (error) {
-    return { ok: false, error: 'DATABASE_ERROR' };
-  }
-  if (!merchant) {
-    return { ok: false, error: 'FORBIDDEN' };
-  }
-
-  return { ok: true };
 }
 
 async function getBaseCurrency(

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import nextPlugin from '@next/eslint-plugin-next';
 import eslintConfigPrettier from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
+import noUnguardedMutation from './eslint-rules/no-unguarded-mutation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -48,6 +49,25 @@ export default tseslint.config(
   {
     rules: {
       'no-console': ['warn', { allow: ['warn', 'error'] }],
+    },
+  },
+  // DL-8: Enforce .eq('user_id', ...) on every Supabase mutation against user-owned tables.
+  // Applies to server-side code only (actions, API routes, server utilities, Edge functions).
+  // To suppress for a legitimate cross-table ownership case:
+  //   // eslint-disable-next-line local/no-unguarded-mutation -- ownership verified via <explain>
+  {
+    files: [
+      'app/**/*.ts',
+      'app/**/*.tsx',
+      'lib/server/**/*.ts',
+      'lib/**/*.ts',
+      'supabase/functions/**/*.ts',
+    ],
+    plugins: {
+      local: { rules: { 'no-unguarded-mutation': noUnguardedMutation } },
+    },
+    rules: {
+      'local/no-unguarded-mutation': 'error',
     },
   },
   // Deno Edge functions: not part of the Next.js tsconfig (remote https imports).

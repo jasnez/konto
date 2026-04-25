@@ -204,11 +204,11 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
         userId: user.id,
         error: obCatError.message,
       });
-      await supabase.from('accounts').delete().eq('id', newId);
+      await supabase.from('accounts').delete().eq('id', newId).eq('user_id', user.id);
       return { success: false, error: 'DATABASE_ERROR' };
     }
     if (!obCat) {
-      await supabase.from('accounts').delete().eq('id', newId);
+      await supabase.from('accounts').delete().eq('id', newId).eq('user_id', user.id);
       return { success: false, error: 'OPENING_BALANCE_CATEGORY_MISSING' };
     }
 
@@ -227,7 +227,7 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
         userId: user.id,
         error: error instanceof Error ? error.message : 'unknown',
       });
-      await supabase.from('accounts').delete().eq('id', newId);
+      await supabase.from('accounts').delete().eq('id', newId).eq('user_id', user.id);
       return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
     }
 
@@ -270,7 +270,7 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
 
     if (txError) {
       console.error('create_account_opening_tx_error', { userId: user.id, error: txError.message });
-      await supabase.from('accounts').delete().eq('id', newId);
+      await supabase.from('accounts').delete().eq('id', newId).eq('user_id', user.id);
       return { success: false, error: 'DATABASE_ERROR' };
     }
   }

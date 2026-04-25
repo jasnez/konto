@@ -190,7 +190,7 @@ export async function createInstallmentPlan(input: unknown): Promise<CreateInsta
       error: occErr.message,
     });
     // Roll back the plan.
-    await supabase.from('installment_plans').delete().eq('id', plan.id);
+    await supabase.from('installment_plans').delete().eq('id', plan.id).eq('user_id', user.id);
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -346,16 +346,17 @@ export async function markOccurrencePaid(occurrenceId: unknown): Promise<MarkOcc
   if (occ.state === 'posted') return { success: false, error: 'ALREADY_POSTED' };
   if (occ.state === 'skipped') return { success: false, error: 'NOT_FOUND' };
 
-  // Fetch parent plan for ownership + meta.
+  // Fetch parent plan — eq('user_id') enforces ownership at the query level so a missing
+  // row and a foreign-user row are indistinguishable (both return null → FORBIDDEN).
   const { data: plan, error: planErr } = await supabase
     .from('installment_plans')
     .select('id,user_id,account_id,currency,merchant_id,category_id,notes')
     .eq('id', occ.plan_id)
+    .eq('user_id', user.id)
     .maybeSingle();
 
   if (planErr) return { success: false, error: 'DATABASE_ERROR' };
   if (!plan) return { success: false, error: 'FORBIDDEN' };
-  if (plan.user_id !== user.id) return { success: false, error: 'FORBIDDEN' };
 
   const [profileResult, accountResult] = await Promise.all([
     supabase.from('profiles').select('base_currency').eq('id', user.id).maybeSingle(),

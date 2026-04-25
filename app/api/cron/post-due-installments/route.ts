@@ -165,6 +165,9 @@ export async function GET(request: Request) {
   // Mark plans as completed if all their occurrences are posted.
   const activeplanIds = [...new Set(occurrences.map((o) => o.plan_id))];
   for (const activePlanId of activeplanIds) {
+    const activePlan = planMap.get(activePlanId);
+    if (!activePlan) continue; // should not happen — plan was loaded above
+
     const { count: pendingCount } = await supabase
       .from('installment_occurrences')
       .select('id', { count: 'exact', head: true })
@@ -175,7 +178,8 @@ export async function GET(request: Request) {
       await supabase
         .from('installment_plans')
         .update({ status: 'completed' })
-        .eq('id', activePlanId);
+        .eq('id', activePlanId)
+        .eq('user_id', activePlan.user_id);
     }
   }
 
