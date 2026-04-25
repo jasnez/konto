@@ -1,5 +1,6 @@
 /**
- * Integration test for the `update_account_balance` trigger (migration 00013).
+ * Integration test for the `update_account_balance` trigger (migrations 00013,
+ * 00035 multi-currency sum).
  *
  * Uses the local Supabase stack and skips itself unless RUN_INTEGRATION_TESTS
  * is set — same convention as `transactions.test.ts`. To run locally:
@@ -180,6 +181,30 @@ describe.skipIf(!shouldRun)('update_account_balance trigger', () => {
 
     expect(await getBalance(admin, accountAId)).toBe(-1200n);
     expect(await getBalance(admin, accountBId)).toBe(1200n);
+  });
+
+  it('BAM account + foreign original uses base_amount_cents for balance (e.g. receipt SEK)', async () => {
+    const originalSek = -34_217; // −342.17 SEK (minor units)
+    const baseBam = -6185; // −61.85 KM — must drive balance, not originalSek
+    const { data, error } = await admin
+      .from('transactions')
+      .insert({
+        user_id: userId,
+        account_id: accountAId,
+        original_amount_cents: originalSek,
+        original_currency: 'SEK',
+        base_amount_cents: baseBam,
+        base_currency: 'BAM',
+        transaction_date: TODAY,
+        source: 'import_receipt',
+      })
+      .select('id')
+      .single();
+    if (error) throw error;
+    expect(data).toBeDefined();
+    expect(data.id).toBeDefined();
+
+    expect(await getBalance(admin, accountAId)).toBe(BigInt(baseBam));
   });
 
   it('balance is zero for a brand-new account with no transactions', async () => {
