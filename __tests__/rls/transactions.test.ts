@@ -109,6 +109,7 @@ describe.skipIf(!shouldRun)('transactions RLS', () => {
       original_currency: 'BAM',
       base_amount_cents: -100,
       base_currency: 'BAM',
+      account_ledger_cents: -100,
       transaction_date: new Date().toISOString().slice(0, 10),
       source: 'manual',
     });
@@ -123,6 +124,7 @@ describe.skipIf(!shouldRun)('transactions RLS', () => {
       original_currency: 'BAM',
       base_amount_cents: -9999,
       base_currency: 'BAM',
+      account_ledger_cents: -9999,
       transaction_date: new Date().toISOString().slice(0, 10),
       source: 'manual',
     });

@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { computeDedupHash } from '@/lib/dedup';
+import { computeAccountLedgerCents } from '@/lib/fx/account-ledger';
 import { convertToBase } from '@/lib/fx/convert';
 import { extractReceiptFields } from '@/lib/llm/gemini-receipt';
 import {
@@ -373,6 +374,24 @@ export async function createTransactionFromReceipt(
     return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
   }
 
+  let ledgerCents: bigint;
+  try {
+    ledgerCents = await computeAccountLedgerCents(
+      account.currency,
+      signedCents,
+      data.currency,
+      fxResult.baseCents,
+      baseCurrency,
+      data.transaction_date,
+    );
+  } catch (err) {
+    console.error('receipt_ledger_fx_error', {
+      userId: user.id,
+      error: err instanceof Error ? err.message : 'unknown',
+    });
+    return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+  }
+
   const dedupHash = computeDedupHash({
     account_id: data.account_id,
     amount_cents: signedCents,
@@ -389,6 +408,7 @@ export async function createTransactionFromReceipt(
       original_currency: data.currency,
       base_amount_cents: bigintToDbInt(fxResult.baseCents),
       base_currency: baseCurrency,
+      account_ledger_cents: bigintToDbInt(ledgerCents),
       fx_rate: fxResult.fxRate,
       fx_rate_date: fxResult.fxRateDate,
       fx_stale: fxResult.fxStale,

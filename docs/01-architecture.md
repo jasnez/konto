@@ -869,26 +869,11 @@ Ovo je živa lista; inicijalno seedaj top ~100 merchanta u `/db/seeds/merchants-
 
 **Šta je denormalizovano (i zašto):**
 
-- `accounts.current_balance_cents` — računa se kroz trigger na `transactions` insert/update/delete (puni re-sum po računu, ne delta). Saldo je u **valuti računa**: za svaki red uzima se `original_amount_cents` ako `original_currency` odgovara valuti računa, inače `base_amount_cents` ako `base_currency` odgovara (npr. skenirani račun u SEK na BAM računu — uticaj u KM). Ako ni jedno ne odgovara (npr. EUR račun, `base` i dalje u BAM), fallback je `original_amount_cents` (ograničenje sheme; rijetko u praksi). Alternativa (live sum u aplikaciji) je presporo za dashboard sa 5000+ transakcija. Izvedeno poljem je kompromis; može se rebuildati iz primary data kroz RPC funkciju.
+- `accounts.current_balance_cents` — računa se kroz trigger na `transactions` insert/update/delete (puni re-sum: `sum(account_ledger_cents)`). Kolona `account_ledger_cents` na transakciji = potpisani iznos u **valuti tog računa** (aplikacijski izračun, uključujući FX u valutu računa kada strani `original` i korisnički `base` nisu ista valuta kao račun — npr. profil EUR, tekući BAM, račun u SEK). Alternativa (live sum u aplikaciji) je presporo za dashboard sa 5000+ transakcija. Izvedeno poljem je kompromis; može se rebuildati iz primary data kroz RPC funkciju.
 - `merchants.transaction_count` — trigger update-uje na svakoj tx operaciji.
 - `categorization_rules.applied_count` — update-uje se u aplikacionom sloju.
 
-**Trigger pattern (stvarna implementacija, migracije 00013 + 00035):** Funkcija `update_account_balance()` nakon svakog INSERT/UPDATE/DELETE na `transactions` ponovo računa potpuni zbir za sve pogođene račune (`current_balance_cents = SUM(...)`). Zbir po transakciji:
-
-- `original_amount_cents` kad `original_currency` = valuta računa (standardni ručni unos, transfer, izvod u KM);
-- inače `base_amount_cents` kad `base_currency` = valuta računa (strana valuta na BAM računu, `base` = korisnikova bazna valuta);
-- inače fallback na `original_amount_cents`.
-
-```sql
--- Pojednostavljen izraz u SUM (stvarni trigger koristi PL/pgSQL i ažurira sve pogođene account_id):
-sum(
-  case
-    when upper(t.original_currency) = upper(a.currency) then t.original_amount_cents
-    when upper(t.base_currency) = upper(a.currency) then t.base_amount_cents
-    else t.original_amount_cents
-  end
-)
-```
+**Trigger pattern (migracija 00036+):** Funkcija `update_account_balance()` nakon svakog INSERT/UPDATE/DELETE na `transactions` postavlja `current_balance_cents = coalesce(sum(t.account_ledger_cents) …)` — jedan izvor istine, bez CASE u bazi. Aplikacija i RPC (`create_transfer_pair`, `finalize_import_batch`) uvek pune `account_ledger_cents` pri umetanju.
 
 **Važno:** Ako ikad radiš bulk operaciju (import 500 transakcija), privremeno disable-uj trigger i rebuild balance na kraju — inače je N× sporije.
 

@@ -62,6 +62,7 @@ describe.skipIf(!shouldRun)('update_account_balance trigger', () => {
         original_currency: 'BAM',
         base_amount_cents: amount,
         base_currency: 'BAM',
+        account_ledger_cents: amount,
         transaction_date: TODAY,
         source: 'manual',
       })
@@ -121,13 +122,13 @@ describe.skipIf(!shouldRun)('update_account_balance trigger', () => {
     expect(await getBalance(admin, accountAId)).toBe(3500n);
   });
 
-  it('UPDATE to original_amount_cents re-syncs the balance', async () => {
+  it('UPDATE to account_ledger_cents (and amounts) re-syncs the balance', async () => {
     const txId = await insertTx({ userId, accountId: accountAId, amount: 1000 });
     expect(await getBalance(admin, accountAId)).toBe(1000n);
 
     const { error } = await admin
       .from('transactions')
-      .update({ original_amount_cents: 4200 })
+      .update({ original_amount_cents: 4200, account_ledger_cents: 4200, base_amount_cents: 4200 })
       .eq('id', txId);
     expect(error).toBeNull();
     expect(await getBalance(admin, accountAId)).toBe(4200n);
@@ -195,6 +196,7 @@ describe.skipIf(!shouldRun)('update_account_balance trigger', () => {
         original_currency: 'SEK',
         base_amount_cents: baseBam,
         base_currency: 'BAM',
+        account_ledger_cents: baseBam,
         transaction_date: TODAY,
         source: 'import_receipt',
       })

@@ -107,6 +107,8 @@ interface SupabaseStubOptions {
   storageRemoveError?: { message: string } | null;
   parsedRow?: ParsedOwnership | null;
   togglePartialUpdated?: { id: string }[];
+  /** Import target account: used for `account_ledger_cents` (defaults to BAM). */
+  account?: { currency: string };
   categoryOwner?: { id: string } | null;
   merchantOwner?: { id: string } | null;
   /** Rows returned by the `user_corrections` SELECT in `maybeCreateAlias`. */
@@ -181,6 +183,17 @@ function buildSupabase(options: SupabaseStubOptions): SupabaseStub {
           batchUpdatePayloads.push(payload);
           return makeBuilder({ data: null, error: null });
         },
+      };
+    }
+
+    if (table === 'accounts') {
+      const accRow = { currency: options.account?.currency ?? 'BAM' };
+      return {
+        select: () =>
+          makeBuilder(
+            { data: accRow, error: null },
+            { maybeSingle: { data: accRow, error: null } },
+          ),
       };
     }
 
@@ -402,6 +415,7 @@ describe('finalizeImport', () => {
           original_currency: 'EUR',
           base_amount_cents: -4890,
           base_currency: 'BAM',
+          account_ledger_cents: -4890,
           fx_rate: 1.9558,
           fx_rate_date: '2026-04-10',
           fx_stale: false,
@@ -762,11 +776,13 @@ describe('finalizeImport', () => {
     const row = finalize[1].p_rows[0] as {
       base_amount_cents: number;
       base_currency: string;
+      account_ledger_cents: number;
       fx_rate: number;
       fx_rate_date: string;
       fx_stale: boolean;
     };
     expect(row.base_amount_cents).toBe(-19_558);
+    expect(row.account_ledger_cents).toBe(-19_558);
     expect(row.base_currency).toBe('BAM');
     expect(row.fx_rate).toBe(1.95583);
     expect(row.fx_rate_date).toBe('2026-03-15');

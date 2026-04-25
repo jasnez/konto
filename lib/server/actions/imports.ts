@@ -6,6 +6,7 @@ import { z } from 'zod';
 import type { CategorizationSource } from '@/lib/categorization/cascade';
 import { maybeCreateAlias, recordCorrection } from '@/lib/categorization/learn';
 import { computeDedupHash } from '@/lib/dedup';
+import { computeAccountLedgerCents } from '@/lib/fx/account-ledger';
 import { convertToBase } from '@/lib/fx/convert';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -610,6 +611,7 @@ interface PreparedImportRow {
   original_currency: string;
   base_amount_cents: number;
   base_currency: string;
+  account_ledger_cents: number;
   fx_rate: number;
   fx_rate_date: string;
   fx_stale: boolean;
@@ -695,6 +697,22 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
   }
   const baseCurrency = profile?.base_currency ?? 'BAM';
 
+  const { data: importAccount, error: acctErr } = await supabase
+    .from('accounts')
+    .select('currency')
+    .eq('id', accountId)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (acctErr) {
+    console.error('finalize_import_account', { userId: user.id, error: acctErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  if (!importAccount) {
+    return { success: false, error: 'NOT_FOUND' };
+  }
+  const accountCurrency = importAccount.currency;
+
   // 3. Compute FX + dedup hash per row in Node (network calls allowed here).
   const prepared: (PreparedImportRow & { sourceId: string })[] = [];
   for (const row of staging) {
@@ -708,6 +726,24 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
       );
     } catch (error) {
       console.error('finalize_import_fx', {
+        userId: user.id,
+        error: error instanceof Error ? error.message : 'unknown',
+      });
+      return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+    }
+
+    let ledgerCents: bigint;
+    try {
+      ledgerCents = await computeAccountLedgerCents(
+        accountCurrency,
+        BigInt(row.amount_minor),
+        row.currency,
+        fx.baseCents,
+        baseCurrency,
+        row.transaction_date,
+      );
+    } catch (error) {
+      console.error('finalize_import_ledger_fx', {
         userId: user.id,
         error: error instanceof Error ? error.message : 'unknown',
       });
@@ -728,6 +764,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
       original_currency: row.currency,
       base_amount_cents: bigintToDbInt(fx.baseCents),
       base_currency: baseCurrency,
+      account_ledger_cents: bigintToDbInt(ledgerCents),
       fx_rate: fx.fxRate,
       fx_rate_date: fx.fxRateDate,
       fx_stale: fx.fxStale,
@@ -773,6 +810,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
     original_currency: r.original_currency,
     base_amount_cents: r.base_amount_cents,
     base_currency: r.base_currency,
+    account_ledger_cents: r.account_ledger_cents,
     fx_rate: r.fx_rate,
     fx_rate_date: r.fx_rate_date,
     fx_stale: r.fx_stale,

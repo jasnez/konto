@@ -9,6 +9,7 @@ import {
   ReorderAccountsSchema,
   UpdateAccountSchema,
 } from '@/lib/accounts/validation';
+import { computeAccountLedgerCents } from '@/lib/fx/account-ledger';
 import { convertToBase } from '@/lib/fx/convert';
 import type { Database } from '@/supabase/types';
 
@@ -219,6 +220,25 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
       return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
     }
 
+    let openingLedger: bigint;
+    try {
+      openingLedger = await computeAccountLedgerCents(
+        currency,
+        initial,
+        currency,
+        fxConversion.baseCents,
+        baseCurrency,
+        txDate,
+      );
+    } catch (error) {
+      console.error('create_account_opening_ledger_error', {
+        userId: user.id,
+        error: error instanceof Error ? error.message : 'unknown',
+      });
+      await supabase.from('accounts').delete().eq('id', newId);
+      return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+    }
+
     const { error: txError } = await supabase.from('transactions').insert({
       user_id: user.id,
       account_id: newId,
@@ -226,6 +246,7 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
       original_currency: currency,
       base_amount_cents: centsToDbInt(fxConversion.baseCents),
       base_currency: baseCurrency,
+      account_ledger_cents: centsToDbInt(openingLedger),
       fx_rate: fxConversion.fxRate,
       fx_rate_date: fxConversion.fxRateDate,
       fx_stale: fxConversion.fxStale,

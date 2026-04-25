@@ -193,6 +193,7 @@ describe('createAccount', () => {
         original_currency: 'BAM',
         base_amount_cents: 5113,
         base_currency: 'EUR',
+        account_ledger_cents: 10000,
         fx_rate: 0.51129,
         fx_rate_date: '2026-01-15',
         fx_stale: false,

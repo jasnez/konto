@@ -786,6 +786,7 @@ export type Database = {
       transactions: {
         Row: {
           account_id: string;
+          account_ledger_cents: number;
           attachments: Json | null;
           base_amount_cents: number;
           base_currency: string;
@@ -828,6 +829,7 @@ export type Database = {
         };
         Insert: {
           account_id: string;
+          account_ledger_cents: number;
           attachments?: Json | null;
           base_amount_cents: number;
           base_currency: string;
@@ -870,6 +872,7 @@ export type Database = {
         };
         Update: {
           account_id?: string;
+          account_ledger_cents?: number;
           attachments?: Json | null;
           base_amount_cents?: number;
           base_currency?: string;

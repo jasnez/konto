@@ -190,6 +190,7 @@ describe('transaction actions', () => {
     expect(result).toEqual({ success: true, data: { id: 'tx-fx-bam' } });
     expect(insertedPayload?.original_amount_cents).toBe(10000);
     expect(insertedPayload?.base_amount_cents).toBe(10000);
+    expect(insertedPayload?.account_ledger_cents).toBe(10000);
   });
 
   it('FX conversion EUR->BAM applies currency board rate', async () => {
@@ -228,6 +229,7 @@ describe('transaction actions', () => {
 
     expect(result).toEqual({ success: true, data: { id: 'tx-fx-eur' } });
     expect(insertedPayload?.base_amount_cents).toBe(19558);
+    expect(insertedPayload?.account_ledger_cents).toBe(10000);
   });
 
   it('delete sets deleted_at', async () => {

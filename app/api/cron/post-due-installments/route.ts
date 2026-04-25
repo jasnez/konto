@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { computeAccountLedgerCents } from '@/lib/fx/account-ledger';
 import { convertToBase } from '@/lib/fx/convert';
 import { createClient } from '@/lib/supabase/server';
 
@@ -93,6 +94,25 @@ export async function GET(request: Request) {
       continue;
     }
 
+    let ledgerCents: bigint;
+    try {
+      ledgerCents = await computeAccountLedgerCents(
+        currency,
+        signedCents,
+        currency,
+        fxResult.baseCents,
+        baseCurrency,
+        occ.due_date,
+      );
+    } catch (err) {
+      console.error('post_due_installments_ledger_error', {
+        occurrenceId: occ.id,
+        error: err instanceof Error ? err.message : 'unknown',
+      });
+      failed++;
+      continue;
+    }
+
     const { data: tx, error: txErr } = await supabase
       .from('transactions')
       .insert({
@@ -102,6 +122,7 @@ export async function GET(request: Request) {
         original_currency: currency,
         base_amount_cents: Number(fxResult.baseCents),
         base_currency: baseCurrency,
+        account_ledger_cents: Number(ledgerCents),
         fx_rate: fxResult.fxRate,
         fx_rate_date: fxResult.fxRateDate,
         fx_stale: fxResult.fxStale,

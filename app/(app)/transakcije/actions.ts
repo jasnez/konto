@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { computeDedupHash } from '@/lib/dedup';
+import { computeAccountLedgerCents } from '@/lib/fx/account-ledger';
 import { convertToBase } from '@/lib/fx/convert';
 import {
   BulkDeleteTransactionIdsSchema,
@@ -339,6 +340,15 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
     return { success: false, error: 'DUPLICATE', duplicateId: duplicate.id };
   }
 
+  const ledgerCents = await computeAccountLedgerCents(
+    ownedAccount.currency,
+    parsedData.amount_cents,
+    parsedData.currency,
+    fxResult.baseCents,
+    baseCurrencyResult.value,
+    parsedData.transaction_date,
+  );
+
   const { data: tx, error } = await supabase
     .from('transactions')
     .insert({
@@ -348,6 +358,7 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
       original_currency: parsedData.currency,
       base_amount_cents: bigintToDbInt(fxResult.baseCents),
       base_currency: baseCurrencyResult.value,
+      account_ledger_cents: bigintToDbInt(ledgerCents),
       fx_rate: fxResult.fxRate,
       fx_rate_date: fxResult.fxRateDate,
       fx_stale: fxResult.fxStale,
@@ -569,12 +580,22 @@ export async function updateTransaction(
     return { success: false, error: 'DUPLICATE', duplicateId: duplicate.id };
   }
 
+  const ledgerCents = await computeAccountLedgerCents(
+    ownedAccount.currency,
+    finalInput.amount_cents,
+    finalInput.currency,
+    fxResult.baseCents,
+    baseCurrencyResult.value,
+    finalInput.transaction_date,
+  );
+
   const patch: TransactionUpdate = {
     account_id: finalInput.account_id,
     original_amount_cents: bigintToDbInt(finalInput.amount_cents),
     original_currency: finalInput.currency,
     base_amount_cents: bigintToDbInt(fxResult.baseCents),
     base_currency: baseCurrencyResult.value,
+    account_ledger_cents: bigintToDbInt(ledgerCents),
     fx_rate: fxResult.fxRate,
     fx_rate_date: fxResult.fxRateDate,
     fx_stale: fxResult.fxStale,

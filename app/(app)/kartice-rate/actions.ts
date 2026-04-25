@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { computeAccountLedgerCents } from '@/lib/fx/account-ledger';
 import { convertToBase } from '@/lib/fx/convert';
 import {
   CancelInstallmentPlanSchema,
@@ -214,6 +215,26 @@ export async function createInstallmentPlan(input: unknown): Promise<CreateInsta
       return { success: true, data: { planId: plan.id } };
     }
 
+    let ledgerCents: bigint;
+    try {
+      ledgerCents = await computeAccountLedgerCents(
+        data.currency,
+        signedCents,
+        data.currency,
+        fxResult.baseCents,
+        baseCurrency,
+        firstOcc.due_date,
+      );
+    } catch (err) {
+      console.error('create_installment_ledger_error', {
+        userId: user.id,
+        planId: plan.id,
+        error: err instanceof Error ? err.message : 'unknown',
+      });
+      revalidatePath('/kartice-rate');
+      return { success: true, data: { planId: plan.id } };
+    }
+
     const { data: tx, error: txErr } = await supabase
       .from('transactions')
       .insert({
@@ -223,6 +244,7 @@ export async function createInstallmentPlan(input: unknown): Promise<CreateInsta
         original_currency: data.currency,
         base_amount_cents: bigintToDbInt(fxResult.baseCents),
         base_currency: baseCurrency,
+        account_ledger_cents: bigintToDbInt(ledgerCents),
         fx_rate: fxResult.fxRate,
         fx_rate_date: fxResult.fxRateDate,
         fx_stale: fxResult.fxStale,
@@ -358,6 +380,25 @@ export async function markOccurrencePaid(occurrenceId: unknown): Promise<MarkOcc
     return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
   }
 
+  let ledgerCents: bigint;
+  try {
+    ledgerCents = await computeAccountLedgerCents(
+      currency,
+      signedCents,
+      currency,
+      fxResult.baseCents,
+      baseCurrency,
+      occ.due_date,
+    );
+  } catch (err) {
+    console.error('mark_occurrence_paid_ledger_error', {
+      userId: user.id,
+      occurrenceId: occ.id,
+      error: err instanceof Error ? err.message : 'unknown',
+    });
+    return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+  }
+
   const { data: tx, error: txErr } = await supabase
     .from('transactions')
     .insert({
@@ -367,6 +408,7 @@ export async function markOccurrencePaid(occurrenceId: unknown): Promise<MarkOcc
       original_currency: currency,
       base_amount_cents: bigintToDbInt(fxResult.baseCents),
       base_currency: baseCurrency,
+      account_ledger_cents: bigintToDbInt(ledgerCents),
       fx_rate: fxResult.fxRate,
       fx_rate_date: fxResult.fxRateDate,
       fx_stale: fxResult.fxStale,
