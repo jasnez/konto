@@ -1,4 +1,4 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+﻿export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   graphql_public: {
@@ -300,6 +300,7 @@ export type Database = {
           account_id: string | null;
           checksum: string;
           created_at: string;
+          dedup_skipped: number;
           error_message: string | null;
           id: string;
           imported_at: string | null;
@@ -318,6 +319,7 @@ export type Database = {
           account_id?: string | null;
           checksum: string;
           created_at?: string;
+          dedup_skipped?: number;
           error_message?: string | null;
           id?: string;
           imported_at?: string | null;
@@ -336,6 +338,7 @@ export type Database = {
           account_id?: string | null;
           checksum?: string;
           created_at?: string;
+          dedup_skipped?: number;
           error_message?: string | null;
           id?: string;
           imported_at?: string | null;
@@ -1023,8 +1026,12 @@ export type Database = {
         Returns: Json;
       };
       finalize_import_batch: {
-        Args: { p_batch_id: string; p_rows: Json };
+        Args: { p_batch_id: string; p_dedup_skipped?: number; p_rows: Json };
         Returns: Json;
+      };
+      import_dedup_filter: {
+        Args: { p_account_id: string; p_rows: Json };
+        Returns: number[];
       };
       get_monthly_summary:
         | {

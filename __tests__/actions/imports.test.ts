@@ -6,7 +6,6 @@ import {
   togglePartialExclusion,
   updateParsedTransaction,
 } from '@/lib/server/actions/imports';
-import { computeDedupHash } from '@/lib/dedup';
 import { convertToBase } from '@/lib/fx/convert';
 import { createClient } from '@/lib/supabase/server';
 
@@ -84,11 +83,6 @@ interface ProfileRow {
   base_currency: string;
 }
 
-interface ExistingTxRow {
-  dedup_hash: string | null;
-  transaction_date: string;
-}
-
 interface ParsedOwnership {
   id: string;
   batch_id: string;
@@ -105,7 +99,9 @@ interface SupabaseStubOptions {
   batch?: BatchRow | null;
   staging?: StagedRow[];
   profile?: ProfileRow | null;
-  existingTransactions?: ExistingTxRow[];
+  /** Indices (0-based) to skip from `import_dedup_filter` RPC. */
+  dedupSkipIndices?: number[];
+  importDedupError?: { message: string } | null;
   rpcResult?: unknown;
   rpcError?: { message: string } | null;
   storageRemoveError?: { message: string } | null;
@@ -138,10 +134,28 @@ interface SupabaseStub {
 }
 
 function buildSupabase(options: SupabaseStubOptions): SupabaseStub {
-  const rpcSpy = vi.fn().mockResolvedValue({
-    data: options.rpcResult ?? { imported: options.staging?.length ?? 0 },
-    error: options.rpcError ?? null,
-  });
+  const rpcSpy = vi
+    .fn()
+    .mockImplementation((name: string, args: Record<string, unknown> | undefined) => {
+      if (name === 'import_dedup_filter') {
+        if (options.importDedupError) {
+          return Promise.resolve({ data: null, error: options.importDedupError });
+        }
+        return Promise.resolve({
+          data: options.dedupSkipIndices ?? [],
+          error: null,
+        });
+      }
+      if (name === 'finalize_import_batch') {
+        const pRows = args?.p_rows;
+        const n = Array.isArray(pRows) ? pRows.length : 0;
+        return Promise.resolve({
+          data: options.rpcResult ?? { imported: n },
+          error: options.rpcError ?? null,
+        });
+      }
+      return Promise.resolve({ data: null, error: { message: `unknown rpc: ${name}` } });
+    });
 
   const storageRemoveSpy = vi.fn().mockResolvedValue({
     data: null,
@@ -207,7 +221,7 @@ function buildSupabase(options: SupabaseStubOptions): SupabaseStub {
       return {
         select: () =>
           makeBuilder({
-            data: options.existingTransactions ?? [],
+            data: [],
             error: null,
           }),
       };
@@ -353,7 +367,6 @@ describe('finalizeImport', () => {
         },
       ],
       profile: { base_currency: 'BAM' },
-      existingTransactions: [],
       rpcResult: { imported: 1 },
     });
     vi.mocked(createClient).mockResolvedValue(stub.client as never);
@@ -369,8 +382,19 @@ describe('finalizeImport', () => {
 
     expect(result).toEqual({ success: true, data: { imported: 1, skippedDuplicates: 0 } });
     expect(convertToBase).toHaveBeenCalledWith(-2500n, 'EUR', 'BAM', '2026-04-10');
+    expect(stub.rpcSpy).toHaveBeenCalledWith('import_dedup_filter', {
+      p_account_id: ACCOUNT_ID,
+      p_rows: [
+        {
+          transaction_date: '2026-04-10',
+          original_amount_cents: -2500,
+          merchant_raw: 'KONZUM',
+        },
+      ],
+    });
     expect(stub.rpcSpy).toHaveBeenCalledWith('finalize_import_batch', {
       p_batch_id: BATCH_ID,
+      p_dedup_skipped: 0,
       p_rows: [
         expect.objectContaining({
           account_id: ACCOUNT_ID,
@@ -393,7 +417,7 @@ describe('finalizeImport', () => {
     expect(stub.storageRemoveSpy).toHaveBeenCalledWith(['user/1.pdf']);
   });
 
-  it('returns ALL_DUPLICATES without calling the RPC when every staged row already exists', async () => {
+  it('returns ALL_DUPLICATES without calling finalize_import_batch when the dedup pass skips every row', async () => {
     const stub = buildSupabase({
       user: { id: USER_ID },
       batch: {
@@ -415,17 +439,7 @@ describe('finalizeImport', () => {
         },
       ],
       profile: { base_currency: 'BAM' },
-      existingTransactions: [
-        {
-          dedup_hash: computeDedupHash({
-            account_id: ACCOUNT_ID,
-            amount_cents: -2500n,
-            date: '2026-04-10',
-            merchant: 'DUPE',
-          }),
-          transaction_date: '2026-04-10',
-        },
-      ],
+      dedupSkipIndices: [0],
     });
     vi.mocked(createClient).mockResolvedValue(stub.client as never);
     vi.mocked(convertToBase).mockResolvedValue({
@@ -439,8 +453,248 @@ describe('finalizeImport', () => {
     const result = await finalizeImport({ batchId: BATCH_ID });
 
     expect(result).toEqual({ success: false, error: 'ALL_DUPLICATES' });
-    expect(stub.rpcSpy).not.toHaveBeenCalled();
+    expect(stub.rpcSpy).toHaveBeenCalledWith('import_dedup_filter', expect.any(Object));
+    expect(stub.rpcSpy.mock.calls.some((c) => c[0] === 'finalize_import_batch')).toBe(false);
     expect(stub.storageRemoveSpy).not.toHaveBeenCalled();
+  });
+
+  it('skips the second row when it is a duplicate of the first (in-batch dedup)', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'ready',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+      },
+      staging: [
+        {
+          id: PARSED_ID_A,
+          transaction_date: '2026-04-10',
+          amount_minor: -100,
+          currency: 'BAM',
+          raw_description: 'KONZUM',
+          merchant_id: null,
+          category_id: null,
+        },
+        {
+          id: PARSED_ID_B,
+          transaction_date: '2026-04-10',
+          amount_minor: -100,
+          currency: 'BAM',
+          raw_description: 'KONZUM',
+          merchant_id: null,
+          category_id: null,
+        },
+      ],
+      profile: { base_currency: 'BAM' },
+      dedupSkipIndices: [1],
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+    vi.mocked(convertToBase).mockResolvedValue({
+      baseCents: -100n,
+      fxRate: 1,
+      fxRateDate: '2026-04-10',
+      fxSource: 'identity',
+      fxStale: false,
+    });
+
+    const result = await finalizeImport({ batchId: BATCH_ID });
+    expect(result).toEqual({ success: true, data: { imported: 1, skippedDuplicates: 1 } });
+    expect(convertToBase).toHaveBeenCalledTimes(2);
+    expect(stub.rpcSpy).toHaveBeenCalledWith(
+      'finalize_import_batch',
+      expect.objectContaining({
+        p_batch_id: BATCH_ID,
+        p_dedup_skipped: 1,
+      }),
+    );
+    const fin = stub.rpcSpy.mock.calls.find((c) => c[0] === 'finalize_import_batch')?.[1] as {
+      p_rows: unknown[];
+    };
+    expect(fin.p_rows).toHaveLength(1);
+  });
+
+  it('returns DATABASE_ERROR when import_dedup_filter fails', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'ready',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+      },
+      staging: [
+        {
+          id: PARSED_ID_A,
+          transaction_date: '2026-04-10',
+          amount_minor: -100,
+          currency: 'BAM',
+          raw_description: 'X',
+          merchant_id: null,
+          category_id: null,
+        },
+      ],
+      profile: { base_currency: 'BAM' },
+      importDedupError: { message: 'rpc failed' },
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+    vi.mocked(convertToBase).mockResolvedValue({
+      baseCents: -100n,
+      fxRate: 1,
+      fxRateDate: '2026-04-10',
+      fxSource: 'identity',
+      fxStale: false,
+    });
+
+    const result = await finalizeImport({ batchId: BATCH_ID });
+    expect(result).toEqual({ success: false, error: 'DATABASE_ERROR' });
+    expect(stub.rpcSpy.mock.calls.some((c) => c[0] === 'finalize_import_batch')).toBe(false);
+  });
+
+  it('does not treat different dates as duplicates (orchestration: no skip from RPC)', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'ready',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+      },
+      staging: [
+        {
+          id: PARSED_ID_A,
+          transaction_date: '2026-04-10',
+          amount_minor: -100,
+          currency: 'BAM',
+          raw_description: 'SHOP',
+          merchant_id: null,
+          category_id: null,
+        },
+        {
+          id: PARSED_ID_B,
+          transaction_date: '2026-04-12',
+          amount_minor: -100,
+          currency: 'BAM',
+          raw_description: 'SHOP',
+          merchant_id: null,
+          category_id: null,
+        },
+      ],
+      profile: { base_currency: 'BAM' },
+      dedupSkipIndices: [],
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+    vi.mocked(convertToBase).mockResolvedValue({
+      baseCents: -100n,
+      fxRate: 1,
+      fxRateDate: '2026-04-10',
+      fxSource: 'identity',
+      fxStale: false,
+    });
+
+    const result = await finalizeImport({ batchId: BATCH_ID });
+    expect(result).toEqual({ success: true, data: { imported: 2, skippedDuplicates: 0 } });
+    const fin = stub.rpcSpy.mock.calls.find((c) => c[0] === 'finalize_import_batch')?.[1] as {
+      p_rows: unknown[];
+    };
+    expect(fin.p_rows).toHaveLength(2);
+  });
+
+  it('does not treat different amounts as duplicates (orchestration)', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'ready',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+      },
+      staging: [
+        {
+          id: PARSED_ID_A,
+          transaction_date: '2026-04-10',
+          amount_minor: -100,
+          currency: 'BAM',
+          raw_description: 'SHOP',
+          merchant_id: null,
+          category_id: null,
+        },
+        {
+          id: PARSED_ID_B,
+          transaction_date: '2026-04-10',
+          amount_minor: -200,
+          currency: 'BAM',
+          raw_description: 'SHOP',
+          merchant_id: null,
+          category_id: null,
+        },
+      ],
+      profile: { base_currency: 'BAM' },
+      dedupSkipIndices: [],
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+    vi.mocked(convertToBase).mockResolvedValue({
+      baseCents: -100n,
+      fxRate: 1,
+      fxRateDate: '2026-04-10',
+      fxSource: 'identity',
+      fxStale: false,
+    });
+
+    const result = await finalizeImport({ batchId: BATCH_ID });
+    expect(result).toEqual({ success: true, data: { imported: 2, skippedDuplicates: 0 } });
+  });
+
+  it('allows "BINGO" vs "BINGO MARKET" when the RPC does not mark them as duplicates (trigram lives in SQL)', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'ready',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+      },
+      staging: [
+        {
+          id: PARSED_ID_A,
+          transaction_date: '2026-04-10',
+          amount_minor: -500,
+          currency: 'BAM',
+          raw_description: 'BINGO',
+          merchant_id: null,
+          category_id: null,
+        },
+        {
+          id: PARSED_ID_B,
+          transaction_date: '2026-04-10',
+          amount_minor: -500,
+          currency: 'BAM',
+          raw_description: 'BINGO MARKET',
+          merchant_id: null,
+          category_id: null,
+        },
+      ],
+      profile: { base_currency: 'BAM' },
+      /** Simulates similarity ≤ 0.8 between normalised strings in Postgres. */
+      dedupSkipIndices: [],
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+    vi.mocked(convertToBase).mockResolvedValue({
+      baseCents: -500n,
+      fxRate: 1,
+      fxRateDate: '2026-04-10',
+      fxSource: 'identity',
+      fxStale: false,
+    });
+
+    const result = await finalizeImport({ batchId: BATCH_ID });
+    expect(result).toEqual({ success: true, data: { imported: 2, skippedDuplicates: 0 } });
   });
 
   it('returns BAD_STATE when the batch is not in ready status', async () => {
@@ -497,9 +751,15 @@ describe('finalizeImport', () => {
     const result = await finalizeImport({ batchId: BATCH_ID });
     expect(result.success).toBe(true);
 
-    expect(stub.rpcSpy).toHaveBeenCalledTimes(1);
-    const args = stub.rpcSpy.mock.calls[0] as [string, { p_rows: unknown[] }];
-    const row = args[1].p_rows[0] as {
+    expect(stub.rpcSpy).toHaveBeenCalledTimes(2);
+    const finalize = stub.rpcSpy.mock.calls.find((c) => c[0] === 'finalize_import_batch') as
+      | [string, { p_rows: unknown[] }]
+      | undefined;
+    expect(finalize).toBeDefined();
+    if (finalize === undefined) {
+      throw new Error('expected finalize_import_batch in rpc calls');
+    }
+    const row = finalize[1].p_rows[0] as {
       base_amount_cents: number;
       base_currency: string;
       fx_rate: number;

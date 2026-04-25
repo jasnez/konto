@@ -39,6 +39,23 @@ function bigintToDbInt(value: bigint): number {
   return Number(value);
 }
 
+/** Parsed from `import_dedup_filter` (int[]); ignores out-of-range indices. */
+function parseDedupSkipIndices(raw: unknown, rowCount: number): Set<number> {
+  const out = new Set<number>();
+  if (!Array.isArray(raw)) {
+    return out;
+  }
+  for (const x of raw) {
+    let n: number | null = null;
+    if (typeof x === 'number' && Number.isInteger(x)) n = x;
+    else if (typeof x === 'string' && /^\d+$/.test(x)) n = parseInt(x, 10);
+    if (n !== null && n >= 0 && n < rowCount) {
+      out.add(n);
+    }
+  }
+  return out;
+}
+
 // ------------------------------------------------------------------
 // uploadStatement
 // ------------------------------------------------------------------
@@ -707,25 +724,26 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
     });
   }
 
-  // 4. Detect duplicates against existing transactions in one query.
-  const dedupHashes = prepared.map((r) => r.dedup_hash);
-  const { data: dupRows, error: dupErr } = await supabase
-    .from('transactions')
-    .select('dedup_hash, transaction_date')
-    .eq('user_id', user.id)
-    .is('deleted_at', null)
-    .in('dedup_hash', dedupHashes);
+  // 4. Duplicates: same account, date (±1 day), same amount, trigram
+  // similarity on normalised description > 0.8 — via RPC (also catches two
+  // identical lines in the same import).
+  const dedupPayload = prepared.map((r) => ({
+    transaction_date: r.transaction_date,
+    original_amount_cents: r.original_amount_cents,
+    merchant_raw: r.merchant_raw,
+  }));
 
-  if (dupErr) {
-    console.error('finalize_import_dup', { userId: user.id, error: dupErr.message });
+  const { data: rawSkip, error: dedupErr } = await supabase.rpc('import_dedup_filter', {
+    p_account_id: accountId,
+    p_rows: dedupPayload,
+  });
+  if (dedupErr) {
+    console.error('finalize_import_dedup', { userId: user.id, error: dedupErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
-
-  const duplicateHashes = new Set(
-    dupRows.map((r) => r.dedup_hash).filter((h): h is string => typeof h === 'string'),
-  );
-  const toInsert = prepared.filter((r) => !duplicateHashes.has(r.dedup_hash));
-  const skippedDuplicates = prepared.length - toInsert.length;
+  const skip = parseDedupSkipIndices(rawSkip, prepared.length);
+  const toInsert = prepared.filter((_, i) => !skip.has(i));
+  const skippedDuplicates = skip.size;
 
   if (toInsert.length === 0) {
     return { success: false, error: 'ALL_DUPLICATES' };
@@ -753,6 +771,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
   const { data: rpcData, error: rpcErr } = await supabase.rpc('finalize_import_batch', {
     p_batch_id: batchId,
     p_rows: rpcPayload,
+    p_dedup_skipped: skippedDuplicates,
   });
 
   if (rpcErr) {

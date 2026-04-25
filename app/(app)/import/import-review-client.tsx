@@ -367,11 +367,11 @@ export function ImportReviewClient({
         return;
       }
       if (res.data.skippedDuplicates > 0) {
-        toast.message(
-          `Uvezeno ${String(res.data.imported)}. Preskočeno kao duplikat: ${String(res.data.skippedDuplicates)}.`,
+        toast.success(
+          `Importovano ${String(res.data.imported)} transakcija. ${String(res.data.skippedDuplicates)} preskočene kao duplikati.`,
         );
       } else {
-        toast.success(`Uvezeno ${String(res.data.imported)} transakcija.`);
+        toast.success(`Importovano ${String(res.data.imported)} transakcija.`);
       }
       router.push('/transakcije');
     });
