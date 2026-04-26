@@ -2,6 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SummarySupabaseClient } from './summary';
 import { getMonthlySummary, resolveSummaryDateParts } from './summary';
 
+/**
+ * getMonthlySummary only maps get_monthly_summary JSON to bigint. Mjesečni prihod,
+ * trošak, neto i prosječni dnevni trošak nisu u TS poslovnoj logici — definiše ih
+ * isključivo SQL (npr. isključenje kategorije opening_balance). Ako RPC pukne,
+ * ti se iznosi ostanu 0; nema lokalne rekonstrukcije. Integracija: __tests__/rpc/get-monthly-summary.test.ts
+ */
+
 interface AccountRow {
   current_balance_cents: number;
   currency: string;
