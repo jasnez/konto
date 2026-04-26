@@ -1,5 +1,8 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
+import { guardCircuit, onFailure, onSuccess } from './gemini-circuit-breaker';
+import { withRetry } from './with-retry';
+export { CircuitOpenError } from './gemini-circuit-breaker';
 
 const SYSTEM_PROMPT = `
 Ti si asistent koji ekstraktuje transakcije iz bankarskih izvoda.
@@ -124,9 +127,20 @@ export async function parseStatementWithLLM(
     ? `Banka: ${bankHint}\n\nIzvod:\n${redactedText}`
     : `Izvod:\n${redactedText}`;
 
-  const result = await model.generateContent(userMessage, {
-    timeout: GEMINI_TIMEOUT_MS,
-  });
+  // Guard: throws CircuitOpenError if the breaker is OPEN and the recovery
+  // timeout has not elapsed yet.
+  guardCircuit();
+
+  let result: Awaited<ReturnType<typeof model.generateContent>>;
+  try {
+    result = await withRetry(() =>
+      model.generateContent(userMessage, { timeout: GEMINI_TIMEOUT_MS }),
+    );
+  } catch (err) {
+    onFailure();
+    throw err;
+  }
+  onSuccess();
 
   const raw = result.response.text();
   const parsed: unknown = JSON.parse(raw);

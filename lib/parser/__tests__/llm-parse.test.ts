@@ -15,8 +15,23 @@ vi.mock('@google/generative-ai', () => {
       return { generateContent: mockGenerateContent };
     }
   }
+  // Export real-looking error classes so with-retry.ts instanceof checks work.
+  class GoogleGenerativeAIError extends Error {}
+  class GoogleGenerativeAIFetchError extends GoogleGenerativeAIError {
+    status: number;
+    constructor(msg: string, status: number) {
+      super(msg);
+      this.status = status;
+    }
+  }
+  class GoogleGenerativeAIAbortError extends GoogleGenerativeAIError {}
+  class GoogleGenerativeAIRequestInputError extends GoogleGenerativeAIError {}
   return {
     GoogleGenerativeAI: MockGoogleGenerativeAI,
+    GoogleGenerativeAIError,
+    GoogleGenerativeAIFetchError,
+    GoogleGenerativeAIAbortError,
+    GoogleGenerativeAIRequestInputError,
     SchemaType: {
       STRING: 'string',
       NUMBER: 'number',
@@ -29,6 +44,7 @@ vi.mock('@google/generative-ai', () => {
 });
 
 import { parseStatementWithLLM, ParseResultSchema } from '../llm-parse';
+import { _resetCircuit } from '../gemini-circuit-breaker';
 
 const ORIGINAL_API_KEY = process.env.GEMINI_API_KEY;
 const LONG_TEXT = 'Datum 15.04.2026 Iznos 125,50 BAM opis MARKET SARAJEVO\n'.repeat(5);
@@ -43,6 +59,8 @@ beforeEach(() => {
   process.env.GEMINI_API_KEY = 'test-key';
   mockGenerateContent.mockReset();
   mockConstructor.mockReset();
+  // Reset circuit breaker so each test starts with a clean CLOSED state.
+  _resetCircuit();
 });
 
 afterEach(() => {

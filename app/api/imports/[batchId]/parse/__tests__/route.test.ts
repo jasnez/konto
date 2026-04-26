@@ -10,7 +10,16 @@ import { createClient } from '@/lib/supabase/server';
 vi.mock('@/lib/categorization/cascade', () => ({ runCategorizationCascade: vi.fn() }));
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }));
 vi.mock('@/lib/parser/extract-text', () => ({ extractPdfText: vi.fn() }));
-vi.mock('@/lib/parser/llm-parse', () => ({ parseStatementWithLLM: vi.fn() }));
+vi.mock('@/lib/parser/llm-parse', () => {
+  // Provide a stub CircuitOpenError so route.ts instanceof checks work under mock.
+  class CircuitOpenError extends Error {
+    constructor() {
+      super('circuit open');
+      this.name = 'CircuitOpenError';
+    }
+  }
+  return { parseStatementWithLLM: vi.fn(), CircuitOpenError };
+});
 vi.mock('@/lib/parser/ocr-fallback', () => ({ ocrFallback: vi.fn() }));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { runCategorizationCascade } from '@/lib/categorization/cascade';
 import { extractPdfText } from '@/lib/parser/extract-text';
 import { ocrFallback } from '@/lib/parser/ocr-fallback';
-import { parseStatementWithLLM } from '@/lib/parser/llm-parse';
+import { CircuitOpenError, parseStatementWithLLM } from '@/lib/parser/llm-parse';
 import { redactPII } from '@/lib/parser/redact-pii';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, IMPORT_PARSE_MAX, IMPORT_PARSE_WINDOW_SEC } from '@/lib/server/rate-limit';
@@ -32,6 +32,7 @@ type ParseErrorCode =
   | 'rate_limited'
   | 'pdf_not_found'
   | 'no_text_extracted'
+  | 'service_unavailable'
   | 'parse_failed';
 
 function jsonError(code: ParseErrorCode, status: number) {
@@ -202,15 +203,27 @@ export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
       warnings: parsed.warnings,
     });
   } catch (err) {
+    const isCircuitOpen = err instanceof CircuitOpenError;
     const message = err instanceof Error ? err.message : 'unknown';
-    logSafe('parse_route_error', { userId: user.id, batchId: batch.id, error: message });
+    logSafe('parse_route_error', {
+      userId: user.id,
+      batchId: batch.id,
+      error: message,
+      circuitOpen: isCircuitOpen,
+    });
 
+    // Preserve the batch in a retryable state when the circuit is open so the
+    // user can try again after the 60-second recovery window without re-uploading.
     await supabase
       .from('import_batches')
-      .update({ status: 'failed', error_message: message })
+      .update({
+        status: 'failed',
+        error_message: isCircuitOpen ? 'service_unavailable' : message,
+      })
       .eq('id', batch.id)
       .eq('user_id', user.id);
 
+    if (isCircuitOpen) return jsonError('service_unavailable', 503);
     return jsonError('parse_failed', 500);
   }
 }
