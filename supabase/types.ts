@@ -1,11 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: '14.5';
-  };
   graphql_public: {
     Tables: {
       [_ in never]: never;
@@ -275,24 +270,32 @@ export type Database = {
       };
       deletion_cancel_tokens: {
         Row: {
+          consumed_at: string;
+          expires_at: string;
           jti: string;
           user_id: string;
-          expires_at: string;
-          consumed_at: string;
         };
         Insert: {
+          consumed_at?: string;
+          expires_at: string;
           jti: string;
           user_id: string;
-          expires_at: string;
-          consumed_at?: string;
         };
         Update: {
+          consumed_at?: string;
+          expires_at?: string;
           jti?: string;
           user_id?: string;
-          expires_at?: string;
-          consumed_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'deletion_cancel_tokens_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       fx_rates: {
         Row: {

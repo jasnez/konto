@@ -4,6 +4,7 @@ import { HelpCircle } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import type { AccountOption } from '@/components/account-select';
+import { recoverStuckImports } from '@/lib/server/actions/recover-stuck-imports';
 import { ImportBatchesTable } from './import-batches-table';
 import { ImportStatementClient } from './import-client';
 import type { ImportListRow, ImportStatus } from './types';
@@ -25,6 +26,9 @@ export default async function ImportPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect('/prijava');
+
+  // AV-6: Recover any imports stuck in 'parsing' state.
+  await recoverStuckImports(supabase, user.id);
 
   const [{ data: accountRows, error: accountsError }, { data: batchRows, error: batchError }] =
     await Promise.all([
