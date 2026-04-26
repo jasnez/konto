@@ -1,10 +1,19 @@
 import { verifyAccountDeletionCancelToken } from '@/lib/account-deletion/cancel-token';
 import { mustExist } from '@/lib/env';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { logSafe } from '@/lib/logger';
 
 export type RunCancelDeletionResult =
   | { ok: true; magicLinkUrl: string }
-  | { ok: false; error: 'INVALID_TOKEN' | 'NO_EMAIL' | 'USER_NOT_FOUND' | 'NOT_SCHEDULED' | 'MAGIC_LINK_FAILED' };
+  | {
+      ok: false;
+      error:
+        | 'INVALID_TOKEN'
+        | 'NO_EMAIL'
+        | 'USER_NOT_FOUND'
+        | 'NOT_SCHEDULED'
+        | 'MAGIC_LINK_FAILED';
+    };
 
 /**
  * Clears soft-delete flag and returns a one-time Supabase magic-link URL so the user can sign in again.
@@ -16,9 +25,11 @@ export async function runCancelDeletion(token: string): Promise<RunCancelDeletio
   }
 
   const admin = createAdminClient();
-  const { data: userData, error: getUserError } = await admin.auth.admin.getUserById(verified.userId);
+  const { data: userData, error: getUserError } = await admin.auth.admin.getUserById(
+    verified.userId,
+  );
   if (getUserError) {
-    console.error('cancel_deletion_get_user_error', { error: getUserError.message });
+    logSafe('cancel_deletion_get_user_error', { error: getUserError.message });
     return { ok: false, error: 'USER_NOT_FOUND' };
   }
 
@@ -34,7 +45,7 @@ export async function runCancelDeletion(token: string): Promise<RunCancelDeletio
     .maybeSingle();
 
   if (profileError) {
-    console.error('cancel_deletion_profile_error', { error: profileError.message });
+    logSafe('cancel_deletion_profile_error', { error: profileError.message });
     return { ok: false, error: 'USER_NOT_FOUND' };
   }
 
@@ -48,7 +59,7 @@ export async function runCancelDeletion(token: string): Promise<RunCancelDeletio
     .eq('id', verified.userId);
 
   if (updateError) {
-    console.error('cancel_deletion_update_error', { error: updateError.message });
+    logSafe('cancel_deletion_update_error', { error: updateError.message });
     return { ok: false, error: 'USER_NOT_FOUND' };
   }
 
@@ -63,7 +74,7 @@ export async function runCancelDeletion(token: string): Promise<RunCancelDeletio
   });
 
   if (linkError) {
-    console.error('cancel_deletion_magic_link_error', { error: linkError.message });
+    logSafe('cancel_deletion_magic_link_error', { error: linkError.message });
     return { ok: false, error: 'MAGIC_LINK_FAILED' };
   }
 

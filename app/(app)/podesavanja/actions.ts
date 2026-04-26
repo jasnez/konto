@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { buildUserExportJsonForRequest } from '@/lib/export/build-user-export-json';
 import { createClient } from '@/lib/supabase/server';
 import { UpdateProfileSchema } from './schema';
+import { logSafe } from '@/lib/logger';
 
 export type UpdateProfileResult =
   | { success: true }
@@ -62,7 +63,7 @@ export async function restoreDefaultCategories(): Promise<RestoreDefaultCategori
 
   const { error } = await supabase.rpc('restore_default_categories_for_user');
   if (error) {
-    console.error('restore_default_categories_error', { userId: user.id, error: error.message });
+    logSafe('restore_default_categories_error', { userId: user.id, error: error.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -96,7 +97,7 @@ export async function updateProfile(input: unknown): Promise<UpdateProfileResult
   const { error } = await supabase.from('profiles').update(parsed.data).eq('id', user.id);
 
   if (error) {
-    console.error('update_profile_error', { userId: user.id, error: error.message });
+    logSafe('update_profile_error', { userId: user.id, error: error.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 

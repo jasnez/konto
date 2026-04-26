@@ -11,6 +11,7 @@ import {
   type CreateInstallmentPlanInput,
 } from '@/lib/schemas/installment';
 import { createClient } from '@/lib/supabase/server';
+import { logSafe } from '@/lib/logger';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -165,7 +166,7 @@ export async function createInstallmentPlan(input: unknown): Promise<CreateInsta
     .single();
 
   if (planErr) {
-    console.error('create_installment_plan_error', { userId: user.id, error: planErr.message });
+    logSafe('create_installment_plan_error', { userId: user.id, error: planErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -184,7 +185,7 @@ export async function createInstallmentPlan(input: unknown): Promise<CreateInsta
     .select('id,due_date,occurrence_num,amount_cents');
 
   if (occErr) {
-    console.error('create_installment_occurrences_error', {
+    logSafe('create_installment_occurrences_error', {
       userId: user.id,
       planId: plan.id,
       error: occErr.message,
@@ -205,7 +206,7 @@ export async function createInstallmentPlan(input: unknown): Promise<CreateInsta
     try {
       fxResult = await convertToBase(signedCents, data.currency, baseCurrency, firstOcc.due_date);
     } catch (err) {
-      console.error('create_installment_fx_error', {
+      logSafe('create_installment_fx_error', {
         userId: user.id,
         planId: plan.id,
         error: err instanceof Error ? err.message : 'unknown',
@@ -226,7 +227,7 @@ export async function createInstallmentPlan(input: unknown): Promise<CreateInsta
         firstOcc.due_date,
       );
     } catch (err) {
-      console.error('create_installment_ledger_error', {
+      logSafe('create_installment_ledger_error', {
         userId: user.id,
         planId: plan.id,
         error: err instanceof Error ? err.message : 'unknown',
@@ -260,7 +261,7 @@ export async function createInstallmentPlan(input: unknown): Promise<CreateInsta
       .single();
 
     if (txErr) {
-      console.error('create_installment_first_tx_error', { userId: user.id, error: txErr.message });
+      logSafe('create_installment_first_tx_error', { userId: user.id, error: txErr.message });
     } else {
       await supabase
         .from('installment_occurrences')
@@ -373,7 +374,7 @@ export async function markOccurrencePaid(occurrenceId: unknown): Promise<MarkOcc
   try {
     fxResult = await convertToBase(signedCents, currency, baseCurrency, occ.due_date);
   } catch (err) {
-    console.error('mark_occurrence_paid_fx_error', {
+    logSafe('mark_occurrence_paid_fx_error', {
       userId: user.id,
       occurrenceId: occ.id,
       error: err instanceof Error ? err.message : 'unknown',
@@ -392,7 +393,7 @@ export async function markOccurrencePaid(occurrenceId: unknown): Promise<MarkOcc
       occ.due_date,
     );
   } catch (err) {
-    console.error('mark_occurrence_paid_ledger_error', {
+    logSafe('mark_occurrence_paid_ledger_error', {
       userId: user.id,
       occurrenceId: occ.id,
       error: err instanceof Error ? err.message : 'unknown',
@@ -425,7 +426,7 @@ export async function markOccurrencePaid(occurrenceId: unknown): Promise<MarkOcc
     .single();
 
   if (txErr) {
-    console.error('mark_occurrence_paid_tx_error', { userId: user.id, error: txErr.message });
+    logSafe('mark_occurrence_paid_tx_error', { userId: user.id, error: txErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 

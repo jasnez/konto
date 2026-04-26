@@ -19,6 +19,7 @@ import {
   ensureOwnedMerchant,
 } from '@/lib/server/db/ensure-owned';
 import type { Database } from '@/supabase/types';
+import { logSafe } from '@/lib/logger';
 
 type TransactionUpdate = Database['public']['Tables']['transactions']['Update'];
 
@@ -245,7 +246,7 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
       parsedData.transaction_date,
     );
   } catch (error) {
-    console.error('create_transaction_fx_error', {
+    logSafe('create_transaction_fx_error', {
       userId: user.id,
       error: error instanceof Error ? error.message : 'unknown',
     });
@@ -303,7 +304,7 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
     .single();
 
   if (error) {
-    console.error('create_transaction_error', { userId: user.id, error: error.message });
+    logSafe('create_transaction_error', { userId: user.id, error: error.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -352,7 +353,7 @@ async function createTransferPair(
       toFx = await convertToBase(toAmountCents, toCurrency, baseCurrency, date);
     }
   } catch (error) {
-    console.error('create_transfer_fx_error', {
+    logSafe('create_transfer_fx_error', {
       userId,
       error: error instanceof Error ? error.message : 'unknown',
     });
@@ -387,7 +388,7 @@ async function createTransferPair(
   });
 
   if (rpcError) {
-    console.error('create_transfer_pair_rpc_error', { userId, error: rpcError.message });
+    logSafe('create_transfer_pair_rpc_error', { userId, error: rpcError.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -484,7 +485,7 @@ export async function updateTransaction(
       finalInput.transaction_date,
     );
   } catch (error) {
-    console.error('update_transaction_fx_error', {
+    logSafe('update_transaction_fx_error', {
       userId: user.id,
       error: error instanceof Error ? error.message : 'unknown',
     });
@@ -614,7 +615,7 @@ export async function deleteTransaction(id: unknown): Promise<DeleteTransactionR
     .is('deleted_at', null);
 
   if (deleteError) {
-    console.error('delete_transaction', {
+    logSafe('delete_transaction', {
       code: deleteError.code,
       message: deleteError.message,
       details: deleteError.details,

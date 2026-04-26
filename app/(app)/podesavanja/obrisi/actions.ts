@@ -9,6 +9,7 @@ import { mustExist } from '@/lib/env';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { RequestAccountDeletionSchema } from './schema';
+import { logSafe } from '@/lib/logger';
 
 export type RequestAccountDeletionResult =
   | { success: false; error: 'VALIDATION_ERROR'; details?: Record<string, string[] | undefined> }
@@ -27,7 +28,9 @@ function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
-export async function requestAccountDeletion(input: unknown): Promise<RequestAccountDeletionResult> {
+export async function requestAccountDeletion(
+  input: unknown,
+): Promise<RequestAccountDeletionResult> {
   const parsed = RequestAccountDeletionSchema.safeParse(input);
   if (!parsed.success) {
     const tree = z.treeifyError(parsed.error);
@@ -65,7 +68,7 @@ export async function requestAccountDeletion(input: unknown): Promise<RequestAcc
     .maybeSingle();
 
   if (profileLoadError) {
-    console.error('request_account_deletion_profile_load_error', {
+    logSafe('request_account_deletion_profile_load_error', {
       userId: user.id,
       error: profileLoadError.message,
     });
@@ -83,7 +86,10 @@ export async function requestAccountDeletion(input: unknown): Promise<RequestAcc
     .eq('id', user.id);
 
   if (updateError) {
-    console.error('request_account_deletion_update_error', { userId: user.id, error: updateError.message });
+    logSafe('request_account_deletion_update_error', {
+      userId: user.id,
+      error: updateError.message,
+    });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -95,7 +101,7 @@ export async function requestAccountDeletion(input: unknown): Promise<RequestAcc
   });
 
   if (auditError) {
-    console.error('request_account_deletion_audit_error', { userId: user.id, error: auditError.message });
+    logSafe('request_account_deletion_audit_error', { userId: user.id, error: auditError.message });
     await supabase.from('profiles').update({ deleted_at: null }).eq('id', user.id);
     return { success: false, error: 'DATABASE_ERROR' };
   }

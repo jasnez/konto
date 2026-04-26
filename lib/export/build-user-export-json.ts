@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { bigintJsonReplacer } from '@/lib/export/bigint-json-replacer';
 import type { Database } from '@/supabase/types';
+import { logSafe } from '@/lib/logger';
 
 const EXPORT_RATE_WINDOW_MS = 60 * 60 * 1000;
 
@@ -26,7 +27,7 @@ async function gateExportRateLimit(
     .maybeSingle();
 
   if (error) {
-    console.error('export_rate_check_error', { userId, error: error.message });
+    logSafe('export_rate_check_error', { userId, error: error.message });
     return 'error';
   }
 
@@ -80,7 +81,7 @@ export async function buildUserExportJsonForRequest(
     transactionsRes.error;
 
   if (firstError) {
-    console.error('export_fetch_error', { userId, error: firstError.message });
+    logSafe('export_fetch_error', { userId, error: firstError.message });
     return { ok: false, error: 'DATABASE_ERROR' };
   }
 
@@ -109,7 +110,7 @@ export async function buildUserExportJsonForRequest(
   });
 
   if (auditError) {
-    console.error('export_audit_error', { userId, error: auditError.message });
+    logSafe('export_audit_error', { userId, error: auditError.message });
     return { ok: false, error: 'DATABASE_ERROR' };
   }
 

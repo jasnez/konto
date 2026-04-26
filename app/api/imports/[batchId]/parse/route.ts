@@ -7,6 +7,7 @@ import { redactPII } from '@/lib/parser/redact-pii';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, IMPORT_PARSE_MAX, IMPORT_PARSE_WINDOW_SEC } from '@/lib/server/rate-limit';
 import type { Database } from '@/supabase/types';
+import { logSafe } from '@/lib/logger';
 
 /**
  * POST /api/imports/[batchId]/parse
@@ -56,7 +57,7 @@ export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
     .maybeSingle();
 
   if (batchErr) {
-    console.error('parse_route_load_error', { userId: user.id, error: batchErr.message });
+    logSafe('parse_route_load_error', { userId: user.id, error: batchErr.message });
     return jsonError('parse_failed', 500);
   }
   if (!batch) return jsonError('not_found', 404);
@@ -162,7 +163,7 @@ export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
       }
       const { error: insertErr } = await supabase.from('parsed_transactions').insert(rows);
       if (insertErr) {
-        console.error('parse_route_insert_error', {
+        logSafe('parse_route_insert_error', {
           userId: user.id,
           batchId: batch.id,
           error: insertErr.message,
@@ -186,7 +187,7 @@ export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
       .eq('id', batch.id)
       .eq('user_id', user.id);
     if (updateErr) {
-      console.error('parse_route_finalize_error', {
+      logSafe('parse_route_finalize_error', {
         userId: user.id,
         batchId: batch.id,
         error: updateErr.message,
@@ -202,7 +203,7 @@ export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
-    console.error('parse_route_error', { userId: user.id, batchId: batch.id, error: message });
+    logSafe('parse_route_error', { userId: user.id, batchId: batch.id, error: message });
 
     await supabase
       .from('import_batches')

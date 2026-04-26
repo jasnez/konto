@@ -15,6 +15,7 @@ import {
   type Locale,
   type UpdateProfileInput,
 } from './schema';
+import { logSafe } from '@/lib/logger';
 
 export const metadata: Metadata = {
   title: 'Podešavanja — Konto',
@@ -37,7 +38,7 @@ export default async function PodesavanjaPage() {
     .maybeSingle();
 
   if (error) {
-    console.error('podesavanja_load_error', { userId: user.id, error: error.message });
+    logSafe('podesavanja_load_error', { userId: user.id, error: error.message });
   }
 
   const defaultValues: UpdateProfileInput = {

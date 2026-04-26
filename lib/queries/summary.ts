@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { BAM_EUR_RATE } from '@/lib/fx/constants';
 import { safeIanaTimeZone } from '@/lib/safe-timezone';
 import type { Database } from '@/supabase/types';
+import { logSafe, logWarn } from '@/lib/logger';
 
 interface MonthlySummaryRpcResult {
   total_balance: number | string | null;
@@ -104,7 +105,7 @@ function convertCentsToBase(cents: bigint, from: string, base: string): bigint {
     return BigInt(Math.round(Number(cents) * BAM_EUR_RATE));
   }
   if (from !== 'BAM' && from !== 'EUR' && (base === 'BAM' || base === 'EUR')) {
-    console.warn('[getMonthlySummary] fallback: nepoznat par valuta, koristim 1:1', {
+    logWarn('[getMonthlySummary] fallback: nepoznat par valuta, koristim 1:1', {
       from,
       base,
     });
@@ -125,7 +126,7 @@ async function sumNetWorthFromAccounts(
     .is('deleted_at', null);
 
   if (error) {
-    console.error('[getMonthlySummary] sumNetWorthFromAccounts:', error.message);
+    logSafe('[getMonthlySummary] sumNetWorthFromAccounts', { error: error.message });
     return 0n;
   }
 
@@ -155,7 +156,7 @@ async function sumLiabilitiesFromAccounts(
     .is('deleted_at', null);
 
   if (error) {
-    console.error('[getMonthlySummary] sumLiabilitiesFromAccounts:', error.message);
+    logSafe('[getMonthlySummary] sumLiabilitiesFromAccounts', { error: error.message });
     return 0n;
   }
 
@@ -245,7 +246,7 @@ export async function getMonthlySummary(
   });
 
   if (error) {
-    console.error('[getMonthlySummary] get_monthly_summary:', error.message);
+    logSafe('[getMonthlySummary] get_monthly_summary', { error: error.message });
     const [total, liab] = await Promise.all([
       sumNetWorthFromAccounts(supabase, userId, baseCurrency),
       sumLiabilitiesFromAccounts(supabase, userId, baseCurrency),
@@ -255,7 +256,7 @@ export async function getMonthlySummary(
 
   const payload = parseRpcPayload(data);
   if (payload == null) {
-    console.error('[getMonthlySummary] nevažeći odgovor od RPC (data null ili JSON).');
+    logSafe('[getMonthlySummary] nevažeći odgovor od RPC (data null ili JSON).');
     const [total, liab] = await Promise.all([
       sumNetWorthFromAccounts(supabase, userId, baseCurrency),
       sumLiabilitiesFromAccounts(supabase, userId, baseCurrency),
@@ -267,7 +268,7 @@ export async function getMonthlySummary(
   if (out.totalBalance === 0n) {
     const fromAccounts = await sumNetWorthFromAccounts(supabase, userId, baseCurrency);
     if (fromAccounts !== 0n) {
-      console.warn('[getMonthlySummary] RPC vraća ukupno 0, koristim zbroj s računa (fallback).', {
+      logWarn('[getMonthlySummary] RPC vraća ukupno 0, koristim zbroj s računa (fallback).', {
         fromAccounts: fromAccounts.toString(),
       });
       out = { ...out, totalBalance: fromAccounts };

@@ -2,6 +2,7 @@ import { revalidatePath } from 'next/cache';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { KarticeRateClient, type OccurrenceRow, type PlanRow } from './kartice-rate-client';
+import { logSafe } from '@/lib/logger';
 
 export const metadata: Metadata = {
   title: 'Kartice na rate — Konto',
@@ -21,7 +22,7 @@ async function fetchPlans(userId: string): Promise<PlanRow[]> {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('fetch_installment_plans_error', { userId, error: error.message });
+    logSafe('fetch_installment_plans_error', { userId, error: error.message });
     return [];
   }
   if (plans.length === 0) return [];

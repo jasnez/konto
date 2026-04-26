@@ -10,6 +10,7 @@ import {
 } from '@/lib/merchants/validation';
 import { createClient } from '@/lib/supabase/server';
 import type { Database } from '@/supabase/types';
+import { logSafe } from '@/lib/logger';
 
 type MerchantUpdate = Database['public']['Tables']['merchants']['Update'];
 
@@ -142,7 +143,7 @@ export async function searchMerchants(
   });
 
   if (error) {
-    console.error('search_merchants_rpc', { userId: user.id, error: error.message });
+    logSafe('search_merchants_rpc', { userId: user.id, error: error.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -179,7 +180,7 @@ export async function createMerchant(input: unknown): Promise<CreateMerchantResu
       .is('deleted_at', null)
       .maybeSingle();
     if (cErr) {
-      console.error('create_merchant_category', { userId: user.id, error: cErr.message });
+      logSafe('create_merchant_category', { userId: user.id, error: cErr.message });
       return { success: false, error: 'DATABASE_ERROR' };
     }
     if (!cat) {
@@ -216,10 +217,10 @@ export async function createMerchant(input: unknown): Promise<CreateMerchantResu
       if (existing) {
         return { success: false, error: 'DUPLICATE_CANONICAL', existingId: existing.id };
       }
-      console.error('create_merchant_duplicate_not_found', { userId: user.id, canonical_name });
+      logSafe('create_merchant_duplicate_not_found', { userId: user.id, canonical_name });
       return { success: false, error: 'DUPLICATE_CANONICAL_NOT_FOUND' };
     }
-    console.error('create_merchant_error', { userId: user.id, error: insErr.message });
+    logSafe('create_merchant_error', { userId: user.id, error: insErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -263,7 +264,7 @@ export async function updateMerchant(id: unknown, input: unknown): Promise<Updat
     .maybeSingle();
 
   if (selErr) {
-    console.error('update_merchant_select', { userId: user.id, error: selErr.message });
+    logSafe('update_merchant_select', { userId: user.id, error: selErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!existing) {
@@ -296,7 +297,7 @@ export async function updateMerchant(id: unknown, input: unknown): Promise<Updat
       .is('deleted_at', null)
       .maybeSingle();
     if (cErr) {
-      console.error('update_merchant_category', { userId: user.id, error: cErr.message });
+      logSafe('update_merchant_category', { userId: user.id, error: cErr.message });
       return { success: false, error: 'DATABASE_ERROR' };
     }
     if (!cat) {
@@ -318,7 +319,7 @@ export async function updateMerchant(id: unknown, input: unknown): Promise<Updat
     if (upErr.code === '23505') {
       return { success: false, error: 'DUPLICATE_CANONICAL' };
     }
-    console.error('update_merchant_error', { userId: user.id, error: upErr.message });
+    logSafe('update_merchant_error', { userId: user.id, error: upErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -353,7 +354,7 @@ export async function deleteMerchant(id: unknown): Promise<DeleteMerchantResult>
     .maybeSingle();
 
   if (selErr) {
-    console.error('delete_merchant_select', { userId: user.id, error: selErr.message });
+    logSafe('delete_merchant_select', { userId: user.id, error: selErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!row) {
@@ -370,7 +371,7 @@ export async function deleteMerchant(id: unknown): Promise<DeleteMerchantResult>
     .eq('user_id', user.id);
 
   if (delErr) {
-    console.error('delete_merchant_error', { userId: user.id, error: delErr.message });
+    logSafe('delete_merchant_error', { userId: user.id, error: delErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 

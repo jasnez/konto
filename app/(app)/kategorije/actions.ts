@@ -10,6 +10,7 @@ import {
 } from '@/lib/categories/validation';
 import { createClient } from '@/lib/supabase/server';
 import type { Database } from '@/supabase/types';
+import { logSafe } from '@/lib/logger';
 
 type CategoryUpdate = Database['public']['Tables']['categories']['Update'];
 
@@ -127,7 +128,7 @@ export async function createCategory(input: unknown): Promise<CreateCategoryResu
       .is('deleted_at', null)
       .maybeSingle();
     if (pErr) {
-      console.error('create_category_parent_select', { userId: user.id, error: pErr.message });
+      logSafe('create_category_parent_select', { userId: user.id, error: pErr.message });
       return { success: false, error: 'DATABASE_ERROR' };
     }
     if (!parent) {
@@ -150,7 +151,7 @@ export async function createCategory(input: unknown): Promise<CreateCategoryResu
     .maybeSingle();
 
   if (maxErr) {
-    console.error('create_category_sort_select', { userId: user.id, error: maxErr.message });
+    logSafe('create_category_sort_select', { userId: user.id, error: maxErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -176,7 +177,7 @@ export async function createCategory(input: unknown): Promise<CreateCategoryResu
     if (insErr.code === '23505') {
       return { success: false, error: 'SLUG_CONFLICT' };
     }
-    console.error('create_category_error', { userId: user.id, error: insErr.message });
+    logSafe('create_category_error', { userId: user.id, error: insErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -220,7 +221,7 @@ export async function updateCategory(id: unknown, input: unknown): Promise<Updat
     .maybeSingle();
 
   if (selErr) {
-    console.error('update_category_select', { userId: user.id, error: selErr.message });
+    logSafe('update_category_select', { userId: user.id, error: selErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!existing) {
@@ -273,7 +274,7 @@ export async function updateCategory(id: unknown, input: unknown): Promise<Updat
       .is('deleted_at', null)
       .maybeSingle();
     if (pErr) {
-      console.error('update_category_parent_select', { userId: user.id, error: pErr.message });
+      logSafe('update_category_parent_select', { userId: user.id, error: pErr.message });
       return { success: false, error: 'DATABASE_ERROR' };
     }
     if (!parent) {
@@ -295,7 +296,7 @@ export async function updateCategory(id: unknown, input: unknown): Promise<Updat
       .neq('id', idParse.data)
       .maybeSingle();
     if (dErr) {
-      console.error('update_category_slug_check', { userId: user.id, error: dErr.message });
+      logSafe('update_category_slug_check', { userId: user.id, error: dErr.message });
       return { success: false, error: 'DATABASE_ERROR' };
     }
     if (dup) {
@@ -313,7 +314,7 @@ export async function updateCategory(id: unknown, input: unknown): Promise<Updat
     if (upErr.code === '23505') {
       return { success: false, error: 'SLUG_CONFLICT' };
     }
-    console.error('update_category_error', { userId: user.id, error: upErr.message });
+    logSafe('update_category_error', { userId: user.id, error: upErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -348,7 +349,7 @@ export async function deleteCategory(id: unknown): Promise<DeleteCategoryResult>
     .maybeSingle();
 
   if (selErr) {
-    console.error('delete_category_select', { userId: user.id, error: selErr.message });
+    logSafe('delete_category_select', { userId: user.id, error: selErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!row) {
@@ -365,7 +366,7 @@ export async function deleteCategory(id: unknown): Promise<DeleteCategoryResult>
     .eq('user_id', user.id);
 
   if (delErr) {
-    console.error('delete_category_error', { userId: user.id, error: delErr.message });
+    logSafe('delete_category_error', { userId: user.id, error: delErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -399,7 +400,7 @@ export async function restoreCategory(id: unknown): Promise<RestoreCategoryResul
     .maybeSingle();
 
   if (selErr) {
-    console.error('restore_category_select', { userId: user.id, error: selErr.message });
+    logSafe('restore_category_select', { userId: user.id, error: selErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!row) {
@@ -416,7 +417,7 @@ export async function restoreCategory(id: unknown): Promise<RestoreCategoryResul
     .eq('user_id', user.id);
 
   if (upErr) {
-    console.error('restore_category_error', { userId: user.id, error: upErr.message });
+    logSafe('restore_category_error', { userId: user.id, error: upErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -456,7 +457,7 @@ export async function reorderCategories(orderedIds: unknown): Promise<ReorderCat
     .in('id', ids);
 
   if (rErr) {
-    console.error('reorder_categories_select', { userId: user.id, error: rErr.message });
+    logSafe('reorder_categories_select', { userId: user.id, error: rErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (rows.length !== ids.length) {
@@ -487,7 +488,7 @@ export async function reorderCategories(orderedIds: unknown): Promise<ReorderCat
   const results = await Promise.all(updates);
   const failed = results.find((r) => r.error);
   if (failed?.error) {
-    console.error('reorder_categories_error', { userId: user.id, error: failed.error.message });
+    logSafe('reorder_categories_error', { userId: user.id, error: failed.error.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 

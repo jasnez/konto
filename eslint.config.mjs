@@ -25,6 +25,7 @@ export default tseslint.config(
       'supabase/types.ts',
       'scripts/**',
       'public/**',
+      'eslint-rules/**',
     ],
   },
   ...tseslint.configs.strictTypeChecked,
@@ -46,9 +47,30 @@ export default tseslint.config(
       ...nextPlugin.configs['core-web-vitals'].rules,
     },
   },
+  // SE-6: Ban raw console.* in Next.js app / lib server code.
+  // lib/logger.ts itself suppresses with inline `// eslint-disable-next-line no-console`.
+  // Client-side error boundaries (error.tsx) and Deno Edge Functions are re-permitted below.
   {
+    files: ['app/**/*.ts', 'app/**/*.tsx', 'lib/**/*.ts', 'lib/**/*.tsx'],
     rules: {
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': 'error',
+    },
+  },
+  // SE-6: Re-permit console.* in client-side error boundaries only.
+  // These are 'use client' components; console.error() fires in the browser and is
+  // the standard way to report React error boundary activations to devtools / Sentry.
+  {
+    files: ['**/error.tsx'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  // SE-6: Deno Edge Functions cannot import from '@/lib/logger' (different runtime).
+  // console.* is the only logging mechanism available there; permit it explicitly.
+  {
+    files: ['supabase/functions/**/*.ts'],
+    rules: {
+      'no-console': 'off',
     },
   },
   // DL-8: Enforce .eq('user_id', ...) on every Supabase mutation against user-owned tables.

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/supabase/types';
+import { logSafe } from '@/lib/logger';
 
 type RateClient = Pick<SupabaseClient<Database>, 'rpc'>;
 
@@ -31,7 +32,7 @@ export async function checkRateLimit(
     p_window_seconds: windowSec,
   });
   if (error) {
-    console.error('check_rate_limit_rpc', { userId, action, error: error.message });
+    logSafe('check_rate_limit_rpc', { userId, action, error: error.message });
     return false;
   }
   return data;

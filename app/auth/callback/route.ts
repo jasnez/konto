@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { sanitizeNextPath } from '@/lib/auth/safe-next';
 import { createClient } from '@/lib/supabase/server';
+import { logSafe } from '@/lib/logger';
 
 /**
  * Magic-link callback. Supabase appends `?code=...` (and sometimes `&next=...`)
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
       if (!error) {
         return NextResponse.redirect(`${origin}${next}`);
       }
-      console.error('auth_callback_code_error', { error: error.message });
+      logSafe('auth_callback_code_error', { error: error.message });
     } else if (tokenHash && isEmailOtpType(otpType)) {
       const { error } = await supabase.auth.verifyOtp({
         type: otpType,
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
       if (!error) {
         return NextResponse.redirect(`${origin}${next}`);
       }
-      console.error('auth_callback_token_hash_error', { error: error.message });
+      logSafe('auth_callback_token_hash_error', { error: error.message });
     }
   }
 

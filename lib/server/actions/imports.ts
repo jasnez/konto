@@ -15,6 +15,7 @@ import {
   IMPORT_UPLOAD_WINDOW_SEC,
 } from '@/lib/server/rate-limit';
 import type { Database } from '@/supabase/types';
+import { logSafe, logWarn } from '@/lib/logger';
 
 const MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024;
 const STORAGE_BUCKET = 'bank-statements';
@@ -114,7 +115,7 @@ export async function uploadStatement(formData: FormData): Promise<UploadStateme
     .is('deleted_at', null)
     .maybeSingle();
   if (accountErr) {
-    console.error('upload_statement_account_error', { userId: user.id, error: accountErr.message });
+    logSafe('upload_statement_account_error', { userId: user.id, error: accountErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!account) return { success: false, error: 'NOT_FOUND' };
@@ -129,7 +130,7 @@ export async function uploadStatement(formData: FormData): Promise<UploadStateme
     .eq('checksum', checksum)
     .maybeSingle();
   if (existingErr) {
-    console.error('upload_statement_duplicate_check_error', {
+    logSafe('upload_statement_duplicate_check_error', {
       userId: user.id,
       error: existingErr.message,
     });
@@ -156,7 +157,7 @@ export async function uploadStatement(formData: FormData): Promise<UploadStateme
     upsert: false,
   });
   if (uploadErr) {
-    console.error('upload_statement_storage_error', { userId: user.id, error: uploadErr.message });
+    logSafe('upload_statement_storage_error', { userId: user.id, error: uploadErr.message });
     return { success: false, error: 'STORAGE_ERROR' };
   }
 
@@ -174,7 +175,7 @@ export async function uploadStatement(formData: FormData): Promise<UploadStateme
     .single();
 
   if (insertErr) {
-    console.error('upload_statement_insert_error', {
+    logSafe('upload_statement_insert_error', {
       userId: user.id,
       error: insertErr.message,
     });
@@ -189,7 +190,7 @@ export async function uploadStatement(formData: FormData): Promise<UploadStateme
 
   const batchId = batch.id;
   if (!batchId) {
-    console.error('upload_statement_insert_error', { userId: user.id, error: 'missing id' });
+    logSafe('upload_statement_insert_error', { userId: user.id, error: 'missing id' });
     await supabase.storage
       .from(STORAGE_BUCKET)
       .remove([path])
@@ -294,7 +295,7 @@ export async function updateParsedTransaction(
     .maybeSingle();
 
   if (loadErr) {
-    console.error('update_parsed_transaction_load', { userId: user.id, error: loadErr.message });
+    logSafe('update_parsed_transaction_load', { userId: user.id, error: loadErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (row?.user_id !== user.id || row.status !== 'pending_review') {
@@ -310,7 +311,7 @@ export async function updateParsedTransaction(
       .is('deleted_at', null)
       .maybeSingle();
     if (cErr) {
-      console.error('update_parsed_transaction_cat', { userId: user.id, error: cErr.message });
+      logSafe('update_parsed_transaction_cat', { userId: user.id, error: cErr.message });
       return { success: false, error: 'DATABASE_ERROR' };
     }
     if (!cat) {
@@ -327,7 +328,7 @@ export async function updateParsedTransaction(
       .is('deleted_at', null)
       .maybeSingle();
     if (mErr) {
-      console.error('update_parsed_transaction_merchant', {
+      logSafe('update_parsed_transaction_merchant', {
         userId: user.id,
         error: mErr.message,
       });
@@ -361,7 +362,7 @@ export async function updateParsedTransaction(
     .eq('id', p.id)
     .eq('user_id', user.id);
   if (upErr) {
-    console.error('update_parsed_transaction', { userId: user.id, error: upErr.message });
+    logSafe('update_parsed_transaction', { userId: user.id, error: upErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -456,7 +457,7 @@ export async function togglePartialExclusion(
     .eq('user_id', user.id)
     .maybeSingle();
   if (bErr) {
-    console.error('toggle_partial_exclusion_batch', { userId: user.id, error: bErr.message });
+    logSafe('toggle_partial_exclusion_batch', { userId: user.id, error: bErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!batch) {
@@ -473,7 +474,7 @@ export async function togglePartialExclusion(
     .select('id');
 
   if (upErr) {
-    console.error('toggle_partial_exclusion', { userId: user.id, error: upErr.message });
+    logSafe('toggle_partial_exclusion', { userId: user.id, error: upErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -529,7 +530,7 @@ export async function bulkApplyCategoryToParsedRows(
       .is('deleted_at', null)
       .maybeSingle();
     if (cErr) {
-      console.error('bulk_parsed_category_check', { userId: user.id, error: cErr.message });
+      logSafe('bulk_parsed_category_check', { userId: user.id, error: cErr.message });
       return { success: false, error: 'DATABASE_ERROR' };
     }
     if (!cat) {
@@ -544,7 +545,7 @@ export async function bulkApplyCategoryToParsedRows(
     .eq('user_id', user.id)
     .maybeSingle();
   if (bErr) {
-    console.error('bulk_parsed_batch', { userId: user.id, error: bErr.message });
+    logSafe('bulk_parsed_batch', { userId: user.id, error: bErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!batch) {
@@ -560,7 +561,7 @@ export async function bulkApplyCategoryToParsedRows(
     .in('id', parsedIds);
 
   if (rErr) {
-    console.error('bulk_parsed_load', { userId: user.id, error: rErr.message });
+    logSafe('bulk_parsed_load', { userId: user.id, error: rErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -581,7 +582,7 @@ export async function bulkApplyCategoryToParsedRows(
     .in('id', targetIds);
 
   if (uErr) {
-    console.error('bulk_parsed_update', { userId: user.id, error: uErr.message });
+    logSafe('bulk_parsed_update', { userId: user.id, error: uErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -651,7 +652,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
     .maybeSingle();
 
   if (bErr) {
-    console.error('finalize_import_load', { userId: user.id, error: bErr.message });
+    logSafe('finalize_import_load', { userId: user.id, error: bErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!batch) {
@@ -676,7 +677,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
     .order('transaction_date', { ascending: true });
 
   if (sErr) {
-    console.error('finalize_import_staged', { userId: user.id, error: sErr.message });
+    logSafe('finalize_import_staged', { userId: user.id, error: sErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -692,7 +693,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
     .eq('id', user.id)
     .maybeSingle();
   if (pErr) {
-    console.error('finalize_import_profile', { userId: user.id, error: pErr.message });
+    logSafe('finalize_import_profile', { userId: user.id, error: pErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   const baseCurrency = profile?.base_currency ?? 'BAM';
@@ -705,7 +706,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
     .is('deleted_at', null)
     .maybeSingle();
   if (acctErr) {
-    console.error('finalize_import_account', { userId: user.id, error: acctErr.message });
+    logSafe('finalize_import_account', { userId: user.id, error: acctErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!importAccount) {
@@ -725,7 +726,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
         row.transaction_date,
       );
     } catch (error) {
-      console.error('finalize_import_fx', {
+      logSafe('finalize_import_fx', {
         userId: user.id,
         error: error instanceof Error ? error.message : 'unknown',
       });
@@ -743,7 +744,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
         row.transaction_date,
       );
     } catch (error) {
-      console.error('finalize_import_ledger_fx', {
+      logSafe('finalize_import_ledger_fx', {
         userId: user.id,
         error: error instanceof Error ? error.message : 'unknown',
       });
@@ -792,7 +793,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
     p_rows: dedupPayload,
   });
   if (dedupErr) {
-    console.error('finalize_import_dedup', { userId: user.id, error: dedupErr.message });
+    logSafe('finalize_import_dedup', { userId: user.id, error: dedupErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   const skip = parseDedupSkipIndices(rawSkip, prepared.length);
@@ -834,7 +835,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
     if (msg.includes('UNAUTHORIZED')) return { success: false, error: 'UNAUTHORIZED' };
     if (msg.includes('NOT_FOUND')) return { success: false, error: 'NOT_FOUND' };
     if (msg.includes('BAD_STATE')) return { success: false, error: 'BAD_STATE' };
-    console.error('finalize_import_rpc', { userId: user.id, error: msg });
+    logSafe('finalize_import_rpc', { userId: user.id, error: msg });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -846,7 +847,7 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
       .from(STORAGE_BUCKET)
       .remove([batch.storage_path]);
     if (rmErr) {
-      console.warn('finalize_import_storage_cleanup', {
+      logWarn('finalize_import_storage_cleanup', {
         userId: user.id,
         error: rmErr.message,
       });
@@ -910,7 +911,7 @@ export async function rejectImport(input: unknown): Promise<RejectImportResult> 
     .maybeSingle();
 
   if (bErr) {
-    console.error('reject_import_load', { userId: user.id, error: bErr.message });
+    logSafe('reject_import_load', { userId: user.id, error: bErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!batch) {
@@ -927,7 +928,7 @@ export async function rejectImport(input: unknown): Promise<RejectImportResult> 
     .eq('user_id', user.id);
 
   if (delErr) {
-    console.error('reject_import_staging_delete', { userId: user.id, error: delErr.message });
+    logSafe('reject_import_staging_delete', { userId: user.id, error: delErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -936,7 +937,7 @@ export async function rejectImport(input: unknown): Promise<RejectImportResult> 
       .from(STORAGE_BUCKET)
       .remove([batch.storage_path]);
     if (rmErr) {
-      console.warn('reject_import_storage_cleanup', { userId: user.id, error: rmErr.message });
+      logWarn('reject_import_storage_cleanup', { userId: user.id, error: rmErr.message });
       // Non-fatal: proceed so batch still gets marked rejected.
     }
   }
@@ -948,7 +949,7 @@ export async function rejectImport(input: unknown): Promise<RejectImportResult> 
     .eq('user_id', user.id);
 
   if (updErr) {
-    console.error('reject_import_mark', { userId: user.id, error: updErr.message });
+    logSafe('reject_import_mark', { userId: user.id, error: updErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -996,7 +997,7 @@ export async function retryImportParse(input: unknown): Promise<RetryImportParse
     .maybeSingle();
 
   if (bErr) {
-    console.error('retry_import_parse_load', { userId: user.id, error: bErr.message });
+    logSafe('retry_import_parse_load', { userId: user.id, error: bErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!batch) {
@@ -1013,7 +1014,7 @@ export async function retryImportParse(input: unknown): Promise<RetryImportParse
     .eq('user_id', user.id);
 
   if (delErr) {
-    console.error('retry_import_parse_staging', { userId: user.id, error: delErr.message });
+    logSafe('retry_import_parse_staging', { userId: user.id, error: delErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -1033,7 +1034,7 @@ export async function retryImportParse(input: unknown): Promise<RetryImportParse
     .eq('user_id', user.id);
 
   if (updErr) {
-    console.error('retry_import_parse_reset', { userId: user.id, error: updErr.message });
+    logSafe('retry_import_parse_reset', { userId: user.id, error: updErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 

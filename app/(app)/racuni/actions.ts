@@ -12,6 +12,7 @@ import {
 import { computeAccountLedgerCents } from '@/lib/fx/account-ledger';
 import { convertToBase } from '@/lib/fx/convert';
 import type { Database } from '@/supabase/types';
+import { logSafe } from '@/lib/logger';
 
 type AccountUpdate = Database['public']['Tables']['accounts']['Update'];
 
@@ -184,7 +185,7 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
     .single();
 
   if (insertError) {
-    console.error('create_account_error', { userId: user.id, error: insertError.message });
+    logSafe('create_account_error', { userId: user.id, error: insertError.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -200,7 +201,7 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
       .maybeSingle();
 
     if (obCatError) {
-      console.error('create_account_opening_cat_select', {
+      logSafe('create_account_opening_cat_select', {
         userId: user.id,
         error: obCatError.message,
       });
@@ -223,7 +224,7 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
     try {
       fxConversion = await convertToBase(initial, currency, baseCurrency, txDate);
     } catch (error) {
-      console.error('create_account_opening_fx_error', {
+      logSafe('create_account_opening_fx_error', {
         userId: user.id,
         error: error instanceof Error ? error.message : 'unknown',
       });
@@ -242,7 +243,7 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
         txDate,
       );
     } catch (error) {
-      console.error('create_account_opening_ledger_error', {
+      logSafe('create_account_opening_ledger_error', {
         userId: user.id,
         error: error instanceof Error ? error.message : 'unknown',
       });
@@ -269,7 +270,7 @@ export async function createAccount(input: unknown): Promise<CreateAccountResult
     });
 
     if (txError) {
-      console.error('create_account_opening_tx_error', { userId: user.id, error: txError.message });
+      logSafe('create_account_opening_tx_error', { userId: user.id, error: txError.message });
       await supabase.from('accounts').delete().eq('id', newId).eq('user_id', user.id);
       return { success: false, error: 'DATABASE_ERROR' };
     }
@@ -319,7 +320,7 @@ export async function updateAccount(id: unknown, input: unknown): Promise<Update
     .maybeSingle();
 
   if (selErr) {
-    console.error('update_account_select', { userId: user.id, error: selErr.message });
+    logSafe('update_account_select', { userId: user.id, error: selErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!row) {
@@ -345,7 +346,7 @@ export async function updateAccount(id: unknown, input: unknown): Promise<Update
     .eq('user_id', user.id);
 
   if (upErr) {
-    console.error('update_account_error', { userId: user.id, error: upErr.message });
+    logSafe('update_account_error', { userId: user.id, error: upErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -386,7 +387,7 @@ export async function deleteAccount(id: unknown): Promise<DeleteAccountResult> {
     .maybeSingle();
 
   if (selErr) {
-    console.error('delete_account_select', { userId: user.id, error: selErr.message });
+    logSafe('delete_account_select', { userId: user.id, error: selErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!row) {
@@ -400,7 +401,7 @@ export async function deleteAccount(id: unknown): Promise<DeleteAccountResult> {
     .eq('user_id', user.id);
 
   if (delErr) {
-    console.error('delete_account_error', { userId: user.id, error: delErr.message });
+    logSafe('delete_account_error', { userId: user.id, error: delErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -444,7 +445,7 @@ export async function reorderAccounts(orderedIds: unknown): Promise<ReorderAccou
     .in('id', ids);
 
   if (oErr) {
-    console.error('reorder_accounts_select', { userId: user.id, error: oErr.message });
+    logSafe('reorder_accounts_select', { userId: user.id, error: oErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (ownRows.length !== ids.length) {
@@ -463,7 +464,7 @@ export async function reorderAccounts(orderedIds: unknown): Promise<ReorderAccou
   const results = await Promise.all(updates);
   const failed = results.find((r) => r.error);
   if (failed?.error) {
-    console.error('reorder_accounts_error', { userId: user.id, error: failed.error.message });
+    logSafe('reorder_accounts_error', { userId: user.id, error: failed.error.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 

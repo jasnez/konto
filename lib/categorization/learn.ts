@@ -37,6 +37,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizeDescription } from '@/lib/categorization/cascade';
 import type { CategorizationSource } from '@/lib/categorization/cascade';
 import type { Database } from '@/supabase/types';
+import { logSafe, logWarn } from '@/lib/logger';
 
 /** Number of identical corrections before we promote to an alias. The
  *  spec wants exactly 3 (docs/01-architecture.md §8.3, F2-E4-T3). */
@@ -117,7 +118,7 @@ export async function recordCorrection(
 
   const { error } = await supabase.from('user_corrections').insert(insert);
   if (error) {
-    console.error('record_correction_insert_error', {
+    logSafe('record_correction_insert_error', {
       userId: input.userId,
       error: error.message,
     });
@@ -182,7 +183,7 @@ export async function maybeCreateAlias(
     .limit(RECENT_CORRECTIONS_LIMIT);
 
   if (corrErr) {
-    console.error('maybe_create_alias_select_corrections_error', {
+    logSafe('maybe_create_alias_select_corrections_error', {
       userId: args.userId,
       error: corrErr.message,
     });
@@ -216,7 +217,7 @@ export async function maybeCreateAlias(
     .eq('user_id', args.userId);
 
   if (aliasErr) {
-    console.error('maybe_create_alias_select_aliases_error', {
+    logSafe('maybe_create_alias_select_aliases_error', {
       userId: args.userId,
       error: aliasErr.message,
     });
@@ -243,7 +244,7 @@ export async function maybeCreateAlias(
     .limit(1);
 
   if (findMerchErr) {
-    console.error('maybe_create_alias_find_merchant_error', {
+    logSafe('maybe_create_alias_find_merchant_error', {
       userId: args.userId,
       error: findMerchErr.message,
     });
@@ -263,7 +264,7 @@ export async function maybeCreateAlias(
         .eq('id', merchantId)
         .eq('user_id', args.userId);
       if (setDefaultErr) {
-        console.warn('maybe_create_alias_set_default_category_error', {
+        logWarn('maybe_create_alias_set_default_category_error', {
           userId: args.userId,
           error: setDefaultErr.message,
         });
@@ -282,7 +283,7 @@ export async function maybeCreateAlias(
       .select('id')
       .single();
     if (insMerchErr) {
-      console.error('maybe_create_alias_insert_merchant_error', {
+      logSafe('maybe_create_alias_insert_merchant_error', {
         userId: args.userId,
         error: insMerchErr.message,
       });
@@ -305,7 +306,7 @@ export async function maybeCreateAlias(
     .single();
 
   if (insAliasErr) {
-    console.error('maybe_create_alias_insert_alias_error', {
+    logSafe('maybe_create_alias_insert_alias_error', {
       userId: args.userId,
       error: insAliasErr.message,
     });

@@ -8,6 +8,7 @@ import { TransactionsClient } from './transactions-client';
 import type { TransactionListItem, TransactionsFilters } from './types';
 import type { AccountOption } from '@/components/account-select';
 import type { CategoryOption } from '@/components/category-select';
+import { logSafe } from '@/lib/logger';
 
 export const metadata: Metadata = {
   title: 'Transakcije — Konto',
@@ -157,7 +158,7 @@ async function fetchTransactionsUncached(
   ]);
 
   if (hasQueryError(countError) || hasQueryError(dataError)) {
-    console.error('transactions_page_query_failed', {
+    logSafe('transactions_page_query_failed', {
       userId,
       countError: countError?.message,
       dataError: dataError?.message,

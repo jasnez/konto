@@ -12,6 +12,7 @@ import {
   type ReviewCategoryOption,
   type ReviewParsedRow,
 } from '../import-review-client';
+import { logSafe } from '@/lib/logger';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
@@ -106,7 +107,7 @@ export default async function ImportBatchPage(props: PageProps) {
     .maybeSingle();
 
   if (error) {
-    console.error('import_batch_detail', { userId: user.id, error: error.message });
+    logSafe('import_batch_detail', { userId: user.id, error: error.message });
     notFound();
   }
   if (!batch) notFound();
@@ -191,11 +192,11 @@ export default async function ImportBatchPage(props: PageProps) {
     ]);
 
   if (parsedErr) {
-    console.error('import_batch_parsed', { userId: user.id, error: parsedErr.message });
+    logSafe('import_batch_parsed', { userId: user.id, error: parsedErr.message });
     notFound();
   }
   if (catErr) {
-    console.error('import_batch_categories', { userId: user.id, error: catErr.message });
+    logSafe('import_batch_categories', { userId: user.id, error: catErr.message });
     notFound();
   }
 

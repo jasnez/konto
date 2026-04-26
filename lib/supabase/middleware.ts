@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { mustExist } from '@/lib/env';
 import type { Database } from '@/supabase/types';
+import { logSafe } from '@/lib/logger';
 
 // Keep this list aligned with directories under app/(app)/. Adding an entry
 // for a route that doesn't exist causes Next's 404 to render inside the authed
@@ -55,7 +56,7 @@ export async function updateSession(request: NextRequest) {
       .maybeSingle();
 
     if (profileError) {
-      console.error('middleware_profile_deleted_check_error', { error: profileError.message });
+      logSafe('middleware_profile_deleted_check_error', { error: profileError.message });
     } else if (profile?.deleted_at) {
       const path = request.nextUrl.pathname;
       const allowedWhenDeleted =

@@ -7,6 +7,7 @@ import type { AccountOption } from '@/components/account-select';
 import { ImportBatchesTable } from './import-batches-table';
 import { ImportStatementClient } from './import-client';
 import type { ImportListRow, ImportStatus } from './types';
+import { logSafe } from '@/lib/logger';
 
 export const metadata: Metadata = {
   title: 'Uvezi izvod — Konto',
@@ -43,11 +44,11 @@ export default async function ImportPage() {
     ]);
 
   if (accountsError) {
-    console.error('import_page_accounts', { userId: user.id, error: accountsError.message });
+    logSafe('import_page_accounts', { userId: user.id, error: accountsError.message });
   }
 
   if (batchError) {
-    console.error('import_page_batches', { userId: user.id, error: batchError.message });
+    logSafe('import_page_batches', { userId: user.id, error: batchError.message });
   }
 
   const accountOptions: AccountOption[] = (accountRows ?? []).map((a) => ({
@@ -76,7 +77,7 @@ export default async function ImportPage() {
       .is('deleted_at', null);
 
     if (countErr) {
-      console.error('import_page_tx_count', { userId: user.id, error: countErr.message });
+      logSafe('import_page_tx_count', { userId: user.id, error: countErr.message });
     } else {
       for (const row of countRows) {
         const bid = row.import_batch_id;

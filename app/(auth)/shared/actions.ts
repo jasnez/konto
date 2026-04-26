@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { mustExist } from '@/lib/env';
 import { SendOtpSchema, VerifyOtpSchema } from './schema';
+import { logSafe } from '@/lib/logger';
 
 export type SendOtpResult =
   | { success: true }
@@ -40,7 +41,7 @@ export async function sendOtp(input: unknown): Promise<SendOtpResult> {
 
   if (error) {
     // Do not log the email — PII redaction rule in .cursor/rules/security.mdc.
-    console.error('send_otp_error', { error: error.message });
+    logSafe('send_otp_error', { error: error.message });
     return { success: false, error: 'EMAIL_SEND_FAILED' };
   }
 
@@ -78,7 +79,7 @@ export async function verifyOtp(input: unknown): Promise<VerifyOtpResult> {
   });
 
   if (error) {
-    console.error('verify_otp_error', { error: error.message });
+    logSafe('verify_otp_error', { error: error.message });
     return { success: false, error: 'INVALID_OR_EXPIRED' };
   }
 

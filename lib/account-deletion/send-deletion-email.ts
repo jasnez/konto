@@ -1,3 +1,4 @@
+import { logSafe } from '@/lib/logger';
 const DELETION_EMAIL_SUBJECT = 'Potvrda brisanja naloga — Konto';
 
 function buildDeletionEmailBody(cancelUrl: string): { text: string; html: string } {
@@ -52,7 +53,7 @@ export async function sendAccountDeletionEmail(
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
   if (!apiKey || !from) {
-    console.error('account_deletion_email_not_configured');
+    logSafe('account_deletion_email_not_configured');
     return { ok: false, error: 'NOT_CONFIGURED' };
   }
 
@@ -75,7 +76,7 @@ export async function sendAccountDeletionEmail(
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    console.error('account_deletion_email_send_failed', {
+    logSafe('account_deletion_email_send_failed', {
       status: res.status,
       body: body.slice(0, 200),
     });

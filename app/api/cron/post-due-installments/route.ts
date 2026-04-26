@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { computeAccountLedgerCents } from '@/lib/fx/account-ledger';
 import { convertToBase } from '@/lib/fx/convert';
 import { createClient } from '@/lib/supabase/server';
+import { logSafe } from '@/lib/logger';
 
 /**
  * Vercel Cron Job — runs daily at 06:00 UTC.
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
     .limit(200);
 
   if (fetchErr) {
-    console.error('post_due_installments_fetch_error', { error: fetchErr.message });
+    logSafe('post_due_installments_fetch_error', { error: fetchErr.message });
     return NextResponse.json({ error: 'fetch_failed' }, { status: 500 });
   }
 
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
     .in('id', planIds);
 
   if (plansErr) {
-    console.error('post_due_installments_plans_error', { error: plansErr.message });
+    logSafe('post_due_installments_plans_error', { error: plansErr.message });
     return NextResponse.json({ error: 'plans_fetch_failed' }, { status: 500 });
   }
 
@@ -86,7 +87,7 @@ export async function GET(request: Request) {
     try {
       fxResult = await convertToBase(signedCents, currency, baseCurrency, occ.due_date);
     } catch (err) {
-      console.error('post_due_installments_fx_error', {
+      logSafe('post_due_installments_fx_error', {
         occurrenceId: occ.id,
         error: err instanceof Error ? err.message : 'unknown',
       });
@@ -105,7 +106,7 @@ export async function GET(request: Request) {
         occ.due_date,
       );
     } catch (err) {
-      console.error('post_due_installments_ledger_error', {
+      logSafe('post_due_installments_ledger_error', {
         occurrenceId: occ.id,
         error: err instanceof Error ? err.message : 'unknown',
       });
@@ -138,7 +139,7 @@ export async function GET(request: Request) {
       .single();
 
     if (txErr) {
-      console.error('post_due_installments_tx_error', {
+      logSafe('post_due_installments_tx_error', {
         occurrenceId: occ.id,
         error: txErr.message,
       });
@@ -152,7 +153,7 @@ export async function GET(request: Request) {
       .eq('id', occ.id);
 
     if (stateErr) {
-      console.error('post_due_installments_state_error', {
+      logSafe('post_due_installments_state_error', {
         occurrenceId: occ.id,
         error: stateErr.message,
       });
@@ -183,6 +184,6 @@ export async function GET(request: Request) {
     }
   }
 
-  console.error('post_due_installments_done', { posted, failed, today });
+  logSafe('post_due_installments_done', { posted, failed, today });
   return NextResponse.json({ posted, failed, today });
 }

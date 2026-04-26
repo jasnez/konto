@@ -14,6 +14,7 @@ import {
 } from '@/lib/schemas/receipt';
 import { createClient } from '@/lib/supabase/server';
 import type { Json } from '@/supabase/types';
+import { logSafe } from '@/lib/logger';
 
 const DAILY_SCAN_LIMIT = 20;
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -152,7 +153,7 @@ export async function uploadReceipt(formData: FormData): Promise<UploadReceiptRe
   // Rate limit: 20 per UTC day.
   const { data: countData, error: countErr } = await supabase.rpc('count_receipt_scans_today');
   if (countErr) {
-    console.error('receipt_rate_limit_error', { userId: user.id, error: countErr.message });
+    logSafe('receipt_rate_limit_error', { userId: user.id, error: countErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (typeof countData === 'number' && countData >= DAILY_SCAN_LIMIT) {
@@ -168,7 +169,7 @@ export async function uploadReceipt(formData: FormData): Promise<UploadReceiptRe
     upsert: false,
   });
   if (upErr) {
-    console.error('receipt_storage_upload_error', { userId: user.id, error: upErr.message });
+    logSafe('receipt_storage_upload_error', { userId: user.id, error: upErr.message });
     return { success: false, error: 'STORAGE_ERROR' };
   }
 
@@ -184,7 +185,7 @@ export async function uploadReceipt(formData: FormData): Promise<UploadReceiptRe
     .select('id')
     .single();
   if (insErr) {
-    console.error('receipt_scans_insert_error', {
+    logSafe('receipt_scans_insert_error', {
       userId: user.id,
       error: insErr.message,
     });
@@ -223,7 +224,7 @@ export async function analyzeReceipt(input: unknown): Promise<AnalyzeReceiptResu
     .eq('id', scanId)
     .maybeSingle();
   if (scanErr) {
-    console.error('receipt_scan_fetch_error', { userId: user.id, error: scanErr.message });
+    logSafe('receipt_scan_fetch_error', { userId: user.id, error: scanErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!scan) return { success: false, error: 'NOT_FOUND' };
@@ -291,7 +292,7 @@ export async function analyzeReceipt(input: unknown): Promise<AnalyzeReceiptResu
     .eq('id', scan.id)
     .eq('user_id', user.id);
   if (upErr) {
-    console.error('receipt_scan_update_error', { userId: user.id, error: upErr.message });
+    logSafe('receipt_scan_update_error', { userId: user.id, error: upErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
@@ -371,7 +372,7 @@ export async function createTransactionFromReceipt(
   try {
     fxResult = await convertToBase(signedCents, data.currency, baseCurrency, data.transaction_date);
   } catch (err) {
-    console.error('receipt_fx_error', {
+    logSafe('receipt_fx_error', {
       userId: user.id,
       error: err instanceof Error ? err.message : 'unknown',
     });
@@ -389,7 +390,7 @@ export async function createTransactionFromReceipt(
       data.transaction_date,
     );
   } catch (err) {
-    console.error('receipt_ledger_fx_error', {
+    logSafe('receipt_ledger_fx_error', {
       userId: user.id,
       error: err instanceof Error ? err.message : 'unknown',
     });
@@ -429,7 +430,7 @@ export async function createTransactionFromReceipt(
     .single();
 
   if (txErr) {
-    console.error('receipt_tx_insert_error', { userId: user.id, error: txErr.message });
+    logSafe('receipt_tx_insert_error', { userId: user.id, error: txErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
