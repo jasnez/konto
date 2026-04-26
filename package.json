@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "test:parser:benchmark": "vitest run tests/parser/benchmark.test.ts",
     "parser:golden:generate": "node scripts/generate-parser-golden-dataset.mjs",
     "test:e2e": "playwright test --grep-invert @slow",
