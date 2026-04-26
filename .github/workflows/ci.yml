@@ -88,7 +88,9 @@ jobs:
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: 2.39.0
+          # Must match a CLI that can parse the committed `supabase/config.toml`
+          # (2.39.x fails: unknown keys e.g. db.health_timeout, storage.s3_protocol).
+          version: 2.90.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -141,7 +143,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: supabase/setup-cli@v1
-        with: { version: 2.39.0 }
+        with: { version: 2.90.0 }
       - run: pnpm exec playwright install chromium --with-deps
       - name: Cijeli import E2E (mock parse)
         run: pnpm test:e2e:slow
