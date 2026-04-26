@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
 interface ErrorProps {
@@ -20,11 +21,64 @@ function isLikelyNetworkError(err: Error): boolean {
   );
 }
 
+function classifyError(err: Error): {
+  type: 'network' | 'auth' | 'server' | 'unknown';
+  label: string;
+  title: string;
+  message: string;
+} {
+  const m = err.message.toLowerCase();
+
+  if (m.includes('unauthorized') || m.includes('401')) {
+    return {
+      type: 'auth',
+      label: 'Pristup odbijen',
+      title: 'Trebam da se prijaviš',
+      message: 'Tvoja sesija je istekla. Prijavi se ponovo da bi nastavio rad sa Kontom.',
+    };
+  }
+
+  if (m.includes('service_unavailable') || m.includes('503')) {
+    return {
+      type: 'server',
+      label: 'Servis nedostupan',
+      title: 'Privremeno nedostupan',
+      message: 'Naš servis je privremeno nedostupan. Pokušaj opet za par minuta.',
+    };
+  }
+
+  if (m.includes('server') || m.includes('500') || m.includes('internal error')) {
+    return {
+      type: 'server',
+      label: 'Greška servera',
+      title: 'Nešto nije u redu na našoj strani',
+      message: 'Naš tim je obaviješten o problemu. Pokušaj ponovo ili nas kontaktiraj za pomoć.',
+    };
+  }
+
+  if (isLikelyNetworkError(err)) {
+    return {
+      type: 'network',
+      label: 'Mreža',
+      title: 'Nema mrežne veze',
+      message: 'Provjeri Wi‑Fi ili mobilne podatke, pa osvježi stranicu.',
+    };
+  }
+
+  return {
+    type: 'unknown',
+    label: 'Greška',
+    title: 'Nešto nije u redu',
+    message: 'Pokušaj ponovo za trenutak. Ako se problem ponavlja, javi se podršci.',
+  };
+}
+
 export default function Error({ error, reset }: ErrorProps) {
   const [offline, setOffline] = useState(
     typeof navigator !== 'undefined' ? !navigator.onLine : false,
   );
-  const network = offline || isLikelyNetworkError(error);
+  const isOffline = offline || isLikelyNetworkError(error);
+  const classification = classifyError(error);
 
   useEffect(() => {
     const onOff = () => {
@@ -39,25 +93,43 @@ export default function Error({ error, reset }: ErrorProps) {
   }, []);
 
   useEffect(() => {
-    console.error(error);
-  }, [error]);
+    console.error('[ErrorBoundary]', {
+      digest: error.digest,
+      message: error.message,
+      type: classification.type,
+    });
+  }, [error, classification]);
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-8 p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center">
       <div className="space-y-2">
-        <p className="text-sm font-mono text-muted-foreground">{network ? 'Mreža' : 'Greška'}</p>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {network ? 'Nema mrežne veze' : 'Nešto nije u redu'}
-        </h1>
-        <p className="text-muted-foreground">
-          {network
-            ? 'Provjeri Wi‑Fi ili mobilne podatke, pa osvježi stranicu.'
-            : 'Pokušaj ponovo za trenutak. Ako se ponavlja, javi se podršci.'}
-        </p>
+        <p className="text-sm font-mono text-muted-foreground">{classification.label}</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{classification.title}</h1>
+        <p className="text-muted-foreground max-w-sm">{classification.message}</p>
       </div>
-      <Button onClick={reset} className="min-h-11 min-w-[44px]">
-        {network ? 'Pokušaj opet' : 'Pokušaj ponovo'}
-      </Button>
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        {isOffline ? (
+          <Button onClick={reset} className="min-h-11 min-w-[44px]">
+            Osvježi stranicu
+          </Button>
+        ) : (
+          <>
+            <Button onClick={reset} variant="default" className="min-h-11 min-w-[44px]">
+              Pokušaj ponovo
+            </Button>
+            <Link href="/pocetna">
+              <Button variant="outline" className="min-h-11 min-w-[44px]">
+                Početna
+              </Button>
+            </Link>
+          </>
+        )}
+      </div>
+
+      {error.digest && (
+        <p className="text-xs text-muted-foreground font-mono">ID: {error.digest}</p>
+      )}
     </main>
   );
 }
