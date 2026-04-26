@@ -13,11 +13,28 @@ describe('account deletion cancel token', () => {
     vi.unstubAllEnvs();
   });
 
-  it('round-trips and extracts user id', () => {
+  it('round-trips and extracts userId, jti, and exp', () => {
     const exp = Math.floor(Date.now() / 1000) + 3600;
     const token = signAccountDeletionCancelToken('user-uuid-1', exp);
     const verified = verifyAccountDeletionCancelToken(token);
-    expect(verified).toEqual({ ok: true, userId: 'user-uuid-1' });
+    expect(verified.ok).toBe(true);
+    if (!verified.ok) return;
+    expect(verified.userId).toBe('user-uuid-1');
+    expect(verified.exp).toBe(exp);
+    // jti must be a UUID-shaped string
+    expect(verified.jti).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u);
+  });
+
+  it('each signed token gets a unique jti', () => {
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    const t1 = signAccountDeletionCancelToken('user-uuid-1', exp);
+    const t2 = signAccountDeletionCancelToken('user-uuid-1', exp);
+    const v1 = verifyAccountDeletionCancelToken(t1);
+    const v2 = verifyAccountDeletionCancelToken(t2);
+    expect(v1.ok).toBe(true);
+    expect(v2.ok).toBe(true);
+    if (!v1.ok || !v2.ok) return;
+    expect(v1.jti).not.toBe(v2.jti);
   });
 
   it('rejects tampered signature', () => {

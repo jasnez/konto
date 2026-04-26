@@ -5,7 +5,13 @@ import { runCancelDeletion } from '@/lib/account-deletion/run-cancel-deletion';
 
 export interface CancelDeletionFailure {
   success: false;
-  error: 'INVALID_TOKEN' | 'NO_EMAIL' | 'USER_NOT_FOUND' | 'NOT_SCHEDULED' | 'MAGIC_LINK_FAILED';
+  error:
+    | 'INVALID_TOKEN'
+    | 'TOKEN_ALREADY_USED'
+    | 'NO_EMAIL'
+    | 'USER_NOT_FOUND'
+    | 'NOT_SCHEDULED'
+    | 'MAGIC_LINK_FAILED';
 }
 
 /**

@@ -273,6 +273,27 @@ export type Database = {
           },
         ];
       };
+      deletion_cancel_tokens: {
+        Row: {
+          jti: string;
+          user_id: string;
+          expires_at: string;
+          consumed_at: string;
+        };
+        Insert: {
+          jti: string;
+          user_id: string;
+          expires_at: string;
+          consumed_at?: string;
+        };
+        Update: {
+          jti?: string;
+          user_id?: string;
+          expires_at?: string;
+          consumed_at?: string;
+        };
+        Relationships: [];
+      };
       fx_rates: {
         Row: {
           base: string;

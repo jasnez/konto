@@ -9,6 +9,7 @@ export type RunCancelDeletionResult =
       ok: false;
       error:
         | 'INVALID_TOKEN'
+        | 'TOKEN_ALREADY_USED'
         | 'NO_EMAIL'
         | 'USER_NOT_FOUND'
         | 'NOT_SCHEDULED'
@@ -25,6 +26,25 @@ export async function runCancelDeletion(token: string): Promise<RunCancelDeletio
   }
 
   const admin = createAdminClient();
+
+  // Atomically consume the jti.  The primary-key constraint on
+  // deletion_cancel_tokens guarantees that only the first redemption succeeds;
+  // any subsequent attempt with the same token returns a 23505 unique-violation.
+  const { error: jtiError } = await admin.from('deletion_cancel_tokens').insert({
+    jti: verified.jti,
+    user_id: verified.userId,
+    expires_at: new Date(verified.exp * 1000).toISOString(),
+  });
+
+  if (jtiError) {
+    if (jtiError.code === '23505') {
+      // Token was already redeemed — reject the replay.
+      return { ok: false, error: 'TOKEN_ALREADY_USED' };
+    }
+    logSafe('cancel_deletion_jti_insert_error', { error: jtiError.message });
+    return { ok: false, error: 'INVALID_TOKEN' };
+  }
+
   const { data: userData, error: getUserError } = await admin.auth.admin.getUserById(
     verified.userId,
   );

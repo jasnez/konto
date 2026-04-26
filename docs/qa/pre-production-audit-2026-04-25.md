@@ -758,13 +758,13 @@ Current: feature branch → PR → `main` merge → Vercel auto-deploy. Two gaps
 
 ## Audit Summary
 
-| Category        | Critical | High         | Medium | Low   | Resolved         |
-| --------------- | -------- | ------------ | ------ | ----- | ---------------- |
-| Data Loss       | 0        | 3 (DL-2,5,8) | 4      | 0     | DL-1, DL-8 ✅    |
-| Security        | 0        | 3 (SE-1,3,7) | 2      | 2     | SE-4 ✅, SE-6 ✅ |
-| Availability    | 1 (AV-2) | 4            | 0      | 0     | AV-1 ✅          |
-| UX              | 0        | 2 (UX-1,3)   | 6      | 1     |                  |
-| Maintainability | 1 (MT-1) | 3 (MT-2,3,4) | 2      | 0     |                  |
-| **Total**       | **2**    | **15**       | **14** | **3** | 5                |
+| Category        | Critical | High         | Medium | Low   | Resolved                  |
+| --------------- | -------- | ------------ | ------ | ----- | ------------------------- |
+| Data Loss       | 0        | 3 (DL-2,5,8) | 4      | 0     | DL-1, DL-8 ✅             |
+| Security        | 0        | 2 (SE-3,7)   | 2      | 2     | SE-1 ✅, SE-4 ✅, SE-6 ✅ |
+| Availability    | 1 (AV-2) | 4            | 0      | 0     | AV-1 ✅                   |
+| UX              | 0        | 2 (UX-1,3)   | 6      | 1     |                           |
+| Maintainability | 1 (MT-1) | 3 (MT-2,3,4) | 2      | 0     |                           |
+| **Total**       | **2**    | **14**       | **14** | **3** | 6                         |
 
 **Verdict:** The app has a solid security and architecture foundation (RLS correct, Zod everywhere, bigint money, PKCE auth, no IDOR, no open redirects). The risks are concentrated in three areas: (1) missing structural guarantees that rely on developer discipline, (2) the parse pipeline being a single fragile 1000-LoC file with no failure recovery, and (3) PII/logging gaps that become GDPR incidents the moment real users import real bank statements. The Week-1 set of 10 items closes the most severe risks without requiring the large refactors. Do not onboard real users before completing items DL-8, SE-1, SE-4, SE-6, SE-7, and AV-6 at minimum.
