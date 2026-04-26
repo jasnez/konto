@@ -213,4 +213,54 @@ describe.skipIf(!shouldRun)('update_account_balance trigger', () => {
     expect(await getBalance(admin, accountAId)).toBe(0n);
     expect(await getBalance(admin, accountBId)).toBe(0n);
   });
+
+  // System-level invariant. The 7 prior tests check named scenarios; this one
+  // does a mixed sequence of operations and verifies the trigger never lets
+  // accounts.current_balance_cents drift from sum(account_ledger_cents) on
+  // non-soft-deleted rows. If this test ever fails the trigger has a bug.
+  it('drift sweep — balance == sum(account_ledger_cents) after a mixed sequence', async () => {
+    // 5 inserts on A, 3 inserts on B
+    const t1 = await insertTx({ userId, accountId: accountAId, amount: 1000 });
+    const t2 = await insertTx({ userId, accountId: accountAId, amount: -250 });
+    const t3 = await insertTx({ userId, accountId: accountAId, amount: 4000 });
+    const t4 = await insertTx({ userId, accountId: accountAId, amount: -100 });
+    await insertTx({ userId, accountId: accountAId, amount: 75 });
+    const t6 = await insertTx({ userId, accountId: accountBId, amount: 200 });
+    const t7 = await insertTx({ userId, accountId: accountBId, amount: -50 });
+    await insertTx({ userId, accountId: accountBId, amount: 1234 });
+
+    // Mutate: amount edit, soft-delete, restore, hard-delete, cross-account move
+    await admin
+      .from('transactions')
+      .update({ original_amount_cents: 9999, account_ledger_cents: 9999, base_amount_cents: 9999 })
+      .eq('id', t1);
+    await admin.from('transactions').update({ deleted_at: new Date().toISOString() }).eq('id', t2);
+    await admin.from('transactions').update({ deleted_at: null }).eq('id', t2);
+    await admin.from('transactions').delete().eq('id', t3);
+    await admin.from('transactions').update({ account_id: accountBId }).eq('id', t4);
+    await admin.from('transactions').update({ deleted_at: new Date().toISOString() }).eq('id', t6);
+    await admin
+      .from('transactions')
+      .update({ original_amount_cents: 500, account_ledger_cents: 500, base_amount_cents: 500 })
+      .eq('id', t7);
+
+    // Compute expected balance per account directly from the ledger.
+    async function expectedBalance(accId: string): Promise<bigint> {
+      const { data, error } = await admin
+        .from('transactions')
+        .select('account_ledger_cents')
+        .eq('account_id', accId)
+        .is('deleted_at', null);
+      if (error) throw error;
+      return data.reduce<bigint>((s, r) => s + BigInt(r.account_ledger_cents), 0n);
+    }
+
+    const aActual = await getBalance(admin, accountAId);
+    const aExpected = await expectedBalance(accountAId);
+    expect(aActual).toBe(aExpected);
+
+    const bActual = await getBalance(admin, accountBId);
+    const bExpected = await expectedBalance(accountBId);
+    expect(bActual).toBe(bExpected);
+  });
 });

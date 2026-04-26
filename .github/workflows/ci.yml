@@ -60,6 +60,70 @@ jobs:
       - name: Build
         run: pnpm build
 
+  integration-tests:
+    name: RLS / DB integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_GEN_SKIP: '1'
+      RUN_INTEGRATION_TESTS: '1'
+      SUPABASE_URL_TEST: 'http://127.0.0.1:54321'
+      NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.39.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start Supabase + apply migrations
+        # `supabase start` boots Postgres/Auth/Storage in Docker (~60s) and applies
+        # everything in `supabase/migrations/` plus `supabase/seed.sql`. The
+        # `supabase db reset --no-seed` afterward guarantees a deterministic state
+        # in case `start` reused a cached volume.
+        run: |
+          supabase start
+          supabase db reset --no-seed
+
+      - name: Capture local stack keys
+        # The local stack uses well-known demo JWTs; we still read them from
+        # `supabase status -o env` rather than hard-coding so a future CLI bump
+        # that rotates them doesn't silently break this job.
+        run: |
+          eval "$(supabase status -o env)"
+          echo "SUPABASE_ANON_KEY_TEST=${ANON_KEY}" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_KEY_TEST=${SERVICE_ROLE_KEY}" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}" >> "$GITHUB_ENV"
+
+      - name: Run integration tests (__tests__/rls)
+        # The 9 specs under __tests__/rls all gate on RUN_INTEGRATION_TESTS=1
+        # and skip themselves otherwise. Unit-style tests in __tests__/actions
+        # use vi.mock() and already run in the `verify` job — they're not
+        # re-run here.
+        run: pnpm exec vitest run __tests__/rls
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --no-backup || true
+
   e2e-slow:
     name: E2E @slow (cijeli import) — main
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
