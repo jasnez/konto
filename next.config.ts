@@ -5,6 +5,54 @@ import type { NextConfig } from 'next';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
+  // SE-4: Security hardening headers.
+  // CSP ships in report-only mode for 48h to catch violations before enforcing,
+  // then switch to Content-Security-Policy (non-report-only) in a follow-up commit.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+          // Report-only CSP: violations logged to console but not blocked.
+          // After 48h of monitoring reports, change to 'Content-Security-Policy'
+          // (non-report-only) to enforce violations as hard failures.
+          {
+            key: 'Content-Security-Policy-Report-Only',
+            value:
+              "default-src 'self'; " +
+              "script-src 'self'; " +
+              "style-src 'self' 'unsafe-inline'; " +
+              "img-src 'self' data: blob:; " +
+              "font-src 'self' data:; " +
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://api.frankfurter.app; " +
+              "frame-ancestors 'none'; " +
+              "base-uri 'self'; " +
+              "form-action 'self'",
+          },
+        ],
+      },
+    ];
+  },
   turbopack: {
     root: __dirname,
   },
