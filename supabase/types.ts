@@ -121,6 +121,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      deletion_cancel_tokens: {
+        Row: {
+          consumed_at: string;
+          expires_at: string;
+          jti: string;
+          user_id: string;
+        };
+        Insert: {
+          consumed_at?: string;
+          expires_at: string;
+          jti: string;
+          user_id: string;
+        };
+        Update: {
+          consumed_at?: string;
+          expires_at?: string;
+          jti?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       categories: {
         Row: {
           color: string | null;
@@ -264,35 +285,6 @@ export type Database = {
             columns: ['set_merchant_id'];
             isOneToOne: false;
             referencedRelation: 'merchants';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      deletion_cancel_tokens: {
-        Row: {
-          consumed_at: string;
-          expires_at: string;
-          jti: string;
-          user_id: string;
-        };
-        Insert: {
-          consumed_at?: string;
-          expires_at: string;
-          jti: string;
-          user_id: string;
-        };
-        Update: {
-          consumed_at?: string;
-          expires_at?: string;
-          jti?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'deletion_cancel_tokens_user_id_fkey';
-            columns: ['user_id'];
-            isOneToOne: false;
-            referencedRelation: 'users';
             referencedColumns: ['id'];
           },
         ];

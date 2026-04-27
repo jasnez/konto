@@ -51,7 +51,7 @@ function loadEnvLocal(): Record<string, string> {
   return parsed;
 }
 
-function mustEnv(name: string): string {
+export function mustEnv(name: string): string {
   const value = process.env[name] ?? envFromFile[name];
   if (!value) {
     throw new Error(`Missing required env var for E2E: ${name}`);

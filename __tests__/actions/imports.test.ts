@@ -820,6 +820,45 @@ describe('finalizeImport', () => {
     expect(stub.rpcSpy).not.toHaveBeenCalled();
   });
 
+  it('MT-4/fx-failure: batch status not modified when FX conversion throws', async () => {
+    // Verifies DL audit concern: FX failure must NOT leave batch in a corrupted state
+    // (status stays 'ready', not silently flipped to 'importing').
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'ready',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+      },
+      staging: [
+        {
+          id: PARSED_ID_A,
+          transaction_date: '2026-04-10',
+          amount_minor: -500,
+          currency: 'USD',
+          raw_description: 'Amazon',
+          merchant_id: null,
+          category_id: null,
+        },
+      ],
+      profile: { base_currency: 'BAM' },
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+    vi.mocked(convertToBase).mockRejectedValue(new Error('FX API unavailable'));
+
+    const result = await finalizeImport({ batchId: BATCH_ID });
+
+    expect(result).toEqual({ success: false, error: 'EXTERNAL_SERVICE_ERROR' });
+    // finalize_import_batch RPC (which atomically writes status + rows) was never called.
+    expect(stub.rpcSpy.mock.calls.some((c) => c[0] === 'finalize_import_batch')).toBe(false);
+    // No direct status UPDATE was issued on import_batches either.
+    expect(stub.batchUpdatePayloads).toHaveLength(0);
+    // Storage not touched.
+    expect(stub.storageRemoveSpy).not.toHaveBeenCalled();
+  });
+
   it('returns UNAUTHORIZED when there is no authenticated user', async () => {
     const stub = buildSupabase({ user: null });
     vi.mocked(createClient).mockResolvedValue(stub.client as never);

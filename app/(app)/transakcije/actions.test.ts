@@ -96,6 +96,36 @@ describe('transaction actions', () => {
     }
   });
 
+  it('MT-4/invalid-input: zero amount rejected pre-DB (createClient never called)', async () => {
+    const result = await createTransaction({
+      account_id: '123e4567-e89b-12d3-a456-426614174000',
+      amount_cents: 0n,
+      currency: 'BAM',
+      transaction_date: '2026-04-23',
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBe('VALIDATION_ERROR');
+    }
+    expect(vi.mocked(createClient)).not.toHaveBeenCalled();
+  });
+
+  it('MT-4/invalid-input: non-ISO date rejected pre-DB (createClient never called)', async () => {
+    const result = await createTransaction({
+      account_id: '123e4567-e89b-12d3-a456-426614174000',
+      amount_cents: 1000n,
+      currency: 'BAM',
+      transaction_date: 'not-a-date',
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBe('VALIDATION_ERROR');
+    }
+    expect(vi.mocked(createClient)).not.toHaveBeenCalled();
+  });
+
   it('create unauthorized', async () => {
     getUser.mockResolvedValue({ data: { user: null } });
 
