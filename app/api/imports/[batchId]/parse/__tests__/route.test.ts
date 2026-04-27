@@ -21,6 +21,8 @@ vi.mock('@/lib/parser/llm-parse', () => {
   return { parseStatementWithLLM: vi.fn(), CircuitOpenError };
 });
 vi.mock('@/lib/parser/ocr-fallback', () => ({ ocrFallback: vi.fn() }));
+const { inngestSendMock } = vi.hoisted(() => ({ inngestSendMock: vi.fn() }));
+vi.mock('@/lib/inngest/client', () => ({ inngest: { send: inngestSendMock } }));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
@@ -300,7 +302,7 @@ describe('POST /api/imports/[batchId]/parse', () => {
     expect(insertCalls).toHaveLength(0);
     expect(updateCalls.at(-1)?.payload).toEqual({
       status: 'failed',
-      error_message: 'gemini_timeout',
+      error_message: 'parse_failed',
     });
   });
 
@@ -376,6 +378,60 @@ describe('POST /api/imports/[batchId]/parse', () => {
     expect(updateCalls.at(-1)?.payload).toEqual({
       status: 'failed',
       error_message: 'insert_failed',
+    });
+  });
+
+  describe('IMPORTS_ASYNC=true (AV-2 async path)', () => {
+    const ORIGINAL = process.env.IMPORTS_ASYNC;
+
+    beforeEach(() => {
+      process.env.IMPORTS_ASYNC = 'true';
+    });
+
+    afterEach(() => {
+      if (ORIGINAL === undefined) delete process.env.IMPORTS_ASYNC;
+      else process.env.IMPORTS_ASYNC = ORIGINAL;
+    });
+
+    it('marks batch enqueued, sends Inngest event, returns 202', async () => {
+      const { client, updateCalls } = buildSupabaseMock({
+        user: { id: 'user-1' },
+        batch: baseBatch,
+        downloadData: fakePdf(),
+      });
+      vi.mocked(createClient).mockResolvedValue(client as never);
+      inngestSendMock.mockResolvedValue({ ids: ['evt-1'] });
+
+      const res = await invoke('batch-1');
+      expect(res.status).toBe(202);
+      expect(await res.json()).toEqual({ enqueued: true });
+      expect(updateCalls).toEqual([{ table: 'import_batches', payload: { status: 'enqueued' } }]);
+      expect(inngestSendMock).toHaveBeenCalledWith({
+        name: 'import/parse.requested',
+        data: { batchId: 'batch-1', userId: 'user-1' },
+      });
+      // The pipeline must NOT run synchronously in async mode.
+      expect(extractPdfText).not.toHaveBeenCalled();
+      expect(parseStatementWithLLM).not.toHaveBeenCalled();
+    });
+
+    it('rolls back to uploaded if Inngest send throws', async () => {
+      const { client, updateCalls } = buildSupabaseMock({
+        user: { id: 'user-1' },
+        batch: baseBatch,
+        downloadData: fakePdf(),
+      });
+      vi.mocked(createClient).mockResolvedValue(client as never);
+      inngestSendMock.mockRejectedValue(new Error('inngest_down'));
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      const res = await invoke('batch-1');
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ error: 'enqueue_failed' });
+      expect(updateCalls).toEqual([
+        { table: 'import_batches', payload: { status: 'enqueued' } },
+        { table: 'import_batches', payload: { status: 'uploaded' } },
+      ]);
     });
   });
 });

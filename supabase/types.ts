@@ -121,27 +121,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      deletion_cancel_tokens: {
-        Row: {
-          consumed_at: string;
-          expires_at: string;
-          jti: string;
-          user_id: string;
-        };
-        Insert: {
-          consumed_at?: string;
-          expires_at: string;
-          jti: string;
-          user_id: string;
-        };
-        Update: {
-          consumed_at?: string;
-          expires_at?: string;
-          jti?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
       categories: {
         Row: {
           color: string | null;
@@ -288,6 +267,27 @@ export type Database = {
             referencedColumns: ['id'];
           },
         ];
+      };
+      deletion_cancel_tokens: {
+        Row: {
+          consumed_at: string;
+          expires_at: string;
+          jti: string;
+          user_id: string;
+        };
+        Insert: {
+          consumed_at?: string;
+          expires_at: string;
+          jti: string;
+          user_id: string;
+        };
+        Update: {
+          consumed_at?: string;
+          expires_at?: string;
+          jti?: string;
+          user_id?: string;
+        };
+        Relationships: [];
       };
       fx_rates: {
         Row: {
