@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
 import { guardCircuit, onFailure, onSuccess } from './gemini-circuit-breaker';
+import { validatePlausibility } from './validate-plausibility';
 import { withRetry } from './with-retry';
 export { CircuitOpenError } from './gemini-circuit-breaker';
 
@@ -144,5 +145,15 @@ export async function parseStatementWithLLM(
 
   const raw = result.response.text();
   const parsed: unknown = JSON.parse(raw);
-  return ParseResultSchema.parse(parsed);
+  const validated = ParseResultSchema.parse(parsed);
+
+  const { transactions, warnings, filteredCount } = validatePlausibility(validated);
+  return {
+    ...validated,
+    transactions,
+    warnings,
+    ...(filteredCount > 0 && {
+      confidence: validated.confidence === 'high' ? 'medium' : validated.confidence,
+    }),
+  };
 }
