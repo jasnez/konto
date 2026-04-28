@@ -60,7 +60,14 @@ export type ParsedTransaction = z.infer<typeof ParsedTransactionSchema>;
 export type ParseResult = z.infer<typeof ParseResultSchema>;
 
 const GEMINI_MODEL = 'gemini-2.5-flash-lite';
-const GEMINI_TIMEOUT_MS = 15_000;
+// Per-call Gemini timeout. Sized for the AV-2 async path (Inngest worker has
+// no Vercel 60s cap), where larger statements with many transactions can
+// legitimately take 30-60s to complete. Worst-case retry budget across 3
+// attempts: 90s + 1s + 90s + 2s + 90s = ~273s (4.5 min), well under any
+// Inngest function timeout. The synchronous fallback path is implicitly
+// limited to whatever Vercel's 60s `maxDuration` allows — that path is
+// expected to time out for big statements, which is exactly why AV-2 exists.
+const GEMINI_TIMEOUT_MS = 90_000;
 const MIN_NON_WHITESPACE_CHARS = 20;
 
 /**
