@@ -149,7 +149,7 @@ jobs:
         with: { version: 2.90.0 }
       - run: pnpm exec playwright install chromium --with-deps
       - name: Cijeli import E2E (mock parse)
-        run: pnpm test:e2e:slow
+        run: pnpm test:e2e:slow --project chromium
         env:
           CI: 'true'
           GITHUB_REF: ${{ github.ref }}
