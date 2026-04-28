@@ -1,22 +1,19 @@
-import { fileURLToPath } from 'node:url';
-
 import './pdfjs-node-polyfill';
 
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 import { ocrFallback } from './ocr-fallback';
 
-// Resolve the worker file using ESM-native import.meta.resolve() so that
-// pnpm's virtual store symlinks and Vercel's serverless file layout are
-// both handled correctly (unlike createRequire which can break when the
-// symlink target is outside the function bundle root).
+// Resolve the worker using ESM-native import.meta.resolve() which correctly
+// follows pnpm virtual-store symlinks in Vercel's serverless environment.
+// import.meta.resolve() already returns a file:// URL string — pass it
+// directly to workerSrc (pdfjs expects a URL, not a filesystem path).
 try {
-  const workerUrl = import.meta.resolve('pdfjs-dist/legacy/build/pdf.worker.mjs');
-  pdfjs.GlobalWorkerOptions.workerSrc = fileURLToPath(workerUrl);
+  pdfjs.GlobalWorkerOptions.workerSrc = import.meta
+    .resolve('pdfjs-dist/legacy/build/pdf.worker.mjs');
 } catch {
-  // Worker file not resolvable in this environment (e.g. bundled without
-  // pdfjs in external packages). pdfjs falls back to inline execution on
-  // the main thread — adequate for server-side text extraction.
+  // Worker not resolvable (e.g. deeply bundled context). pdfjs falls back
+  // to inline main-thread execution — adequate for server-side text extraction.
 }
 
 export interface ExtractResult {
