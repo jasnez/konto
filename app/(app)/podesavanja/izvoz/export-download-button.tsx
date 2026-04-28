@@ -26,7 +26,13 @@ export function ExportDownloadButton() {
         return;
       }
 
-      const blob = await res.blob();
+      let blob: Blob;
+      try {
+        blob = await res.blob();
+      } catch {
+        toast.error('Export se prekinuo.', { description: 'Pokušaj ponovo za trenutak.' });
+        return;
+      }
       const header = res.headers.get('Content-Disposition');
       const match = header?.match(/filename="([^"]+)"/);
       const filename = match?.[1] ?? `konto-export-${new Date().toISOString().split('T')[0]}.json`;
