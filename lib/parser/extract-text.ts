@@ -1,5 +1,19 @@
 import './pdfjs-node-polyfill';
 
+// Dead-code require: never executed at runtime, but webpack's static file
+// tracer follows require() calls unconditionally, so this forces
+// pdf.worker.mjs into the Vercel serverless bundle.
+// pdfjs loads the worker via a dynamic import() which the tracer doesn't
+// follow. PR #18 removed this block on the (incorrect) assumption that
+// outputFileTracingIncludes alone was sufficient — production parse failed
+// silently. DO NOT REMOVE without verifying on a Vercel preview deploy
+// that PDF upload completes end-to-end without it.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+if (false) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('pdfjs-dist/legacy/build/pdf.worker.mjs');
+}
+
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 import { ocrFallback } from './ocr-fallback';
