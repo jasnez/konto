@@ -5,10 +5,20 @@ import { logSafe } from '@/lib/logger';
 import type { Database } from '@/supabase/types';
 
 /** AV-2 watchdog SLA: a batch sitting in `enqueued`/`parsing` longer than
- *  this is considered stranded. The synchronous route caps at 60s; an
- *  async run rarely exceeds 30s once the worker picks up the event, so
- *  90s comfortably exceeds both worst cases. */
-export const STUCK_THRESHOLD_SECONDS = 90;
+ *  this is considered stranded.
+ *
+ *  Sized to comfortably exceed the legitimate worst-case async run:
+ *    - Gemini timeout (lib/parser/llm-parse.ts:GEMINI_TIMEOUT_MS) = 90s
+ *    - withRetry: 3 attempts with 1s + 2s backoff = up to 273s
+ *    - PDF extraction + DB writes ≈ 15s
+ *    - Total legitimate worst case ≈ 290s
+ *
+ *  600s gives ~310s headroom for unexpectedly slow Gemini responses on
+ *  large statements, while still bounding how long a genuinely stuck
+ *  batch can stay in flight before the user sees a `parsing_timeout`
+ *  failure. If GEMINI_TIMEOUT_MS or the retry policy changes, this
+ *  constant must stay at least 2× the new worst case. */
+export const STUCK_THRESHOLD_SECONDS = 600;
 
 export async function sweepStuckImports(
   supabase: SupabaseClient<Database>,
