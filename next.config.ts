@@ -59,6 +59,14 @@ const nextConfig: NextConfig = {
   // Marking it as external tells Next.js to leave it in node_modules and
   // let Node.js resolve it natively, which is the only supported pattern.
   serverExternalPackages: ['pdfjs-dist', 'canvas'],
+  // pdf.worker.mjs is loaded by pdfjs-dist as a dynamic import at runtime.
+  // Next.js's output-file tracer does not follow dynamic imports, so the
+  // worker file is absent from the Vercel serverless bundle by default.
+  // outputFileTracingIncludes forces it into every route that needs it.
+  outputFileTracingIncludes: {
+    '/api/imports/[batchId]/parse': ['./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs'],
+    '/api/inngest': ['./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs'],
+  },
   turbopack: {
     root: __dirname,
   },
