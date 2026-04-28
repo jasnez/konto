@@ -2,7 +2,7 @@
 
 **What this enables:** flips the import pipeline from synchronous (60s Vercel function cap, fragile for >200-row statements) to asynchronous (Inngest worker, no time cap, watchdog recovery). The async code has been deployed since PR #8 but is gated behind `IMPORTS_ASYNC=true` env flag.
 
-**Why a runbook exists:** The first cutover attempt (2026-04-28) failed because three preconditions were missed: (a) migration `20260527130000_00040_import_batches_enqueued_status` was not applied to production Supabase, (b) the frontend's `narrowStatus()` did not include `'enqueued'`, so transitional state rendered as failed UI with `NULL error_message`, and (c) we toggled the flag before verifying. Production was usable but the async path looked broken. This runbook prevents a repeat.
+**Why a runbook exists:** The first cutover attempt (2026-04-28) failed because four preconditions were missed: (a) migration `20260527130000_00040_import_batches_enqueued_status` was not applied to production Supabase, (b) the frontend's `narrowStatus()` did not include `'enqueued'`, so transitional state rendered as failed UI with `NULL error_message`, (c) the project is on Vercel **Hobby** plan with a hard 60s function cap that the `run-pipeline` step exceeds for real bank statements (the trap that ultimately killed the cutover), and (d) we toggled the flag before verifying any of the above. Production was usable but the async path was structurally unable to complete. This runbook prevents a repeat.
 
 ---
 
@@ -92,6 +92,32 @@ Before flipping anything, do one **clean sync-path import** end-to-end with a re
 
 - [ ] Upload real PDF → status flows `uploaded → parsing → ready/awaiting_review → imported`
 - [ ] Transactions visible in `/transakcije`
+
+### 0.7 Vercel plan tier — the silent blocker
+
+This is the trap that bit the 2026-04-28 cutover attempt and is **not optional**.
+
+Inngest functions on Vercel run as **regular serverless functions** that Inngest cloud invokes — every `step.run()` is a fresh Vercel invocation bound by the project's plan-tier `maxDuration` cap:
+
+| Plan       | Max `maxDuration`                     | Verdict for AV-2                                                                            |
+| ---------- | ------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Hobby      | 60s                                   | **Will not work** for any statement large enough to need >60s of Gemini + extraction. STOP. |
+| Pro        | 300s default, 800s with `vercel.json` | Works. Bump `maxDuration` in `app/api/inngest/route.ts` from 60 to 300 before flipping.     |
+| Enterprise | 900s                                  | Works. Same code change as Pro.                                                             |
+
+**Verify the plan:**
+
+1. https://vercel.com/jasnezs-projects/settings/billing — top of page shows current plan
+2. If **Hobby**: do not flip `IMPORTS_ASYNC=true`. Async path will fail with `FUNCTION_INVOCATION_TIMEOUT` for the exact statements AV-2 is meant to fix. Either upgrade to Pro **or** refactor `parseImportFn` so no single step exceeds 60s (e.g. chunk the LLM call by page across separate steps). Track this as a follow-up; do not attempt cutover until resolved.
+3. If **Pro/Enterprise**: bump `maxDuration` in two files (PR before flipping):
+   - `app/api/inngest/route.ts:export const maxDuration = 60` → `300`
+   - `app/api/imports/[batchId]/parse/route.ts:export const maxDuration = 60` → `300` (sync fallback)
+
+**Why this isn't obvious:** "Inngest functions have no time cap" is true at the orchestration layer (Inngest cloud will keep your run alive for hours, retrying steps), but every individual step still runs as a Vercel function with the plan-tier cap. The Inngest docs and the AV-2 audit recommendation both elide this, which is how the original cutover plan missed it.
+
+- [ ] Plan tier identified
+- [ ] If Hobby: cutover deferred until plan upgrade or pipeline refactor
+- [ ] If Pro+: `maxDuration` bumped to 300 in both routes via PR; PR merged and deployed before proceeding to Phase 2
 
 ---
 
@@ -231,12 +257,14 @@ Note: Inngest already does this correctly when it auto-syncs — the deploy-spec
 
 ## Appendix B — Failure-mode quick reference
 
-| Symptom                                                                                      | Most likely cause                                                                          | Fix                                                                         |
-| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| POST returns 500, log shows `parse_route_enqueue_mark_error` with check-constraint violation | Migration 00040 not applied                                                                | `supabase db push`                                                          |
-| POST returns 500, log shows `parse_route_enqueue_send_error` with "Event key not found"      | `INNGEST_EVENT_KEY` missing in Production scope                                            | Add it, redeploy                                                            |
-| POST returns 500, log shows `parse_route_enqueue_send_error` with "Unauthorized"             | Event key from wrong Inngest env (Test vs Prod)                                            | Replace with Production key, redeploy                                       |
-| POST returns 202 but no Inngest run                                                          | Function URL unreachable from Inngest cloud                                                | Re-sync from dashboard; if still broken, check Vercel deployment protection |
-| UI shows "Uvoz nije uspio" but DB row is `enqueued`/`parsing`                                | Frontend missing `'enqueued'` in `narrowStatus()`                                          | Merge the fix; redeploy                                                     |
-| Inngest run completes, status stays `parsing` indefinitely                                   | Inngest function returned but did not update status (bug); watchdog will recover after 90s | Inspect run, file bug                                                       |
-| All Inngest runs fail with "Cannot find module pdf.worker.mjs"                               | `outputFileTracingIncludes` regression                                                     | Check `next.config.ts`; verify `node-linker=hoisted` in `.npmrc`            |
+| Symptom                                                                                         | Most likely cause                                                                          | Fix                                                                                                                             |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| POST returns 500, log shows `parse_route_enqueue_mark_error` with check-constraint violation    | Migration 00040 not applied                                                                | `supabase db push`                                                                                                              |
+| POST returns 500, log shows `parse_route_enqueue_send_error` with "Event key not found"         | `INNGEST_EVENT_KEY` missing in Production scope                                            | Add it, redeploy                                                                                                                |
+| POST returns 500, log shows `parse_route_enqueue_send_error` with "Unauthorized"                | Event key from wrong Inngest env (Test vs Prod)                                            | Replace with Production key, redeploy                                                                                           |
+| POST returns 202 but no Inngest run                                                             | Function URL unreachable from Inngest cloud                                                | Re-sync from dashboard; if still broken, check Vercel deployment protection                                                     |
+| UI shows "Uvoz nije uspio" but DB row is `enqueued`/`parsing`                                   | Frontend missing `'enqueued'` in `narrowStatus()`                                          | Merge the fix; redeploy                                                                                                         |
+| Inngest run completes, status stays `parsing` indefinitely                                      | Inngest function returned but did not update status (bug); watchdog will recover after 90s | Inspect run, file bug                                                                                                           |
+| All Inngest runs fail with "Cannot find module pdf.worker.mjs"                                  | `outputFileTracingIncludes` regression                                                     | Check `next.config.ts`; verify `node-linker=hoisted` in `.npmrc`                                                                |
+| Inngest run fails with `FUNCTION_INVOCATION_TIMEOUT`; batch ends `failed` / `parsing_timeout`   | Vercel plan-tier `maxDuration` exceeded (60s on Hobby; 300s default Pro)                   | See Phase 0.7. On Hobby: cutover not viable until plan upgrade or refactor.                                                     |
+| Inngest run errors `[GoogleGenerativeAI Error]: Request aborted ... This operation was aborted` | `GEMINI_TIMEOUT_MS` fired before Gemini answered                                           | Bump `GEMINI_TIMEOUT_MS` and the watchdog `STUCK_THRESHOLD_SECONDS` together (the two are coupled — see comments in both files) |
