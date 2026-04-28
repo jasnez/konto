@@ -53,6 +53,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // pdfjs-dist uses require.resolve() at module initialisation to locate its
+  // worker file. Bundling it (webpack/turbopack) changes the file-system
+  // layout and makes require.resolve() fail at runtime on Vercel → 500.
+  // Marking it as external tells Next.js to leave it in node_modules and
+  // let Node.js resolve it natively, which is the only supported pattern.
+  serverExternalPackages: ['pdfjs-dist', 'canvas'],
   turbopack: {
     root: __dirname,
   },
