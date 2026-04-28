@@ -1,22 +1,16 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { runCategorizationCascade } from '@/lib/categorization/cascade';
-import { extractPdfText } from '@/lib/parser/extract-text';
-import { ocrFallback } from '@/lib/parser/ocr-fallback';
-import { CircuitOpenError, parseStatementWithLLM } from '@/lib/parser/llm-parse';
-import { redactPII } from '@/lib/parser/redact-pii';
+import { ParsePipelineError, runParsePipeline } from '@/lib/parser/parse-pipeline';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, IMPORT_PARSE_MAX, IMPORT_PARSE_WINDOW_SEC } from '@/lib/server/rate-limit';
-import type { Database } from '@/supabase/types';
+import { inngest } from '@/lib/inngest/client';
 import { logSafe } from '@/lib/logger';
 
 /**
  * POST /api/imports/[batchId]/parse
  *
- * Full PDF → structured transactions pipeline (F2-E2-T5):
- *   download → extractPdfText → (OCR fallback) → redactPII → LLM parse → insert.
- *
- * Runs synchronously inside the Route Handler (no queue in Phase 2).
- * Protected by Supabase auth; RLS blocks cross-user batch access.
+ * When IMPORTS_ASYNC=true the route enqueues the parse to Inngest and returns
+ * 202 immediately. Otherwise the full pipeline runs inside the request, capped
+ * at the route's 60s maxDuration (AV-2).
  */
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -33,10 +27,15 @@ type ParseErrorCode =
   | 'pdf_not_found'
   | 'no_text_extracted'
   | 'service_unavailable'
-  | 'parse_failed';
+  | 'parse_failed'
+  | 'enqueue_failed';
 
 function jsonError(code: ParseErrorCode, status: number) {
   return NextResponse.json({ error: code }, { status });
+}
+
+function asyncEnabled(): boolean {
+  return process.env.IMPORTS_ASYNC === 'true';
 }
 
 export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
@@ -48,8 +47,6 @@ export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
   } = await supabase.auth.getUser();
   if (!user) return jsonError('unauth', 401);
 
-  // RLS blocks batches belonging to other users; we still explicitly match user_id
-  // in the update queries below (defense-in-depth, per security rules).
   const { data: batch, error: batchErr } = await supabase
     .from('import_batches')
     .select('id, account_id, storage_path, status, accounts(institution)')
@@ -85,145 +82,90 @@ export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
     return jsonError('rate_limited', 429);
   }
 
-  // Mark as parsing so the UI (and re-entrant requests) know work is in flight.
+  if (asyncEnabled()) {
+    const { error: markErr } = await supabase
+      .from('import_batches')
+      .update({ status: 'enqueued' })
+      .eq('id', batch.id)
+      .eq('user_id', user.id);
+    if (markErr) {
+      logSafe('parse_route_enqueue_mark_error', {
+        userId: user.id,
+        batchId: batch.id,
+        error: markErr.message,
+      });
+      return jsonError('enqueue_failed', 500);
+    }
+    try {
+      await inngest.send({
+        name: 'import/parse.requested',
+        data: { batchId: batch.id, userId: user.id },
+      });
+    } catch (err) {
+      // Roll back to `uploaded` so the user can retry without watchdog wait.
+      await supabase
+        .from('import_batches')
+        .update({ status: 'uploaded' })
+        .eq('id', batch.id)
+        .eq('user_id', user.id);
+      logSafe('parse_route_enqueue_send_error', {
+        userId: user.id,
+        batchId: batch.id,
+        error: err instanceof Error ? err.message : 'unknown',
+      });
+      return jsonError('enqueue_failed', 500);
+    }
+    return NextResponse.json({ enqueued: true }, { status: 202 });
+  }
+
   await supabase
     .from('import_batches')
     .update({ status: 'parsing' })
     .eq('id', batch.id)
     .eq('user_id', user.id);
 
+  const bankHint = (() => {
+    const rel = batch.accounts as
+      | { institution?: string | null }
+      | { institution?: string | null }[]
+      | null;
+    if (!rel) return undefined;
+    if (Array.isArray(rel)) return rel[0]?.institution ?? undefined;
+    return rel.institution ?? undefined;
+  })();
+
   try {
-    // 1. Download PDF from Storage.
-    const { data: fileData, error: downloadErr } = await supabase.storage
-      .from('bank-statements')
-      .download(batch.storage_path);
-    if (downloadErr) {
-      throw new Error('pdf_not_found');
-    }
-    const buffer = await fileData.arrayBuffer();
-
-    // 2. Extract text. `extractPdfText` already transparently invokes the Mistral
-    //    OCR fallback when available, so most image-only PDFs come back with
-    //    `hasText: true`. The explicit `ocrFallback` call below covers the edge
-    //    case where the internal attempt was skipped (no key) or silently failed
-    //    and we want a surfaced error instead of an empty payload reaching the
-    //    LLM.
-    const extracted = await extractPdfText(buffer);
-    let text = extracted.text;
-    let hasText = extracted.hasText;
-    if (!hasText && !extracted.ocrUsed) {
-      text = await ocrFallback(buffer);
-      hasText = text.replace(/\s/g, '').length > 0;
-    }
-    if (!hasText) {
-      throw new Error('no_text_extracted');
-    }
-
-    // 3. Redact PII before sending anything to the LLM.
-    const redacted = redactPII(text);
-
-    // 4. LLM parse (gemini-2.5-flash-lite, temperature 0, schema-guided JSON).
-    // `accounts` may be returned as an object or (when PostgREST infers many-to-one
-    // via the generated types) a single-element array; normalise defensively.
-    const bankHint = (() => {
-      const rel = batch.accounts as
-        | { institution?: string | null }
-        | { institution?: string | null }[]
-        | null;
-      if (!rel) return undefined;
-      if (Array.isArray(rel)) return rel[0]?.institution ?? undefined;
-      return rel.institution ?? undefined;
-    })();
-    const parsed = await parseStatementWithLLM(redacted, bankHint);
-
-    // 5. Insert parsed rows into the staging table for user review.
-    if (parsed.transactions.length > 0) {
-      const rows: Database['public']['Tables']['parsed_transactions']['Insert'][] = [];
-      for (const t of parsed.transactions) {
-        const categorization = await runCategorizationCascade(supabase, {
-          description: t.description,
-          userId: user.id,
-          amountMinor: t.amountMinor,
-        });
-        rows.push({
-          batch_id: batch.id,
-          user_id: user.id,
-          transaction_date: t.date,
-          amount_minor: t.amountMinor,
-          currency: t.currency,
-          raw_description: t.description,
-          reference: t.reference ?? null,
-          status: 'pending_review' as const,
-          parse_confidence: parsed.confidence,
-          merchant_id: categorization.merchantId ?? null,
-          category_id: categorization.categoryId ?? null,
-          categorization_source: categorization.source,
-          categorization_confidence: categorization.confidence,
-          selected_for_import: true,
-        });
-      }
-      const { error: insertErr } = await supabase.from('parsed_transactions').insert(rows);
-      if (insertErr) {
-        logSafe('parse_route_insert_error', {
-          userId: user.id,
-          batchId: batch.id,
-          error: insertErr.message,
-        });
-        throw new Error('insert_failed');
-      }
-    }
-
-    // 6. Finalise batch state.
-    const { error: updateErr } = await supabase
-      .from('import_batches')
-      .update({
-        status: 'ready',
-        transaction_count: parsed.transactions.length,
-        parse_confidence: parsed.confidence,
-        parse_warnings: parsed.warnings,
-        statement_period_start: parsed.statementPeriodStart ?? null,
-        statement_period_end: parsed.statementPeriodEnd ?? null,
-        error_message: null,
-      })
-      .eq('id', batch.id)
-      .eq('user_id', user.id);
-    if (updateErr) {
-      logSafe('parse_route_finalize_error', {
-        userId: user.id,
-        batchId: batch.id,
-        error: updateErr.message,
-      });
-      throw new Error('finalize_failed');
-    }
-
+    const result = await runParsePipeline(supabase, {
+      batchId: batch.id,
+      userId: user.id,
+      storagePath: batch.storage_path,
+      bankHint,
+    });
     return NextResponse.json({
       success: true,
-      count: parsed.transactions.length,
-      confidence: parsed.confidence,
-      warnings: parsed.warnings,
+      count: result.count,
+      confidence: result.confidence,
+      warnings: result.warnings,
     });
   } catch (err) {
-    const isCircuitOpen = err instanceof CircuitOpenError;
+    const isPipeline = err instanceof ParsePipelineError;
+    const code = isPipeline ? err.code : 'parse_failed';
     const message = err instanceof Error ? err.message : 'unknown';
     logSafe('parse_route_error', {
       userId: user.id,
       batchId: batch.id,
       error: message,
-      circuitOpen: isCircuitOpen,
+      code,
     });
 
-    // Preserve the batch in a retryable state when the circuit is open so the
-    // user can try again after the 60-second recovery window without re-uploading.
     await supabase
       .from('import_batches')
-      .update({
-        status: 'failed',
-        error_message: isCircuitOpen ? 'service_unavailable' : message,
-      })
+      .update({ status: 'failed', error_message: code })
       .eq('id', batch.id)
       .eq('user_id', user.id);
 
-    if (isCircuitOpen) return jsonError('service_unavailable', 503);
+    if (code === 'service_unavailable') return jsonError('service_unavailable', 503);
+    if (code === 'pdf_not_found') return jsonError('pdf_not_found', 404);
     return jsonError('parse_failed', 500);
   }
 }
