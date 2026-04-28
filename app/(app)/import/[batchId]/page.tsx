@@ -27,7 +27,14 @@ export const metadata: Metadata = {
 export const maxDuration = 60;
 
 type ConfidenceLevel = 'high' | 'medium' | 'low' | null;
-type BatchStatus = 'uploaded' | 'parsing' | 'ready' | 'imported' | 'failed' | 'rejected';
+type BatchStatus =
+  | 'uploaded'
+  | 'enqueued'
+  | 'parsing'
+  | 'ready'
+  | 'imported'
+  | 'failed'
+  | 'rejected';
 type CategorizationSource =
   | 'rule'
   | 'alias_exact'
@@ -65,6 +72,7 @@ function narrowCategorizationSource(raw: string | null): CategorizationSource {
 function narrowStatus(raw: string): BatchStatus {
   if (
     raw === 'uploaded' ||
+    raw === 'enqueued' ||
     raw === 'parsing' ||
     raw === 'ready' ||
     raw === 'imported' ||
@@ -155,7 +163,7 @@ export default async function ImportBatchPage(props: PageProps) {
     );
   }
 
-  if (batchStatus === 'uploaded' || batchStatus === 'parsing') {
+  if (batchStatus === 'uploaded' || batchStatus === 'enqueued' || batchStatus === 'parsing') {
     return (
       <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
         <p className="text-sm text-muted-foreground">

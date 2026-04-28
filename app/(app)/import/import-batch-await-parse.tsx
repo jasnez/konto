@@ -11,12 +11,17 @@ const PARSE_SLOW_AFTER_MS = 90_000;
 
 interface ImportBatchAwaitParseProps {
   batchId: string;
-  status: 'uploaded' | 'parsing';
+  status: 'uploaded' | 'enqueued' | 'parsing';
 }
 
 /**
- * Kicks off POST /parse once for `uploaded`, polls server every 3s while `parsing`,
- * and surfaces a slow-parse hint after 90s (per F2-E3-T3).
+ * Kicks off POST /parse once for `uploaded`, polls server every 3s while
+ * `enqueued`/`parsing`, and surfaces a slow-parse hint after 90s
+ * (per F2-E3-T3).
+ *
+ * `enqueued` is the AV-2 transitional state between the route accepting the
+ * request and the Inngest worker picking it up. Treated identically to
+ * `parsing` for polling/UX purposes.
  */
 export function ImportBatchAwaitParse({ batchId, status }: ImportBatchAwaitParseProps) {
   const router = useRouter();
@@ -41,8 +46,10 @@ export function ImportBatchAwaitParse({ batchId, status }: ImportBatchAwaitParse
     })();
   }, [batchId, status, router]);
 
+  const isInFlight = status === 'enqueued' || status === 'parsing';
+
   useEffect(() => {
-    if (status !== 'parsing') {
+    if (!isInFlight) {
       setSlowNotice(false);
       return;
     }
@@ -52,18 +59,20 @@ export function ImportBatchAwaitParse({ batchId, status }: ImportBatchAwaitParse
     return () => {
       window.clearTimeout(slowId);
     };
-  }, [status, batchId]);
+  }, [isInFlight, batchId]);
 
   useEffect(() => {
-    if (status !== 'parsing') return;
+    if (!isInFlight) return;
     const pollId = window.setInterval(() => {
       router.refresh();
     }, PARSE_POLL_MS);
     return () => {
       window.clearInterval(pollId);
     };
-  }, [status, router]);
+  }, [isInFlight, router]);
 
+  // `parsing` shows the actively-running copy; `uploaded`/`enqueued` show the
+  // pre-flight copy since the worker hasn't started yet in either case.
   const isParsing = status === 'parsing';
 
   return (
