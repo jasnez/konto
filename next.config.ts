@@ -6,8 +6,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   // SE-4: Security hardening headers.
-  // CSP ships in report-only mode for 48h to catch violations before enforcing,
-  // then switch to Content-Security-Policy (non-report-only) in a follow-up commit.
+  // CSP enforced (switched from Content-Security-Policy-Report-Only on
+  // 2026-04-28 after the planned 48h monitoring window. Original report-only
+  // ship-date: 2026-04-26.). Violations are now hard-blocked by the browser.
   async headers() {
     return [
       {
@@ -33,11 +34,13 @@ const nextConfig: NextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()',
           },
-          // Report-only CSP: violations logged to console but not blocked.
-          // After 48h of monitoring reports, change to 'Content-Security-Policy'
-          // (non-report-only) to enforce violations as hard failures.
+          // Enforced CSP (per SE-4 plan). Switched from
+          // Content-Security-Policy-Report-Only on 2026-04-28 after the
+          // planned 48h monitoring window. If a directive is too strict for
+          // a real flow we'll learn via console errors / Sentry — preferable
+          // to leaving the policy advisory indefinitely.
           {
-            key: 'Content-Security-Policy-Report-Only',
+            key: 'Content-Security-Policy',
             value:
               "default-src 'self'; " +
               "script-src 'self'; " +
