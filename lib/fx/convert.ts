@@ -233,7 +233,7 @@ function chooseRateDate(firstDate: string, secondDate: string, stale: boolean): 
   return firstDate <= secondDate ? firstDate : secondDate;
 }
 
-function toCents(amountCents: bigint, rate: number): bigint {
+export function toCents(amountCents: bigint, rate: number): bigint {
   return BigInt(Math.round(Number(amountCents) * rate));
 }
 
@@ -244,6 +244,61 @@ export function __setFxRateStoreForTests(store: FxRateStore | null): void {
 export function __resetFxInternalsForTests(): void {
   adminClient = undefined;
   testStore = null;
+}
+
+export async function resolveFxRate(
+  fromCurrency: string,
+  toCurrency: string,
+  date: string,
+): Promise<{
+  fxRate: number;
+  fxRateDate: string;
+  fxSource: FxSource;
+  fxStale: boolean;
+}> {
+  validateDate(date);
+
+  const from = normalizeCurrency(fromCurrency);
+  const to = normalizeCurrency(toCurrency);
+
+  if (from === to) {
+    return {
+      fxRate: 1,
+      fxRateDate: date,
+      fxSource: 'identity',
+      fxStale: false,
+    };
+  }
+
+  if (from === 'BAM' && to === 'EUR') {
+    return {
+      fxRate: EUR_BAM_RATE,
+      fxRateDate: date,
+      fxSource: 'currency_board',
+      fxStale: false,
+    };
+  }
+
+  if (from === 'EUR' && to === 'BAM') {
+    return {
+      fxRate: BAM_EUR_RATE,
+      fxRateDate: date,
+      fxSource: 'currency_board',
+      fxStale: false,
+    };
+  }
+
+  const fromToEur = await resolveToEurRate(date, from);
+  const eurToTarget = await resolveEurToQuote(date, to);
+  const fxRate = fromToEur.rate * eurToTarget.rate;
+  const fxStale = fromToEur.stale || eurToTarget.stale;
+
+  return {
+    fxRate,
+    fxRateDate: chooseRateDate(fromToEur.rateDate, eurToTarget.rateDate, fxStale),
+    fxSource: combineSource(fromToEur, eurToTarget),
+    fxStale,
+  };
 }
 
 export async function convertToBase(
@@ -258,51 +313,9 @@ export async function convertToBase(
   fxSource: FxSource;
   fxStale: boolean;
 }> {
-  validateDate(date);
-
-  const from = normalizeCurrency(fromCurrency);
-  const to = normalizeCurrency(toCurrency);
-
-  if (from === to) {
-    return {
-      baseCents: amountCents,
-      fxRate: 1,
-      fxRateDate: date,
-      fxSource: 'identity',
-      fxStale: false,
-    };
-  }
-
-  if (from === 'BAM' && to === 'EUR') {
-    return {
-      baseCents: toCents(amountCents, EUR_BAM_RATE),
-      fxRate: EUR_BAM_RATE,
-      fxRateDate: date,
-      fxSource: 'currency_board',
-      fxStale: false,
-    };
-  }
-
-  if (from === 'EUR' && to === 'BAM') {
-    return {
-      baseCents: toCents(amountCents, BAM_EUR_RATE),
-      fxRate: BAM_EUR_RATE,
-      fxRateDate: date,
-      fxSource: 'currency_board',
-      fxStale: false,
-    };
-  }
-
-  const fromToEur = await resolveToEurRate(date, from);
-  const eurToTarget = await resolveEurToQuote(date, to);
-  const fxRate = fromToEur.rate * eurToTarget.rate;
-  const fxStale = fromToEur.stale || eurToTarget.stale;
-
+  const rate = await resolveFxRate(fromCurrency, toCurrency, date);
   return {
-    baseCents: toCents(amountCents, fxRate),
-    fxRate,
-    fxRateDate: chooseRateDate(fromToEur.rateDate, eurToTarget.rateDate, fxStale),
-    fxSource: combineSource(fromToEur, eurToTarget),
-    fxStale,
+    baseCents: toCents(amountCents, rate.fxRate),
+    ...rate,
   };
 }

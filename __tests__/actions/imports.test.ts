@@ -8,9 +8,52 @@ import {
 } from '@/lib/server/actions/imports';
 import { convertToBase } from '@/lib/fx/convert';
 import { createClient } from '@/lib/supabase/server';
+import { resolveFxRatesForBatch } from '@/lib/fx/batch-resolver';
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }));
-vi.mock('@/lib/fx/convert', () => ({ convertToBase: vi.fn() }));
+vi.mock('@/lib/fx/convert', () => ({
+  convertToBase: vi.fn(),
+  resolveFxRate: vi.fn(async (from: string, to: string, date: string) => {
+    if (from === to) {
+      return { fxRate: 1, fxRateDate: date, fxSource: 'identity', fxStale: false };
+    }
+    if (from === 'EUR' && to === 'BAM') {
+      return { fxRate: 1.9558, fxRateDate: date, fxSource: 'currency_board', fxStale: false };
+    }
+    if (from === 'BAM' && to === 'EUR') {
+      return { fxRate: 0.5112, fxRateDate: date, fxSource: 'currency_board', fxStale: false };
+    }
+    return { fxRate: 1.5, fxRateDate: date, fxSource: 'ecb', fxStale: false };
+  }),
+  toCents: (amount: bigint, rate: number) => BigInt(Math.round(Number(amount) * rate)),
+}));
+vi.mock('@/lib/fx/batch-resolver', async () => {
+  const convert = await vi.importActual<typeof import('@/lib/fx/convert')>('@/lib/fx/convert');
+  return {
+    resolveFxRatesForBatch: vi.fn(async (rows: Array<{ currency: string; transaction_date: string }>, baseCurrency: string, accountCurrency: string) => {
+      const resolveFxRateMocked = vi.mocked(convert.resolveFxRate);
+      const map = new Map();
+      const keysToResolve = new Set<string>();
+
+      for (const row of rows) {
+        const from = row.currency.trim().toUpperCase();
+        const base = baseCurrency.trim().toUpperCase();
+        const acct = accountCurrency.trim().toUpperCase();
+        keysToResolve.add(`${from}|${base}|${row.transaction_date}`);
+        if (from !== acct && base !== acct) {
+          keysToResolve.add(`${from}|${acct}|${row.transaction_date}`);
+        }
+      }
+
+      for (const key of keysToResolve) {
+        const [from, to, date] = key.split('|');
+        const rate = await resolveFxRateMocked(from, to, date);
+        map.set(key, rate);
+      }
+      return map;
+    }),
+  };
+});
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 // ─── Thenable chain builder ───────────────────────────────────────────
@@ -394,7 +437,6 @@ describe('finalizeImport', () => {
     const result = await finalizeImport({ batchId: BATCH_ID });
 
     expect(result).toEqual({ success: true, data: { imported: 1, skippedDuplicates: 0 } });
-    expect(convertToBase).toHaveBeenCalledWith(-2500n, 'EUR', 'BAM', '2026-04-10');
     expect(stub.rpcSpy).toHaveBeenCalledWith('import_dedup_filter', {
       p_account_id: ACCOUNT_ID,
       p_rows: [
@@ -516,7 +558,6 @@ describe('finalizeImport', () => {
 
     const result = await finalizeImport({ batchId: BATCH_ID });
     expect(result).toEqual({ success: true, data: { imported: 1, skippedDuplicates: 1 } });
-    expect(convertToBase).toHaveBeenCalledTimes(2);
     expect(stub.rpcSpy).toHaveBeenCalledWith(
       'finalize_import_batch',
       expect.objectContaining({
@@ -846,7 +887,8 @@ describe('finalizeImport', () => {
       profile: { base_currency: 'BAM' },
     });
     vi.mocked(createClient).mockResolvedValue(stub.client as never);
-    vi.mocked(convertToBase).mockRejectedValue(new Error('FX API unavailable'));
+    const mockResolveFxRate = vi.mocked(require('@/lib/fx/convert').resolveFxRate);
+    mockResolveFxRate.mockRejectedValueOnce(new Error('FX API unavailable'));
 
     const result = await finalizeImport({ batchId: BATCH_ID });
 

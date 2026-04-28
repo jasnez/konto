@@ -6,8 +6,8 @@ import { z } from 'zod';
 import type { CategorizationSource } from '@/lib/categorization/cascade';
 import { maybeCreateAlias, recordCorrection } from '@/lib/categorization/learn';
 import { computeDedupHash } from '@/lib/dedup';
-import { computeAccountLedgerCents } from '@/lib/fx/account-ledger';
-import { convertToBase } from '@/lib/fx/convert';
+import { resolveFxRatesForBatch } from '@/lib/fx/batch-resolver';
+import { convertToBase, toCents } from '@/lib/fx/convert';
 import { createClient } from '@/lib/supabase/server';
 import {
   checkRateLimit,
@@ -714,41 +714,53 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
   }
   const accountCurrency = importAccount.currency;
 
-  // 3. Compute FX + dedup hash per row in Node (network calls allowed here).
+  // 3. Resolve all FX rates in parallel (group by distinct currency, date pairs).
+  let fxCache;
+  try {
+    fxCache = await resolveFxRatesForBatch(staging, baseCurrency, accountCurrency);
+  } catch (error) {
+    logSafe('finalize_import_fx_batch', {
+      userId: user.id,
+      error: error instanceof Error ? error.message : 'unknown',
+    });
+    return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+  }
+
+  // 3b. Compute dedup hash per row (sync).
   const prepared: (PreparedImportRow & { sourceId: string })[] = [];
   for (const row of staging) {
-    let fx: Awaited<ReturnType<typeof convertToBase>>;
-    try {
-      fx = await convertToBase(
-        BigInt(row.amount_minor),
-        row.currency,
-        baseCurrency,
-        row.transaction_date,
-      );
-    } catch (error) {
-      logSafe('finalize_import_fx', {
+    const fromCurrency = row.currency.trim().toUpperCase();
+    const baseCurrencyNorm = baseCurrency.trim().toUpperCase();
+    const accountCurrencyNorm = accountCurrency.trim().toUpperCase();
+
+    const fxKey = `${fromCurrency}|${baseCurrencyNorm}|${row.transaction_date}`;
+    const baseFxRate = fxCache.get(fxKey);
+    if (!baseFxRate) {
+      logSafe('finalize_import_missing_fx_cache', {
         userId: user.id,
-        error: error instanceof Error ? error.message : 'unknown',
+        key: fxKey,
       });
       return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
     }
 
+    const baseCents = toCents(BigInt(row.amount_minor), baseFxRate.fxRate);
+
     let ledgerCents: bigint;
-    try {
-      ledgerCents = await computeAccountLedgerCents(
-        accountCurrency,
-        BigInt(row.amount_minor),
-        row.currency,
-        fx.baseCents,
-        baseCurrency,
-        row.transaction_date,
-      );
-    } catch (error) {
-      logSafe('finalize_import_ledger_fx', {
-        userId: user.id,
-        error: error instanceof Error ? error.message : 'unknown',
-      });
-      return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+    if (fromCurrency === accountCurrencyNorm) {
+      ledgerCents = BigInt(row.amount_minor);
+    } else if (baseCurrencyNorm === accountCurrencyNorm) {
+      ledgerCents = baseCents;
+    } else {
+      const ledgerKey = `${fromCurrency}|${accountCurrencyNorm}|${row.transaction_date}`;
+      const ledgerFxRate = fxCache.get(ledgerKey);
+      if (!ledgerFxRate) {
+        logSafe('finalize_import_missing_ledger_fx_cache', {
+          userId: user.id,
+          key: ledgerKey,
+        });
+        return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+      }
+      ledgerCents = toCents(BigInt(row.amount_minor), ledgerFxRate.fxRate);
     }
 
     const dedupHash = computeDedupHash({
@@ -763,12 +775,12 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
       account_id: accountId,
       original_amount_cents: row.amount_minor,
       original_currency: row.currency,
-      base_amount_cents: bigintToDbInt(fx.baseCents),
+      base_amount_cents: bigintToDbInt(baseCents),
       base_currency: baseCurrency,
       account_ledger_cents: bigintToDbInt(ledgerCents),
-      fx_rate: fx.fxRate,
-      fx_rate_date: fx.fxRateDate,
-      fx_stale: fx.fxStale,
+      fx_rate: baseFxRate.fxRate,
+      fx_rate_date: baseFxRate.fxRateDate,
+      fx_stale: baseFxRate.fxStale,
       transaction_date: row.transaction_date,
       merchant_raw: row.raw_description,
       merchant_id: row.merchant_id,
