@@ -6,9 +6,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   // SE-4: Security hardening headers.
-  // CSP enforced (switched from Content-Security-Policy-Report-Only on
-  // 2026-04-28 after the planned 48h monitoring window. Original report-only
-  // ship-date: 2026-04-26.). Violations are now hard-blocked by the browser.
+  // CSP rolled back to report-only on 2026-04-28 because the enforce flip
+  // (PR #18) blanked the production app — at least one critical inline
+  // script (Next.js hydration / Sentry / Vercel Analytics) is not yet
+  // covered by the directive set. Re-enable enforce only after auditing
+  // browser console violations during a full user flow and adjusting the
+  // directives (likely needs nonce-based script-src or 'unsafe-inline'
+  // on a narrowed set).
   async headers() {
     return [
       {
@@ -34,13 +38,16 @@ const nextConfig: NextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()',
           },
-          // Enforced CSP (per SE-4 plan). Switched from
-          // Content-Security-Policy-Report-Only on 2026-04-28 after the
-          // planned 48h monitoring window. If a directive is too strict for
-          // a real flow we'll learn via console errors / Sentry — preferable
-          // to leaving the policy advisory indefinitely.
+          // Report-only CSP. Violations are logged to the browser console
+          // (and reported if a report-uri is added later) but not enforced.
+          // Do NOT flip back to 'Content-Security-Policy' until the
+          // directive set is verified against an actual full user flow:
+          // login → dashboard → transactions → import → categories →
+          // accounts → security settings → insights, with DevTools open.
+          // The previous flip (PR #18) blanked the app, so the policy is
+          // currently known to be too strict for real traffic.
           {
-            key: 'Content-Security-Policy',
+            key: 'Content-Security-Policy-Report-Only',
             value:
               "default-src 'self'; " +
               "script-src 'self'; " +
