@@ -521,7 +521,7 @@ The "Retry" button is the highest-severity: it is the only English word a user s
 | -------- | ----------------------------------------------------------------------------------------------- | ----------- | ------ | ----------- |
 | ~~MT-1~~ | ~~`imports.ts` 1000 LoC, 5 concerns, no DI — largest SPOF~~ — **shipped 2026-04-29**            | n/a         | n/a    | ✅ Resolved |
 | MT-2     | Coverage thresholds not enforced in CI                                                          | High        | Med    | **High**    |
-| MT-3     | E2E only on main push, not PRs                                                                  | High        | Med    | **High**    |
+| ~~MT-3~~ | ~~E2E only on main push, not PRs~~ — **shipped 2026-04-29**                                     | n/a         | n/a    | ✅ Resolved |
 | MT-4     | Missing: stuck-parsing test, invalid-input, rate-limit RPC, FX-failure E2E, cancel-deletion E2E | High        | Med    | **High**    |
 | MT-5     | Parser benchmark: no latency SLO, no adversarial fixtures                                       | Med         | Med    | Med         |
 | MT-6     | FX loop not injectable; no DI seams for failure-path testing                                    | High        | Low    | Med         |
