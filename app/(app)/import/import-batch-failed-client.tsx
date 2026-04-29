@@ -38,6 +38,8 @@ export function ImportBatchFailedClient({
           msg = 'Uvoz nije pronađen.';
         } else if (result.error === 'BAD_STATE') {
           msg = 'Ovaj uvoz se ne može ponovo obraditi.';
+        } else if (result.error === 'RATE_LIMITED') {
+          msg = 'Previše pokušaja parsiranja. Pokušaj ponovo za 10 minuta.';
         }
         toast.error(msg);
         return;

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { logSafe, logWarn } from '@/lib/logger';
+import { IMPORT_PARSE_MAX, IMPORT_PARSE_WINDOW_SEC } from '@/lib/server/rate-limit';
 import {
   BatchIdInputSchema,
   STORAGE_BUCKET,
@@ -107,6 +108,7 @@ export type RetryImportParseResult =
   | { success: false; error: 'UNAUTHORIZED' }
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'BAD_STATE' }
+  | { success: false; error: 'RATE_LIMITED' }
   | { success: false; error: 'DATABASE_ERROR' };
 
 export async function retryImportParse(input: unknown): Promise<RetryImportParseResult> {
@@ -144,6 +146,20 @@ export async function retryImportParse(input: unknown): Promise<RetryImportParse
   }
   if (batch.status !== 'failed' && batch.status !== 'ready') {
     return { success: false, error: 'BAD_STATE' };
+  }
+
+  // UX-8: read-only rate-limit pre-check — do not reset the batch if the
+  // user would just hit the limit again on the subsequent POST /parse.
+  // This check does NOT consume a slot; the slot is consumed by POST /parse.
+  const cutoffParse = new Date(Date.now() - IMPORT_PARSE_WINDOW_SEC * 1000).toISOString();
+  const { count: parseCount, error: rlErr } = await supabase
+    .from('rate_limits')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('action', 'parse')
+    .gt('created_at', cutoffParse);
+  if (!rlErr && (parseCount ?? 0) >= IMPORT_PARSE_MAX) {
+    return { success: false, error: 'RATE_LIMITED' };
   }
 
   const { error: delErr } = await supabase
