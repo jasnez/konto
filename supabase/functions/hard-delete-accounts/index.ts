@@ -22,6 +22,24 @@ function json(status: number, body: Record<string, unknown>): Response {
   });
 }
 
+/**
+ * SE-2: Constant-time string comparison to prevent timing-based secret leakage.
+ * XORs every byte of both strings (padding the shorter with 0x00) and ORs the
+ * length difference into the result — any mismatch produces a non-zero value.
+ * Deno Edge Functions have no Node crypto module, so we implement this inline.
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const aBytes = enc.encode(a);
+  const bBytes = enc.encode(b);
+  const len = Math.max(aBytes.length, bBytes.length);
+  let diff = aBytes.length ^ bBytes.length;
+  for (let i = 0; i < len; i++) {
+    diff |= (aBytes[i] ?? 0) ^ (bBytes[i] ?? 0);
+  }
+  return diff === 0;
+}
+
 export async function handleHardDeleteAccounts(request: Request): Promise<Response> {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -29,7 +47,7 @@ export async function handleHardDeleteAccounts(request: Request): Promise<Respon
 
   const cronSecret = Deno.env.get('CRON_SECRET');
   const authHeader = request.headers.get('Authorization');
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || !authHeader || !timingSafeEqual(authHeader, `Bearer ${cronSecret}`)) {
     return json(401, { ok: false, error: 'unauthorized' });
   }
 
