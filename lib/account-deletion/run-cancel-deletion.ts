@@ -38,8 +38,51 @@ export async function runCancelDeletion(token: string): Promise<RunCancelDeletio
 
   if (jtiError) {
     if (jtiError.code === '23505') {
-      // Token was already redeemed — reject the replay.
-      return { ok: false, error: 'TOKEN_ALREADY_USED' };
+      // UX-6: token was already redeemed.  Two sub-cases:
+      // (a) deletion was already successfully cancelled (deleted_at IS NULL) →
+      //     idempotent re-click from a duplicate request or browser retry;
+      //     return a fresh magic link so the user can still sign in.
+      // (b) deletion is still pending (deleted_at IS NOT NULL) →
+      //     genuine replay attempt; reject.
+      const { data: idempotentUser, error: iuErr } = await admin.auth.admin.getUserById(
+        verified.userId,
+      );
+      if (iuErr) {
+        return { ok: false, error: 'TOKEN_ALREADY_USED' };
+      }
+      const idempotentEmail = idempotentUser.user.email;
+      if (!idempotentEmail) {
+        return { ok: false, error: 'TOKEN_ALREADY_USED' };
+      }
+
+      const { data: idempotentProfile, error: ipErr } = await admin
+        .from('profiles')
+        .select('deleted_at')
+        .eq('id', verified.userId)
+        .maybeSingle();
+
+      const alreadyCleared = !ipErr && idempotentProfile?.deleted_at === null;
+      if (!alreadyCleared) {
+        return { ok: false, error: 'TOKEN_ALREADY_USED' };
+      }
+
+      // Deletion already cancelled — issue a fresh magic link and return success.
+      const siteUrlIdempotent = mustExist('NEXT_PUBLIC_SITE_URL', process.env.NEXT_PUBLIC_SITE_URL);
+      const nextPathIdempotent = '/pocetna?deletionCanceled=1';
+      const redirectToIdempotent = `${siteUrlIdempotent}/auth/callback?next=${encodeURIComponent(nextPathIdempotent)}`;
+
+      const { data: idempotentLink, error: ilErr } = await admin.auth.admin.generateLink({
+        type: 'magiclink',
+        email: idempotentEmail,
+        options: { redirectTo: redirectToIdempotent },
+      });
+
+      if (ilErr) {
+        logSafe('cancel_deletion_idempotent_magic_link_error', { error: ilErr.message });
+        return { ok: false, error: 'MAGIC_LINK_FAILED' };
+      }
+
+      return { ok: true, magicLinkUrl: idempotentLink.properties.action_link };
     }
     logSafe('cancel_deletion_jti_insert_error', { error: jtiError.message });
     return { ok: false, error: 'INVALID_TOKEN' };
