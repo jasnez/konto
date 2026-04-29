@@ -180,6 +180,11 @@ interface SupabaseStubOptions {
   insertedMerchant?: { id: string };
   /** Row returned by the `merchant_aliases` insert .single(). */
   insertedAlias?: { id: string };
+  /**
+   * UX-8: number of recent parse entries in `rate_limits` for the pre-check.
+   * Defaults to 0 (not rate-limited).
+   */
+  rateLimitCount?: number;
 }
 
 interface SupabaseStub {
@@ -356,6 +361,15 @@ function buildSupabase(options: SupabaseStubOptions): SupabaseStub {
             },
           );
         },
+      };
+    }
+
+    if (table === 'rate_limits') {
+      // UX-8: read-only head count for retryImportParse pre-check.
+      const count = options.rateLimitCount ?? 0;
+      return {
+        select: () =>
+          makeBuilder({ data: null, count, error: null } as unknown as QueryResult<null>),
       };
     }
 
@@ -1466,6 +1480,48 @@ describe('retryImportParse', () => {
     const result = await retryImportParse({ batchId: BATCH_ID });
     expect(result).toEqual({ success: false, error: 'BAD_STATE' });
     expect(stub.parsedDeleteCalls).toBe(0);
+  });
+
+  it('UX-8: returns RATE_LIMITED and skips reset when user is at parse limit', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'failed',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+      },
+      rateLimitCount: 5, // at IMPORT_PARSE_MAX
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+
+    const result = await retryImportParse({ batchId: BATCH_ID });
+
+    expect(result).toEqual({ success: false, error: 'RATE_LIMITED' });
+    // batch must NOT be reset — no delete or update should fire
+    expect(stub.parsedDeleteCalls).toBe(0);
+    expect(stub.batchUpdatePayloads).toHaveLength(0);
+  });
+
+  it('UX-8: allows retry when parse count is below the limit', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'failed',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+      },
+      rateLimitCount: 4, // one slot still available
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+
+    const result = await retryImportParse({ batchId: BATCH_ID });
+
+    expect(result).toEqual({ success: true });
+    expect(stub.parsedDeleteCalls).toBe(1);
   });
 });
 
