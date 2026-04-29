@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { BAM_EUR_RATE } from '@/lib/fx/constants';
+import { BAM_EUR_RATE, EUR_BAM_RATE } from '@/lib/fx/constants';
+import { toCents } from '@/lib/fx/convert';
 import { safeIanaTimeZone } from '@/lib/safe-timezone';
 import type { Database } from '@/supabase/types';
 import { logSafe, logWarn } from '@/lib/logger';
@@ -93,17 +94,15 @@ function parseRpcPayload(data: unknown): Partial<MonthlySummaryRpcResult> | null
 }
 
 /**
- * Ista logika BAM↔EUR kao u `get_monthly_summary` (dovoljno za BiH domaću valutu);
- * za ostale parove drži stvarni iznos (ograničen fallback).
+ * Pretvori iznos u baznu valutu koristeći kanonski `toCents` iz lib/fx/convert
+ * (DL-6: centralizirana logika zaokruživanja, bez inline duplikata).
+ * Podržava BAM↔EUR via fiksni currency-board kurs; ostale parove ostavlja 1:1
+ * uz upozorenje (ograničen fallback — isti kao u get_monthly_summary RPC).
  */
 function convertCentsToBase(cents: bigint, from: string, base: string): bigint {
   if (from === base) return cents;
-  if (from === 'BAM' && base === 'EUR') {
-    return BigInt(Math.round(Number(cents) / BAM_EUR_RATE));
-  }
-  if (from === 'EUR' && base === 'BAM') {
-    return BigInt(Math.round(Number(cents) * BAM_EUR_RATE));
-  }
+  if (from === 'BAM' && base === 'EUR') return toCents(cents, EUR_BAM_RATE);
+  if (from === 'EUR' && base === 'BAM') return toCents(cents, BAM_EUR_RATE);
   if (from !== 'BAM' && from !== 'EUR' && (base === 'BAM' || base === 'EUR')) {
     logWarn('[getMonthlySummary] fallback: nepoznat par valuta, koristim 1:1', {
       from,
