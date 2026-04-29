@@ -245,7 +245,7 @@ export function QuickAddTransaction({
           ? 'Slična transakcija već postoji u zadnjih 30 dana.'
           : 'Podaci su sačuvani u formi. Možeš pokušati ponovo.',
       action: {
-        label: 'Retry',
+        label: 'Pokušaj ponovo',
         onClick: () => {
           onOpenChange(true);
         },
