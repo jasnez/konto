@@ -84,8 +84,15 @@ export function TransactionEditForm({
     }
 
     if (result.error === 'VALIDATION_ERROR') {
-      const firstMessage = result.details._root[0] ?? 'Provjeri unesene podatke.';
-      toast.error('Validacija nije prošla.', { description: firstMessage });
+      const d = result.details;
+      if (d.amount_cents?.[0]) form.setError('amount_cents', { message: d.amount_cents[0] });
+      if (d.account_id?.[0]) form.setError('account_id', { message: d.account_id[0] });
+      if (d.transaction_date?.[0])
+        form.setError('transaction_date', { message: d.transaction_date[0] });
+      if (d.merchant_raw?.[0]) form.setError('merchant_raw', { message: d.merchant_raw[0] });
+      if (d.category_id?.[0]) form.setError('category_id', { message: d.category_id[0] });
+      if (d.notes?.[0]) form.setError('notes', { message: d.notes[0] });
+      if (d._root?.[0]) toast.error('Validacija nije prošla.', { description: d._root[0] });
       return;
     }
 

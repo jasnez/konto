@@ -60,6 +60,40 @@ interface ValidationDetails {
   _root: string[];
 }
 
+interface ZodErrorTree {
+  errors: string[];
+  properties?: Record<string, { errors?: string[] } | ZodErrorTree | undefined>;
+}
+
+function asErrorTree(t: z.core.$ZodErrorTree<z.ZodError>): ZodErrorTree {
+  return t;
+}
+
+export type TransactionFieldErrorDetails = Partial<{
+  account_id: string[];
+  amount_cents: string[];
+  currency: string[];
+  transaction_date: string[];
+  merchant_raw: string[];
+  category_id: string[];
+  notes: string[];
+  _root: string[];
+}>;
+
+function buildTransactionFieldErrors(error: z.ZodError): TransactionFieldErrorDetails {
+  const t = asErrorTree(z.treeifyError(error));
+  return {
+    account_id: t.properties?.account_id?.errors,
+    amount_cents: t.properties?.amount_cents?.errors,
+    currency: t.properties?.currency?.errors,
+    transaction_date: t.properties?.transaction_date?.errors,
+    merchant_raw: t.properties?.merchant_raw?.errors,
+    category_id: t.properties?.category_id?.errors,
+    notes: t.properties?.notes?.errors,
+    _root: t.errors.length ? t.errors : undefined,
+  };
+}
+
 export type CreateTransactionResult =
   | { success: true; data: { id: string } }
   | { success: true; data: { id: string; transferPairId: string } }
@@ -72,7 +106,7 @@ export type CreateTransactionResult =
 
 export type UpdateTransactionResult =
   | { success: true }
-  | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
+  | { success: false; error: 'VALIDATION_ERROR'; details: TransactionFieldErrorDetails }
   | { success: false; error: 'UNAUTHORIZED' }
   | { success: false; error: 'FORBIDDEN' }
   | { success: false; error: 'NOT_FOUND' }
@@ -406,7 +440,7 @@ export async function updateTransaction(
     return {
       success: false,
       error: 'VALIDATION_ERROR',
-      details: buildValidationDetails(idParsed.error),
+      details: { _root: idParsed.error.issues.map((i) => i.message) },
     };
   }
 
@@ -415,7 +449,7 @@ export async function updateTransaction(
     return {
       success: false,
       error: 'VALIDATION_ERROR',
-      details: buildValidationDetails(parsed.error),
+      details: buildTransactionFieldErrors(parsed.error),
     };
   }
 
