@@ -349,33 +349,60 @@ export function ImportReviewClient({
     [batchId],
   );
 
-  const onConfirm = useCallback(() => {
-    startTransition(async () => {
-      const res = await finalizeImport({ batchId });
-      if (!res.success) {
-        if (res.error === 'BAD_STATE') {
-          toast.error('Uvoz nije spreman za potvrdu.');
-        } else if (res.error === 'ALL_DUPLICATES') {
-          toast.error(
-            'Sve odabrane stavke već postoje kao transakcije. Izmijeni ih ili isključi duplikate.',
-          );
-        } else if (res.error === 'EXTERNAL_SERVICE_ERROR') {
-          toast.error('Tečaj ili vanjski servis trenutno ne odgovara. Pokušaj za minut.');
-        } else {
-          toast.error('Uvoz nije uspio.');
-        }
+  const doConfirm = useCallback(
+    (bypassCategoryCheck: boolean) => {
+      // UX-7: warn before finalizing if any selected row has no category.
+      const uncategorizedCount = rows.filter(
+        (r) => r.selected_for_import && r.category_id === null,
+      ).length;
+      if (uncategorizedCount > 0 && !bypassCategoryCheck) {
+        toast.warning(
+          `${String(uncategorizedCount)} ${uncategorizedCount === 1 ? 'stavka nema' : 'stavki nemaju'} kategoriju.`,
+          {
+            description: 'Možeš nastaviti ili dodijeliti kategorije.',
+            action: {
+              label: 'Nastavi svejedno',
+              onClick: () => {
+                doConfirm(true);
+              },
+            },
+            duration: 8000,
+          },
+        );
         return;
       }
-      if (res.data.skippedDuplicates > 0) {
-        toast.success(
-          `Importovano ${String(res.data.imported)} transakcija. ${String(res.data.skippedDuplicates)} preskočene kao duplikati.`,
-        );
-      } else {
-        toast.success(`Importovano ${String(res.data.imported)} transakcija.`);
-      }
-      router.push('/transakcije');
-    });
-  }, [batchId, router]);
+      startTransition(async () => {
+        const res = await finalizeImport({ batchId });
+        if (!res.success) {
+          if (res.error === 'BAD_STATE') {
+            toast.error('Uvoz nije spreman za potvrdu.');
+          } else if (res.error === 'ALL_DUPLICATES') {
+            toast.error(
+              'Sve odabrane stavke već postoje kao transakcije. Izmijeni ih ili isključi duplikate.',
+            );
+          } else if (res.error === 'EXTERNAL_SERVICE_ERROR') {
+            toast.error('Tečaj ili vanjski servis trenutno ne odgovara. Pokušaj za minut.');
+          } else {
+            toast.error('Uvoz nije uspio.');
+          }
+          return;
+        }
+        if (res.data.skippedDuplicates > 0) {
+          toast.success(
+            `Importovano ${String(res.data.imported)} transakcija. ${String(res.data.skippedDuplicates)} preskočene kao duplikati.`,
+          );
+        } else {
+          toast.success(`Importovano ${String(res.data.imported)} transakcija.`);
+        }
+        router.push('/transakcije');
+      });
+    },
+    [batchId, router, rows],
+  );
+
+  const onConfirm = useCallback(() => {
+    doConfirm(false);
+  }, [doConfirm]);
 
   const onCancel = useCallback(() => {
     startTransition(async () => {
@@ -422,6 +449,11 @@ export function ImportReviewClient({
       setBulkMode(false);
     });
   }, [batchId, bulkCategoryId, bulkIds]);
+
+  // UX-7: select-all / deselect-all for the bulk panel.
+  const toggleAllBulk = useCallback(() => {
+    setBulkIds((prev) => (prev.size === rows.length ? new Set() : new Set(rows.map((r) => r.id))));
+  }, [rows]);
 
   return (
     <div className="pb-36 md:pb-32">
@@ -506,6 +538,14 @@ export function ImportReviewClient({
               >
                 Primijeni kategoriju
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 min-h-11 w-full sm:w-auto"
+                onClick={toggleAllBulk}
+              >
+                {bulkIds.size === rows.length ? 'Poništi sve' : 'Odaberi sve'}
+              </Button>
               <p className="text-sm text-muted-foreground">
                 Odabrano za grupu: {String(bulkIds.size)}
               </p>
@@ -525,7 +565,13 @@ export function ImportReviewClient({
               </th>
               {bulkMode ? (
                 <th className="w-10 py-2 pr-2 font-medium" scope="col">
-                  Grupa
+                  <Checkbox
+                    checked={bulkIds.size > 0 && bulkIds.size === rows.length}
+                    onCheckedChange={(checked) => {
+                      setBulkIds(checked ? new Set(rows.map((r) => r.id)) : new Set());
+                    }}
+                    aria-label="Odaberi sve za grupu"
+                  />
                 </th>
               ) : null}
               <th className="py-2 pr-2 font-medium" scope="col">
