@@ -1,13 +1,21 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CalendarDays, Camera, Loader2, MessageSquareMore } from 'lucide-react';
+import {
+  ArrowLeft,
+  Banknote,
+  CalendarDays,
+  Camera,
+  Loader2,
+  MessageSquareMore,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { createInstallmentPlan } from '@/app/(app)/kartice-rate/actions';
 import { createMerchant } from '@/app/(app)/merchants/actions';
+import { createCashAccount } from '@/app/(app)/racuni/actions';
 import { createTransaction } from '@/app/(app)/transakcije/actions';
 import { AccountSelect, type AccountOption } from '@/components/account-select';
 import {
@@ -76,6 +84,10 @@ export function QuickAddTransaction({
   const [isInstallment, setIsInstallment] = useState(false);
   const [installmentCount, setInstallmentCount] = useState(3);
   const [dayOfMonth, setDayOfMonth] = useState(15);
+  const [atmMode, setAtmMode] = useState(false);
+  const [localCashAccount, setLocalCashAccount] = useState<AccountOption | null>(null);
+  const [cashCreateName, setCashCreateName] = useState('Gotovina');
+  const [cashCreating, setCashCreating] = useState(false);
 
   const form = useForm<QuickAddFormValues>({
     resolver: zodResolver(CreateTransactionSchema) as never,
@@ -92,11 +104,33 @@ export function QuickAddTransaction({
     mode: 'onSubmit',
   });
 
+  // Local-only cash account (created inline within ATM mode) is merged into the
+  // accounts list so the form can target it without waiting for a server round-trip.
+  const effectiveAccounts = useMemo<AccountOption[]>(
+    () => (localCashAccount ? [...accounts, localCashAccount] : accounts),
+    [accounts, localCashAccount],
+  );
+  const cashAccount = useMemo(
+    () => effectiveAccounts.find((account) => account.type === 'cash') ?? null,
+    [effectiveAccounts],
+  );
+  // Source candidates for an ATM withdrawal: anything that isn't itself cash and
+  // can plausibly hold a balance you'd pull from (excludes investment/loan).
+  const atmSourceAccounts = useMemo(
+    () =>
+      effectiveAccounts.filter(
+        (account) =>
+          account.type !== 'cash' && account.type !== 'investment' && account.type !== 'loan',
+      ),
+    [effectiveAccounts],
+  );
+  const canShowAtmPreset = atmSourceAccounts.length > 0;
+
   const selectedAccountId = form.watch('account_id');
   const selectedToAccountId = form.watch('to_account_id');
   const watchedAmount = form.watch('amount_cents');
-  const selectedAccount = accounts.find((account) => account.id === selectedAccountId);
-  const toAccounts = accounts.filter((account) => account.id !== selectedAccountId);
+  const selectedAccount = effectiveAccounts.find((account) => account.id === selectedAccountId);
+  const toAccounts = effectiveAccounts.filter((account) => account.id !== selectedAccountId);
   const isTransfer = kind === 'transfer';
   const isCreditCard = selectedAccount?.type === 'credit_card';
   const showInstallmentToggle = kind === 'expense' && isCreditCard && !isTransfer;
@@ -107,14 +141,29 @@ export function QuickAddTransaction({
       ? absAmount / BigInt(installmentCount) + (absAmount % BigInt(installmentCount) > 0n ? 1n : 0n)
       : 0n;
 
+  // Run reset logic ONLY on open transitions, not on every accounts/categories
+  // change. Otherwise an inline action that triggers `revalidatePath('/racuni')`
+  // (e.g. createCashAccount during ATM flow) would refetch accounts in the
+  // parent layout, fire this effect, and clobber atmMode + localCashAccount
+  // mid-flow.
+  const prevOpenRef = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      prevOpenRef.current = false;
+      return;
+    }
+    if (prevOpenRef.current) return;
+    prevOpenRef.current = true;
 
     if (!retryDraft) {
       merchantIdCacheRef.current.clear();
       setIsInstallment(false);
       setInstallmentCount(3);
       setDayOfMonth(15);
+      setAtmMode(false);
+      setLocalCashAccount(null);
+      setCashCreateName('Gotovina');
+      setCashCreating(false);
     }
 
     if (retryDraft) {
@@ -173,7 +222,90 @@ export function QuickAddTransaction({
     }
   }
 
+  function enterAtmMode() {
+    setAtmMode(true);
+    setKind('transfer');
+    setIsInstallment(false);
+    setShowNotes(false);
+
+    // Pick a sensible default source account: prefer the currently-selected one if
+    // it's a valid ATM source, else fall back to the first such account.
+    const currentSource =
+      selectedAccount && atmSourceAccounts.some((a) => a.id === selectedAccount.id)
+        ? selectedAccount.id
+        : (atmSourceAccounts.at(0)?.id ?? '');
+    if (currentSource && currentSource !== form.getValues('account_id')) {
+      form.setValue('account_id', currentSource, { shouldDirty: true });
+      const sourceCurrency =
+        atmSourceAccounts.find((a) => a.id === currentSource)?.currency ?? 'BAM';
+      form.setValue('currency', sourceCurrency);
+    }
+
+    if (cashAccount) {
+      form.setValue('to_account_id', cashAccount.id, { shouldDirty: true });
+    }
+    // Force amount sign to negative for the transfer-from leg, keeping any
+    // amount the user already typed.
+    const currentAmount = form.getValues('amount_cents');
+    form.setValue('amount_cents', normalizeAmountForKind(currentAmount, 'transfer'), {
+      shouldDirty: true,
+    });
+    form.setValue('category_id', null, { shouldDirty: true });
+    form.setValue('merchant_raw', null, { shouldDirty: true });
+  }
+
+  function exitAtmMode() {
+    setAtmMode(false);
+    setKind('expense');
+    form.setValue('to_account_id', undefined, { shouldDirty: true });
+    const currentAmount = form.getValues('amount_cents');
+    form.setValue('amount_cents', normalizeAmountForKind(currentAmount, 'expense'), {
+      shouldDirty: true,
+    });
+  }
+
+  async function handleCreateCashAccount() {
+    const trimmed = cashCreateName.trim();
+    if (trimmed.length === 0) {
+      toast.error('Naziv ne može biti prazan.');
+      return;
+    }
+    setCashCreating(true);
+    const result = await createCashAccount(trimmed);
+    setCashCreating(false);
+
+    // ALREADY_EXISTS shouldn't normally surface (we only show the form when
+    // cashAccount is null), but if it does we treat it as success: fetch
+    // metadata and use it as the target.
+    if (result.success || result.error === 'ALREADY_EXISTS') {
+      const newId = result.success ? result.data.id : result.data.id;
+      const synthesized: AccountOption = {
+        id: newId,
+        name: trimmed,
+        currency: selectedAccount?.currency ?? 'BAM',
+        type: 'cash',
+      };
+      setLocalCashAccount(synthesized);
+      form.setValue('to_account_id', newId, { shouldDirty: true });
+      toast.success(`Račun "${trimmed}" je kreiran.`);
+      return;
+    }
+
+    if (result.error === 'UNAUTHORIZED') {
+      toast.error('Sesija je istekla.', { description: 'Prijavi se ponovo.' });
+      return;
+    }
+    toast.error('Nije uspjelo kreiranje računa. Pokušaj ponovo.');
+  }
+
   async function onSubmit(values: QuickAddFormValues) {
+    // ATM mode requires a cash destination — block submit before closing the
+    // sheet so the user can still create the cash account inline.
+    if (atmMode && !values.to_account_id) {
+      toast.error('Prvo napravi gotovinski račun.');
+      return;
+    }
+
     const signedAmount = normalizeAmountForKind(values.amount_cents, kind);
 
     // Kick off merchant lookup immediately (may be already in-flight from onBlur).
@@ -215,7 +347,7 @@ export function QuickAddTransaction({
     }
 
     // ── Regular / transfer branch ─────────────────────────────────────────
-    toast.success('Transakcija je dodata.');
+    toast.success(atmMode ? 'Podizanje je zabilježeno.' : 'Transakcija je dodata.');
 
     const payload: QuickAddFormValues = {
       ...values,
@@ -260,9 +392,9 @@ export function QuickAddTransaction({
         onSubmit={(event) => {
           void form.handleSubmit(onSubmit)(event);
         }}
-        className="flex h-full flex-col gap-4"
+        className="flex min-h-0 flex-1 flex-col gap-4"
       >
-        <div className="space-y-4 overflow-y-auto pr-1">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           <Button asChild type="button" variant="outline" className="h-11 min-h-[44px] w-full">
             <Link
               href="/skeniraj"
@@ -307,29 +439,114 @@ export function QuickAddTransaction({
             )}
           />
 
-          <div className="space-y-2">
-            <Label>Tip</Label>
-            <Tabs
-              value={kind}
-              onValueChange={(nextValue) => {
-                const nextKind = nextValue as TransactionKind;
-                setKind(nextKind);
-                const currentAmount = form.getValues('amount_cents');
-                form.setValue('amount_cents', normalizeAmountForKind(currentAmount, nextKind), {
-                  shouldDirty: true,
-                });
-                form.setValue('category_id', null, { shouldDirty: true });
-                form.setValue('to_account_id', undefined, { shouldDirty: true });
-                if (nextKind !== 'expense') setIsInstallment(false);
-              }}
+          {atmMode ? (
+            <div
+              className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3"
+              role="region"
+              aria-label="Podizanje s bankomata"
             >
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="expense">Trošak</TabsTrigger>
-                <TabsTrigger value="income">Prihod</TabsTrigger>
-                <TabsTrigger value="transfer">Transfer</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Banknote className="h-5 w-5 text-primary" aria-hidden />
+                  <span className="text-sm font-semibold">Podizanje s bankomata</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-2 text-muted-foreground"
+                  onClick={exitAtmMode}
+                >
+                  <ArrowLeft className="mr-1 h-4 w-4" aria-hidden />
+                  Otkaži
+                </Button>
+              </div>
+              {cashAccount ? (
+                <p className="text-xs text-muted-foreground">
+                  Cilj: <span className="font-medium text-foreground">{cashAccount.name}</span> (
+                  {cashAccount.currency})
+                </p>
+              ) : (
+                <div className="space-y-2 rounded-md border border-dashed bg-background p-3">
+                  <p className="text-sm">
+                    Još nemaš račun za gotovinu. Napravi ga jednim klikom da knjižiš podizanje kao
+                    transfer.
+                  </p>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      value={cashCreateName}
+                      onChange={(event) => {
+                        setCashCreateName(event.target.value);
+                      }}
+                      maxLength={100}
+                      placeholder="Naziv računa"
+                      className="h-11 min-h-[44px] flex-1"
+                      aria-label="Naziv novog gotovinskog računa"
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        void handleCreateCashAccount();
+                      }}
+                      disabled={cashCreating || cashCreateName.trim().length === 0}
+                      className="h-11 min-h-[44px]"
+                    >
+                      {cashCreating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        'Napravi'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {canShowAtmPreset ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 min-h-[44px] w-full justify-start"
+                  onClick={enterAtmMode}
+                >
+                  <Banknote className="mr-2 size-4" aria-hidden />
+                  Podizanje s bankomata
+                </Button>
+              ) : null}
+              <Label>Tip</Label>
+              <Tabs
+                value={kind}
+                onValueChange={(nextValue) => {
+                  const nextKind = nextValue as TransactionKind;
+                  setKind(nextKind);
+                  const currentAmount = form.getValues('amount_cents');
+                  form.setValue('amount_cents', normalizeAmountForKind(currentAmount, nextKind), {
+                    shouldDirty: true,
+                  });
+                  form.setValue('category_id', null, { shouldDirty: true });
+                  // Smart default: when switching to Transfer and there is exactly
+                  // one cash account, pre-fill it as the destination.
+                  if (
+                    nextKind === 'transfer' &&
+                    cashAccount &&
+                    form.getValues('account_id') !== cashAccount.id
+                  ) {
+                    form.setValue('to_account_id', cashAccount.id, { shouldDirty: true });
+                  } else {
+                    form.setValue('to_account_id', undefined, { shouldDirty: true });
+                  }
+                  if (nextKind !== 'expense') setIsInstallment(false);
+                }}
+              >
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="expense">Trošak</TabsTrigger>
+                  <TabsTrigger value="income">Prihod</TabsTrigger>
+                  <TabsTrigger value="transfer">Transfer</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          )}
 
           {!isTransfer ? (
             <FormField
@@ -389,15 +606,17 @@ export function QuickAddTransaction({
             name="account_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{isTransfer ? 'Sa računa' : 'Račun'}</FormLabel>
+                <FormLabel>
+                  {atmMode ? 'Sa kojeg računa podižeš' : isTransfer ? 'Sa računa' : 'Račun'}
+                </FormLabel>
                 <FormControl>
                   <AccountSelect
                     id="quick-add-account"
-                    accounts={accounts}
+                    accounts={atmMode ? atmSourceAccounts : effectiveAccounts}
                     value={field.value}
                     onValueChange={(nextAccountId) => {
                       field.onChange(nextAccountId);
-                      const nextAccount = accounts.find((a) => a.id === nextAccountId);
+                      const nextAccount = effectiveAccounts.find((a) => a.id === nextAccountId);
                       const nextCurrency = nextAccount?.currency ?? 'BAM';
                       form.setValue('currency', nextCurrency);
                       // Reset to_account_id if it now matches the selected from-account.
@@ -416,7 +635,7 @@ export function QuickAddTransaction({
             )}
           />
 
-          {isTransfer ? (
+          {isTransfer && !atmMode ? (
             <FormField
               control={form.control}
               name="to_account_id"
@@ -442,7 +661,7 @@ export function QuickAddTransaction({
           {isTransfer &&
           selectedToAccountId &&
           selectedAccount?.currency !==
-            accounts.find((a) => a.id === selectedToAccountId)?.currency ? (
+            effectiveAccounts.find((a) => a.id === selectedToAccountId)?.currency ? (
             <p className="text-sm text-muted-foreground">
               Međuvalutni transfer — iznos će biti automatski konvertovan po tekućem kursu.
             </p>
@@ -580,7 +799,10 @@ export function QuickAddTransaction({
           >
             Otkaži
           </Button>
-          <Button type="submit" disabled={form.formState.isSubmitting || accounts.length === 0}>
+          <Button
+            type="submit"
+            disabled={form.formState.isSubmitting || effectiveAccounts.length === 0}
+          >
             {form.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Spasi
           </Button>
@@ -595,7 +817,7 @@ export function QuickAddTransaction({
         <SheetContent
           side="bottom"
           className={cn(
-            'h-[100dvh] max-h-[100dvh] rounded-none px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5 sm:max-w-none',
+            'flex h-[100dvh] max-h-[100dvh] flex-col rounded-none px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5 sm:max-w-none',
           )}
         >
           <SheetHeader className="mb-2 text-left">
@@ -610,7 +832,7 @@ export function QuickAddTransaction({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-xl">
         <DialogTitle>Brzi unos</DialogTitle>
         <DialogDescription>Dodaj transakciju bez napuštanja trenutne stranice.</DialogDescription>
         {content}

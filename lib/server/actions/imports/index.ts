@@ -3,11 +3,13 @@ export type { UploadStatementResult } from './upload';
 
 export {
   bulkApplyCategoryToParsedRows,
+  setTransferConversion,
   togglePartialExclusion,
   updateParsedTransaction,
 } from './review';
 export type {
   BulkCategoryParsedResult,
+  SetTransferConversionResult,
   TogglePartialExclusionResult,
   UpdateParsedTransactionResult,
 } from './review';

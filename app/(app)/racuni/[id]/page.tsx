@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { formatMinorUnits } from '@/lib/format/amount';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AccountDetailHeader } from './account-detail-header';
+import { CashReconcileButton } from './cash-reconcile-button';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -59,6 +60,20 @@ export default async function AccountDetailPage({ params }: PageProps) {
       />
 
       {acc.institution ? <p className="text-sm text-muted-foreground">{acc.institution}</p> : null}
+
+      {acc.type === 'cash' ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/50 p-3">
+          <p className="flex-1 text-sm text-muted-foreground">
+            Ako ti se evidencija razlikuje od stvarne gotovine u novčaniku, možeš jednim potezom
+            uskladiti — razlika ide u &quot;Gotovinski troškovi&quot;.
+          </p>
+          <CashReconcileButton
+            accountId={acc.id}
+            currency={acc.currency}
+            currentBalanceCents={acc.current_balance_cents}
+          />
+        </div>
+      ) : null}
 
       <section aria-labelledby="tx-heading" className="space-y-3">
         <h3 id="tx-heading" className="text-lg font-semibold">

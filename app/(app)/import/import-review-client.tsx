@@ -2,7 +2,7 @@
 
 import { format, parseISO } from 'date-fns';
 import { bs } from 'date-fns/locale';
-import { Loader2, X } from 'lucide-react';
+import { ArrowLeftRight, Loader2, Undo2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   memo,
@@ -15,6 +15,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { toast } from 'sonner';
+import { createCashAccount } from '@/app/(app)/racuni/actions';
 import { searchMerchants, type MerchantResult } from '@/app/(app)/merchants/actions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ import {
   bulkApplyCategoryToParsedRows,
   finalizeImport,
   rejectImport,
+  setTransferConversion,
   updateParsedTransaction,
 } from '@/lib/server/actions/imports';
 import { cn } from '@/lib/utils';
@@ -62,6 +64,15 @@ export interface ReviewParsedRow {
     | 'none'
     | 'user';
   categorization_confidence: number;
+  /** Heuristic flag: description matches ATM withdrawal patterns. */
+  is_likely_atm: boolean;
+  /** When set, finalize will materialise this row as a transfer to the named account. */
+  convert_to_transfer_to_account_id: string | null;
+}
+
+export interface ReviewCashAccount {
+  id: string;
+  name: string;
 }
 
 interface BatchHeaderModel {
@@ -77,6 +88,8 @@ interface ImportReviewClientProps {
   batchId: string;
   initialRows: ReviewParsedRow[];
   categories: ReviewCategoryOption[];
+  /** First active cash account, if any. Used as the default ATM-conversion target. */
+  cashAccount: ReviewCashAccount | null;
   batch: BatchHeaderModel;
 }
 
@@ -177,6 +190,7 @@ export function ImportReviewClient({
   batchId,
   initialRows,
   categories,
+  cashAccount,
   batch,
 }: ImportReviewClientProps) {
   const router = useRouter();
@@ -185,6 +199,9 @@ export function ImportReviewClient({
   const [bulkIds, setBulkIds] = useState<Set<string>>(() => new Set());
   const [bulkCategoryId, setBulkCategoryId] = useState<string>(CATEGORY_NONE);
   const [isWorking, startTransition] = useTransition();
+  // Local cash-account mirror — gets populated when the user creates one inline
+  // from the "no cash account yet" CTA on an ATM row.
+  const [localCashAccount, setLocalCashAccount] = useState<ReviewCashAccount | null>(cashAccount);
 
   const pendingByRow = useRef(new Map<string, PendingPatch>());
   const debounceTimers = useRef(new Map<string, number>());
@@ -250,6 +267,19 @@ export function ImportReviewClient({
 
   const importSelectedCount = useMemo(
     () => rows.filter((r) => r.selected_for_import).length,
+    [rows],
+  );
+
+  const atmRowCount = useMemo(
+    () => rows.filter((r) => r.is_likely_atm && r.selected_for_import).length,
+    [rows],
+  );
+  const pendingAtmRowCount = useMemo(
+    () =>
+      rows.filter(
+        (r) =>
+          r.is_likely_atm && r.selected_for_import && r.convert_to_transfer_to_account_id === null,
+      ).length,
     [rows],
   );
 
@@ -455,6 +485,87 @@ export function ImportReviewClient({
     setBulkIds((prev) => (prev.size === rows.length ? new Set() : new Set(rows.map((r) => r.id))));
   }, [rows]);
 
+  const applyConversion = useCallback(
+    (rowId: string, toAccountId: string | null, optimisticAccountId: string | null) => {
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === rowId ? { ...r, convert_to_transfer_to_account_id: optimisticAccountId } : r,
+        ),
+      );
+      void (async () => {
+        const res = await setTransferConversion({
+          id: rowId,
+          batchId,
+          toAccountId,
+        });
+        if (res.success) {
+          if (toAccountId === null) {
+            toast.message('Vraćeno kao trošak.');
+          } else {
+            toast.success('Knjižit će se kao transfer u Gotovinu.');
+          }
+          return;
+        }
+        // Rollback the optimistic update.
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === rowId
+              ? {
+                  ...r,
+                  convert_to_transfer_to_account_id:
+                    optimisticAccountId === null ? toAccountId : null,
+                }
+              : r,
+          ),
+        );
+        if (res.error === 'NOT_CASH_ACCOUNT') {
+          toast.error('Cilj transfera mora biti gotovinski račun.');
+          return;
+        }
+        if (res.error === 'SAME_ACCOUNT') {
+          toast.error('Cilj transfera ne smije biti isti kao izvor.');
+          return;
+        }
+        toast.error('Nije moguće promijeniti tip stavke.');
+      })();
+    },
+    [batchId],
+  );
+
+  const handleConvertToTransfer = useCallback(
+    async (rowId: string): Promise<void> => {
+      // No cash account → create one inline, then convert.
+      let cash = localCashAccount;
+      if (!cash) {
+        const created = await createCashAccount('Gotovina');
+        if (created.success || created.error === 'ALREADY_EXISTS') {
+          const newId = created.success ? created.data.id : created.data.id;
+          cash = { id: newId, name: 'Gotovina' };
+          setLocalCashAccount(cash);
+          if (created.success) {
+            toast.success('Račun "Gotovina" je kreiran.');
+          }
+        } else {
+          if (created.error === 'UNAUTHORIZED') {
+            toast.error('Sesija je istekla. Prijavi se ponovo.');
+          } else {
+            toast.error('Nije uspjelo kreiranje gotovinskog računa.');
+          }
+          return;
+        }
+      }
+      applyConversion(rowId, cash.id, cash.id);
+    },
+    [applyConversion, localCashAccount],
+  );
+
+  const handleRevertConversion = useCallback(
+    (rowId: string) => {
+      applyConversion(rowId, null, null);
+    },
+    [applyConversion],
+  );
+
   // UX-9: per-row toggle so the Set identity change only re-renders the
   // affected row (memoized row components receive isInBulk: boolean, not the Set).
   const toggleBulkRow = useCallback((rowId: string) => {
@@ -500,6 +611,24 @@ export function ImportReviewClient({
             role="status"
           >
             AI nije siguran. Pažljivo provjeri sve stavke.
+          </div>
+        ) : null}
+
+        {atmRowCount > 0 ? (
+          <div
+            className="space-y-1 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-muted-foreground"
+            role="status"
+          >
+            <p className="text-base font-medium text-foreground">
+              🏧 {atmRowCount} {atmRowCount === 1 ? 'linija' : 'linije'} izgleda kao podizanje s
+              bankomata.
+              {pendingAtmRowCount === 0 ? ' Sve su pripremljene za knjiženje kao transfer.' : null}
+            </p>
+            <p>
+              Klikni <span className="font-medium text-foreground">Knjiži kao transfer</span> na
+              redu da bi se umjesto kao trošak proknjižilo kao prebacivanje na&nbsp;
+              {localCashAccount ? localCashAccount.name : 'tvoj Gotovina račun'}.
+            </p>
           </div>
         ) : null}
 
@@ -616,11 +745,14 @@ export function ImportReviewClient({
                 categories={categories}
                 bulkMode={bulkMode}
                 isInBulk={bulkIds.has(row.id)}
+                cashAccountName={localCashAccount?.name ?? null}
                 onToggleBulk={toggleBulkRow}
                 onToggleImport={toggleImport}
                 onExclude={excludeRow}
                 onCategoryChange={setCategory}
                 onMerchantPicked={setMerchantForRow}
+                onConvertToTransfer={handleConvertToTransfer}
+                onRevertConversion={handleRevertConversion}
                 patchRowLocal={patchRowLocal}
                 scheduleRowPatch={scheduleRowPatch}
                 flushRowDebounced={flushRowDebounced}
@@ -639,11 +771,14 @@ export function ImportReviewClient({
             categories={categories}
             bulkMode={bulkMode}
             isInBulk={bulkIds.has(row.id)}
+            cashAccountName={localCashAccount?.name ?? null}
             onToggleBulk={toggleBulkRow}
             onToggleImport={toggleImport}
             onExclude={excludeRow}
             onCategoryChange={setCategory}
             onMerchantPicked={setMerchantForRow}
+            onConvertToTransfer={handleConvertToTransfer}
+            onRevertConversion={handleRevertConversion}
             patchRowLocal={patchRowLocal}
             scheduleRowPatch={scheduleRowPatch}
             flushRowDebounced={flushRowDebounced}
@@ -694,11 +829,14 @@ interface RowCallbacks {
   bulkMode: boolean;
   /** UX-9: per-row boolean so memo() only re-renders the toggled row. */
   isInBulk: boolean;
+  cashAccountName: string | null;
   onToggleBulk: (rowId: string) => void;
   onToggleImport: (rowId: string, checked: boolean) => void;
   onExclude: (rowId: string) => void;
   onCategoryChange: (rowId: string, categoryId: string | null) => void;
   onMerchantPicked: (rowId: string, merchant: MerchantResult | null) => void;
+  onConvertToTransfer: (rowId: string) => Promise<void>;
+  onRevertConversion: (rowId: string) => void;
   patchRowLocal: (rowId: string, patch: Partial<ReviewParsedRow>) => void;
   scheduleRowPatch: (rowId: string, patch: PendingPatch) => void;
   flushRowDebounced: (rowId: string) => void;
@@ -709,11 +847,14 @@ const ReviewDesktopRow = memo(function ReviewDesktopRow({
   categories,
   bulkMode,
   isInBulk,
+  cashAccountName,
   onToggleBulk,
   onToggleImport,
   onExclude,
   onCategoryChange,
   onMerchantPicked,
+  onConvertToTransfer,
+  onRevertConversion,
   patchRowLocal,
   scheduleRowPatch,
   flushRowDebounced,
@@ -730,6 +871,7 @@ const ReviewDesktopRow = memo(function ReviewDesktopRow({
 
   const lowConfidence = row.parse_confidence === 'low';
   const unknownMerchant = !row.merchant_id;
+  const isLikelyAtm = row.is_likely_atm;
   const categorizationMeta = categorizationBadgeMeta(row.categorization_source);
 
   return (
@@ -778,21 +920,32 @@ const ReviewDesktopRow = memo(function ReviewDesktopRow({
         />
       </td>
       <td className="py-2 pr-2">
-        <MerchantDescriptionField
-          description={desc}
-          unknownMerchant={unknownMerchant}
-          onDescriptionChange={(v) => {
-            setDesc(v);
-            patchRowLocal(row.id, { raw_description: v });
-            scheduleRowPatch(row.id, { raw_description: v });
-          }}
-          onBlur={() => {
-            flushRowDebounced(row.id);
-          }}
-          onMerchantPicked={(m) => {
-            onMerchantPicked(row.id, m);
-          }}
-        />
+        <div className="space-y-1">
+          {isLikelyAtm ? (
+            <AtmRowActions
+              rowId={row.id}
+              isConverted={row.convert_to_transfer_to_account_id !== null}
+              cashAccountName={cashAccountName}
+              onConvertToTransfer={onConvertToTransfer}
+              onRevertConversion={onRevertConversion}
+            />
+          ) : null}
+          <MerchantDescriptionField
+            description={desc}
+            unknownMerchant={unknownMerchant}
+            onDescriptionChange={(v) => {
+              setDesc(v);
+              patchRowLocal(row.id, { raw_description: v });
+              scheduleRowPatch(row.id, { raw_description: v });
+            }}
+            onBlur={() => {
+              flushRowDebounced(row.id);
+            }}
+            onMerchantPicked={(m) => {
+              onMerchantPicked(row.id, m);
+            }}
+          />
+        </div>
       </td>
       <td className="py-2 pr-2">
         <Select
@@ -875,6 +1028,9 @@ const ReviewMobileCard = memo(function ReviewMobileCard(
     bulkMode,
     isInBulk,
     onToggleBulk,
+    cashAccountName,
+    onConvertToTransfer,
+    onRevertConversion,
     patchRowLocal,
   } = props;
   const [desc, setDesc] = useState(row.raw_description);
@@ -889,6 +1045,7 @@ const ReviewMobileCard = memo(function ReviewMobileCard(
 
   const lowConfidence = row.parse_confidence === 'low';
   const unknownMerchant = !row.merchant_id;
+  const isLikelyAtm = row.is_likely_atm;
   const categorizationMeta = categorizationBadgeMeta(row.categorization_source);
 
   return (
@@ -918,13 +1075,23 @@ const ReviewMobileCard = memo(function ReviewMobileCard(
         />
       </div>
       <div className="pr-14">
-        <Badge
-          variant="outline"
-          className={cn('mb-2 h-8 px-2 text-xs', categorizationMeta.className)}
-        >
-          {categorizationMeta.label} ·{' '}
-          {formatCategorizationConfidence(row.categorization_confidence)}
-        </Badge>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className={cn('h-8 px-2 text-xs', categorizationMeta.className)}>
+            {categorizationMeta.label} ·{' '}
+            {formatCategorizationConfidence(row.categorization_confidence)}
+          </Badge>
+        </div>
+        {isLikelyAtm ? (
+          <div className="mb-2">
+            <AtmRowActions
+              rowId={row.id}
+              isConverted={row.convert_to_transfer_to_account_id !== null}
+              cashAccountName={cashAccountName}
+              onConvertToTransfer={onConvertToTransfer}
+              onRevertConversion={onRevertConversion}
+            />
+          </div>
+        ) : null}
         <input
           type="date"
           className="mb-2 h-11 w-full rounded-md border border-input bg-background px-2 text-sm tabular-nums"
@@ -1009,6 +1176,68 @@ const ReviewMobileCard = memo(function ReviewMobileCard(
           Isključi iz uvoza
         </Button>
       </div>
+    </div>
+  );
+});
+
+interface AtmRowActionsProps {
+  rowId: string;
+  isConverted: boolean;
+  cashAccountName: string | null;
+  onConvertToTransfer: (rowId: string) => Promise<void>;
+  onRevertConversion: (rowId: string) => void;
+}
+
+const AtmRowActions = memo(function AtmRowActions({
+  rowId,
+  isConverted,
+  cashAccountName,
+  onConvertToTransfer,
+  onRevertConversion,
+}: AtmRowActionsProps) {
+  const [busy, setBusy] = useState(false);
+
+  if (isConverted) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-xs">
+        <ArrowLeftRight className="size-3.5 text-primary" aria-hidden />
+        <span className="text-foreground">
+          Transfer u <span className="font-medium">{cashAccountName ?? 'Gotovinu'}</span>
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="ml-auto h-7 px-2 text-xs"
+          onClick={() => {
+            onRevertConversion(rowId);
+          }}
+        >
+          <Undo2 className="mr-1 size-3.5" aria-hidden />
+          Vrati
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-xs">
+      <span className="text-foreground">🏧 Liči na podizanje s bankomata.</span>
+      <Button
+        type="button"
+        variant="default"
+        size="sm"
+        className="ml-auto h-7 px-2 text-xs"
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          void onConvertToTransfer(rowId).finally(() => {
+            setBusy(false);
+          });
+        }}
+      >
+        {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : 'Knjiži kao transfer'}
+      </Button>
     </div>
   );
 });
