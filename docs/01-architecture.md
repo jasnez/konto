@@ -1260,6 +1260,7 @@ feature/* → push → Vercel preview → konto-pr-N.vercel.app
   1. Dodaj novu kolonu, mirror-aj podatke, deploy
   2. Nakon što novi kod je 2 sedmice live, druga migracija brše staru kolonu
 - Zero-downtime: sve migrations moraju biti backward-compatible
+- **Napomena:** 7 rednih brojeva ima duplikate (00003, 00004, 00009, 00013, 00038, 00039, 00040) od paralelnog razvoja. **NE preimenovati** — Supabase CLI koristi timestamp prefiks za redoslijed izvršavanja; preimenovanje bi pokvarilo `supabase_migrations` tabelu.
 
 ### 9.4 Environment variables
 
