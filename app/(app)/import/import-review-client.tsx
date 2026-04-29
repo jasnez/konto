@@ -455,6 +455,17 @@ export function ImportReviewClient({
     setBulkIds((prev) => (prev.size === rows.length ? new Set() : new Set(rows.map((r) => r.id))));
   }, [rows]);
 
+  // UX-9: per-row toggle so the Set identity change only re-renders the
+  // affected row (memoized row components receive isInBulk: boolean, not the Set).
+  const toggleBulkRow = useCallback((rowId: string) => {
+    setBulkIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowId)) next.delete(rowId);
+      else next.add(rowId);
+      return next;
+    });
+  }, []);
+
   return (
     <div className="pb-36 md:pb-32">
       <div className="mb-6 space-y-4">
@@ -604,8 +615,8 @@ export function ImportReviewClient({
                 row={row}
                 categories={categories}
                 bulkMode={bulkMode}
-                bulkIds={bulkIds}
-                setBulkIds={setBulkIds}
+                isInBulk={bulkIds.has(row.id)}
+                onToggleBulk={toggleBulkRow}
                 onToggleImport={toggleImport}
                 onExclude={excludeRow}
                 onCategoryChange={setCategory}
@@ -627,8 +638,8 @@ export function ImportReviewClient({
             row={row}
             categories={categories}
             bulkMode={bulkMode}
-            bulkIds={bulkIds}
-            setBulkIds={setBulkIds}
+            isInBulk={bulkIds.has(row.id)}
+            onToggleBulk={toggleBulkRow}
             onToggleImport={toggleImport}
             onExclude={excludeRow}
             onCategoryChange={setCategory}
@@ -681,8 +692,9 @@ export function ImportReviewClient({
 interface RowCallbacks {
   categories: ReviewCategoryOption[];
   bulkMode: boolean;
-  bulkIds: Set<string>;
-  setBulkIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  /** UX-9: per-row boolean so memo() only re-renders the toggled row. */
+  isInBulk: boolean;
+  onToggleBulk: (rowId: string) => void;
   onToggleImport: (rowId: string, checked: boolean) => void;
   onExclude: (rowId: string) => void;
   onCategoryChange: (rowId: string, categoryId: string | null) => void;
@@ -696,8 +708,8 @@ const ReviewDesktopRow = memo(function ReviewDesktopRow({
   row,
   categories,
   bulkMode,
-  bulkIds,
-  setBulkIds,
+  isInBulk,
+  onToggleBulk,
   onToggleImport,
   onExclude,
   onCategoryChange,
@@ -720,15 +732,6 @@ const ReviewDesktopRow = memo(function ReviewDesktopRow({
   const unknownMerchant = !row.merchant_id;
   const categorizationMeta = categorizationBadgeMeta(row.categorization_source);
 
-  const toggleBulk = useCallback(() => {
-    setBulkIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(row.id)) next.delete(row.id);
-      else next.add(row.id);
-      return next;
-    });
-  }, [row.id, setBulkIds]);
-
   return (
     <tr
       className={cn(
@@ -750,8 +753,10 @@ const ReviewDesktopRow = memo(function ReviewDesktopRow({
       {bulkMode ? (
         <td className="py-2 pr-2">
           <Checkbox
-            checked={bulkIds.has(row.id)}
-            onCheckedChange={toggleBulk}
+            checked={isInBulk}
+            onCheckedChange={() => {
+              onToggleBulk(row.id);
+            }}
             className="h-6 w-6 min-h-11 min-w-11 sm:h-4 sm:w-4 sm:min-h-4 sm:min-w-4"
             aria-label="Odaberi za masovnu kategoriju"
           />
@@ -868,8 +873,8 @@ const ReviewMobileCard = memo(function ReviewMobileCard(
     categories,
     onCategoryChange,
     bulkMode,
-    bulkIds,
-    setBulkIds,
+    isInBulk,
+    onToggleBulk,
     patchRowLocal,
   } = props;
   const [desc, setDesc] = useState(row.raw_description);
@@ -886,15 +891,6 @@ const ReviewMobileCard = memo(function ReviewMobileCard(
   const unknownMerchant = !row.merchant_id;
   const categorizationMeta = categorizationBadgeMeta(row.categorization_source);
 
-  const toggleBulk = useCallback(() => {
-    setBulkIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(row.id)) next.delete(row.id);
-      else next.add(row.id);
-      return next;
-    });
-  }, [row.id, setBulkIds]);
-
   return (
     <div
       className={cn(
@@ -905,7 +901,13 @@ const ReviewMobileCard = memo(function ReviewMobileCard(
     >
       <div className="absolute right-3 top-3 flex items-center gap-2">
         {bulkMode ? (
-          <Checkbox checked={bulkIds.has(row.id)} onCheckedChange={toggleBulk} aria-label="Grupa" />
+          <Checkbox
+            checked={isInBulk}
+            onCheckedChange={() => {
+              onToggleBulk(row.id);
+            }}
+            aria-label="Grupa"
+          />
         ) : null}
         <Checkbox
           checked={row.selected_for_import}
