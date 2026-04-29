@@ -92,14 +92,30 @@ describe('runCancelDeletion', () => {
     expect(result).toEqual({ ok: false, error: 'INVALID_TOKEN' });
   });
 
-  it('returns TOKEN_ALREADY_USED when jti is already in the table (replay attack)', async () => {
+  it('returns TOKEN_ALREADY_USED when jti is already in the table (replay attack, deletion still pending)', async () => {
     const exp = Math.floor(Date.now() / 1000) + 3600;
     const token = signAccountDeletionCancelToken('user-uuid-1', exp);
+    // Default profileData has deleted_at set → deletion still active → TOKEN_ALREADY_USED.
     vi.mocked(createAdminClient).mockReturnValue(
       makeAdmin({ jtiInsertError: { code: '23505', message: 'duplicate key' } }) as never,
     );
     const result = await runCancelDeletion(token);
     expect(result).toEqual({ ok: false, error: 'TOKEN_ALREADY_USED' });
+  });
+
+  it('returns magicLinkUrl (idempotent) when jti is already used but deletion is already cleared', async () => {
+    // UX-6: duplicate request / browser retry after the cancellation already succeeded.
+    // deleted_at IS NULL means the first redemption did its job; return a fresh link.
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    const token = signAccountDeletionCancelToken('user-uuid-1', exp);
+    vi.mocked(createAdminClient).mockReturnValue(
+      makeAdmin({
+        jtiInsertError: { code: '23505', message: 'duplicate key' },
+        profileData: { deleted_at: null },
+      }) as never,
+    );
+    const result = await runCancelDeletion(token);
+    expect(result).toEqual({ ok: true, magicLinkUrl: 'https://example.com/magic' });
   });
 
   it('returns NOT_SCHEDULED when profile has no pending deletion', async () => {
