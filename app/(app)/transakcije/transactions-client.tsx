@@ -80,6 +80,13 @@ function getDeleteTransactionLabel(tx: TransactionListItem): string {
   return preferred.trim().length > 0 ? preferred : 'Transakcija';
 }
 
+// count:estimated returns planner approximation for results >1000; signal that with ≈.
+function formatTotalCount(n: number): string {
+  if (n <= 1000) return String(n);
+  if (n < 1_000_000) return `≈ ${(n / 1000).toFixed(1)}k`;
+  return `≈ ${(n / 1_000_000).toFixed(1)}M`;
+}
+
 export function TransactionsClient({
   transactions,
   filters,
@@ -444,7 +451,7 @@ export function TransactionsClient({
       {totalCount > 0 ? (
         <div className="mt-6 flex items-center justify-between border-t pt-4">
           <p className="text-sm text-muted-foreground">
-            Stranica {filters.page} od {totalPages} · Ukupno {totalCount}
+            Stranica {filters.page} od {totalPages} · Ukupno {formatTotalCount(totalCount)}
           </p>
           <div className="flex items-center gap-2">
             <Button

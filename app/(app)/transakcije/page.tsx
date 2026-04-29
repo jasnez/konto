@@ -105,7 +105,7 @@ async function fetchTransactionsUncached(
 
   let countQuery = supabase
     .from('transactions')
-    .select('id', { count: 'exact', head: true })
+    .select('id', { count: 'estimated', head: true })
     .eq('user_id', userId)
     .is('deleted_at', null)
     .gte('transaction_date', filters.from)

@@ -6,8 +6,8 @@ import { z } from 'zod';
 import type { CategorizationSource } from '@/lib/categorization/cascade';
 import { maybeCreateAlias, recordCorrection } from '@/lib/categorization/learn';
 import { computeDedupHash } from '@/lib/dedup';
-import { computeAccountLedgerCents } from '@/lib/fx/account-ledger';
-import { convertToBase } from '@/lib/fx/convert';
+import { resolveFxRatesForBatch } from '@/lib/fx/batch-resolver';
+import { toCents } from '@/lib/fx/convert';
 import { createClient } from '@/lib/supabase/server';
 import {
   checkRateLimit,
@@ -714,41 +714,56 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
   }
   const accountCurrency = importAccount.currency;
 
-  // 3. Compute FX + dedup hash per row in Node (network calls allowed here).
+  // 3. Resolve all FX rates in parallel (group by distinct currency, date pairs).
+  let fxCache;
+  try {
+    fxCache = await resolveFxRatesForBatch(staging, baseCurrency, accountCurrency);
+  } catch (error) {
+    logSafe('finalize_import_fx_batch', {
+      userId: user.id,
+      error: error instanceof Error ? error.message : 'unknown',
+    });
+    await markBatchFailed(supabase, batchId, user.id);
+    return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+  }
+
+  // 3b. Compute dedup hash per row (sync).
   const prepared: (PreparedImportRow & { sourceId: string })[] = [];
   for (const row of staging) {
-    let fx: Awaited<ReturnType<typeof convertToBase>>;
-    try {
-      fx = await convertToBase(
-        BigInt(row.amount_minor),
-        row.currency,
-        baseCurrency,
-        row.transaction_date,
-      );
-    } catch (error) {
-      logSafe('finalize_import_fx', {
+    const fromCurrency = row.currency.trim().toUpperCase();
+    const baseCurrencyNorm = baseCurrency.trim().toUpperCase();
+    const accountCurrencyNorm = accountCurrency.trim().toUpperCase();
+
+    const fxKey = `${fromCurrency}|${baseCurrencyNorm}|${row.transaction_date}`;
+    const baseFxRate = fxCache.get(fxKey);
+    if (!baseFxRate) {
+      logSafe('finalize_import_missing_fx_cache', {
         userId: user.id,
-        error: error instanceof Error ? error.message : 'unknown',
+        key: fxKey,
       });
+      await markBatchFailed(supabase, batchId, user.id);
       return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
     }
 
+    const baseCents = toCents(BigInt(row.amount_minor), baseFxRate.fxRate);
+
     let ledgerCents: bigint;
-    try {
-      ledgerCents = await computeAccountLedgerCents(
-        accountCurrency,
-        BigInt(row.amount_minor),
-        row.currency,
-        fx.baseCents,
-        baseCurrency,
-        row.transaction_date,
-      );
-    } catch (error) {
-      logSafe('finalize_import_ledger_fx', {
-        userId: user.id,
-        error: error instanceof Error ? error.message : 'unknown',
-      });
-      return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+    if (fromCurrency === accountCurrencyNorm) {
+      ledgerCents = BigInt(row.amount_minor);
+    } else if (baseCurrencyNorm === accountCurrencyNorm) {
+      ledgerCents = baseCents;
+    } else {
+      const ledgerKey = `${fromCurrency}|${accountCurrencyNorm}|${row.transaction_date}`;
+      const ledgerFxRate = fxCache.get(ledgerKey);
+      if (!ledgerFxRate) {
+        logSafe('finalize_import_missing_ledger_fx_cache', {
+          userId: user.id,
+          key: ledgerKey,
+        });
+        await markBatchFailed(supabase, batchId, user.id);
+        return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+      }
+      ledgerCents = toCents(BigInt(row.amount_minor), ledgerFxRate.fxRate);
     }
 
     const dedupHash = computeDedupHash({
@@ -763,12 +778,12 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
       account_id: accountId,
       original_amount_cents: row.amount_minor,
       original_currency: row.currency,
-      base_amount_cents: bigintToDbInt(fx.baseCents),
+      base_amount_cents: bigintToDbInt(baseCents),
       base_currency: baseCurrency,
       account_ledger_cents: bigintToDbInt(ledgerCents),
-      fx_rate: fx.fxRate,
-      fx_rate_date: fx.fxRateDate,
-      fx_stale: fx.fxStale,
+      fx_rate: baseFxRate.fxRate,
+      fx_rate_date: baseFxRate.fxRateDate,
+      fx_stale: baseFxRate.fxStale,
       transaction_date: row.transaction_date,
       merchant_raw: row.raw_description,
       merchant_id: row.merchant_id,
@@ -870,6 +885,26 @@ function extractImportedCount(raw: unknown): number {
     }
   }
   return 0;
+}
+
+// Private helper: mark batch as failed with FX error.
+async function markBatchFailed(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  batchId: string,
+  userId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('import_batches')
+    .update({
+      status: 'failed',
+      error_message: 'fx_unavailable',
+    })
+    .eq('id', batchId)
+    .eq('user_id', userId);
+
+  if (error) {
+    logSafe('mark_batch_failed', { userId, error: error.message });
+  }
 }
 
 // ------------------------------------------------------------------
@@ -1035,6 +1070,74 @@ export async function retryImportParse(input: unknown): Promise<RetryImportParse
 
   if (updErr) {
     logSafe('retry_import_parse_reset', { userId: user.id, error: updErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidateImportViews(batch.account_id ?? null);
+  revalidatePath(`/import/${batchId}`);
+  return { success: true };
+}
+
+// ------------------------------------------------------------------
+// retryImportFinalize(batchId) — retry FX-failed finalize without resetting parsed_transactions
+// ------------------------------------------------------------------
+
+export type RetryImportFinalizeResult =
+  | { success: true }
+  | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'NOT_FOUND' }
+  | { success: false; error: 'BAD_STATE' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
+export async function retryImportFinalize(input: unknown): Promise<RetryImportFinalizeResult> {
+  const zod = BatchIdInputSchema.safeParse(input);
+  if (!zod.success) {
+    return {
+      success: false,
+      error: 'VALIDATION_ERROR',
+      details: buildValidationDetails(zod.error),
+    };
+  }
+
+  const { batchId } = zod.data;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  const { data: batch, error: bErr } = await supabase
+    .from('import_batches')
+    .select('id, status, account_id, error_message')
+    .eq('id', batchId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (bErr) {
+    logSafe('retry_import_finalize_load', { userId: user.id, error: bErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  if (!batch) {
+    return { success: false, error: 'NOT_FOUND' };
+  }
+  if (batch.status !== 'failed' || batch.error_message !== 'fx_unavailable') {
+    return { success: false, error: 'BAD_STATE' };
+  }
+
+  const { error: updErr } = await supabase
+    .from('import_batches')
+    .update({
+      status: 'ready',
+      error_message: null,
+    })
+    .eq('id', batchId)
+    .eq('user_id', user.id);
+
+  if (updErr) {
+    logSafe('retry_import_finalize_reset', { userId: user.id, error: updErr.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
