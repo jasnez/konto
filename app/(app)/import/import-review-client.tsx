@@ -62,6 +62,8 @@ export interface ReviewParsedRow {
     | 'none'
     | 'user';
   categorization_confidence: number;
+  /** Heuristic flag: description matches ATM withdrawal patterns. */
+  is_likely_atm: boolean;
 }
 
 interface BatchHeaderModel {
@@ -250,6 +252,11 @@ export function ImportReviewClient({
 
   const importSelectedCount = useMemo(
     () => rows.filter((r) => r.selected_for_import).length,
+    [rows],
+  );
+
+  const atmRowCount = useMemo(
+    () => rows.filter((r) => r.is_likely_atm && r.selected_for_import).length,
     [rows],
   );
 
@@ -455,6 +462,32 @@ export function ImportReviewClient({
     setBulkIds((prev) => (prev.size === rows.length ? new Set() : new Set(rows.map((r) => r.id))));
   }, [rows]);
 
+  const excludeAllAtmRows = useCallback(() => {
+    const atmRows = rows.filter((r) => r.is_likely_atm && r.selected_for_import);
+    if (atmRows.length === 0) return;
+    setRows((prev) =>
+      prev.map((r) => (r.is_likely_atm ? { ...r, selected_for_import: false } : r)),
+    );
+    void (async () => {
+      const results = await Promise.all(
+        atmRows.map((r) =>
+          updateParsedTransaction({
+            id: r.id,
+            batchId,
+            selected_for_import: false,
+          }),
+        ),
+      );
+      const failed = results.filter((res) => !res.success).length;
+      if (failed > 0) {
+        toast.error('Nešto nije snimljeno. Osvježi stranicu.');
+        router.refresh();
+        return;
+      }
+      toast.success(`Isključeno ${String(atmRows.length)} ATM linija iz uvoza.`);
+    })();
+  }, [batchId, rows, router]);
+
   // UX-9: per-row toggle so the Set identity change only re-renders the
   // affected row (memoized row components receive isInBulk: boolean, not the Set).
   const toggleBulkRow = useCallback((rowId: string) => {
@@ -500,6 +533,37 @@ export function ImportReviewClient({
             role="status"
           >
             AI nije siguran. Pažljivo provjeri sve stavke.
+          </div>
+        ) : null}
+
+        {atmRowCount > 0 ? (
+          <div
+            className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-base text-foreground sm:flex-row sm:items-center sm:justify-between"
+            role="status"
+          >
+            <div className="flex-1 space-y-1">
+              <p className="font-medium">
+                🏧 Pronašli smo{' '}
+                <span className="tabular-nums">
+                  {atmRowCount} {atmRowCount === 1 ? 'liniju' : 'linije'}
+                </span>{' '}
+                koja izgleda kao podizanje s bankomata.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Preporučujemo da ih isključiš iz uvoza i unutar &quot;Podizanje s bankomata&quot; u
+                Brzom unosu ručno proslijediš novac na svoj Gotovina račun — tako se ne knjiže kao
+                trošak.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 min-h-10 shrink-0"
+              onClick={excludeAllAtmRows}
+              disabled={isWorking}
+            >
+              Isključi ATM linije
+            </Button>
           </div>
         ) : null}
 
@@ -730,6 +794,7 @@ const ReviewDesktopRow = memo(function ReviewDesktopRow({
 
   const lowConfidence = row.parse_confidence === 'low';
   const unknownMerchant = !row.merchant_id;
+  const isLikelyAtm = row.is_likely_atm;
   const categorizationMeta = categorizationBadgeMeta(row.categorization_source);
 
   return (
@@ -778,21 +843,32 @@ const ReviewDesktopRow = memo(function ReviewDesktopRow({
         />
       </td>
       <td className="py-2 pr-2">
-        <MerchantDescriptionField
-          description={desc}
-          unknownMerchant={unknownMerchant}
-          onDescriptionChange={(v) => {
-            setDesc(v);
-            patchRowLocal(row.id, { raw_description: v });
-            scheduleRowPatch(row.id, { raw_description: v });
-          }}
-          onBlur={() => {
-            flushRowDebounced(row.id);
-          }}
-          onMerchantPicked={(m) => {
-            onMerchantPicked(row.id, m);
-          }}
-        />
+        <div className="space-y-1">
+          {isLikelyAtm ? (
+            <Badge
+              variant="outline"
+              className="h-7 border-primary/40 bg-primary/10 px-2 text-xs font-medium text-foreground"
+              title="Izgleda kao podizanje s bankomata. Razmotri da isključiš i unesi ručno kroz 'Podizanje s bankomata' u Brzom unosu."
+            >
+              🏧 Bankomat
+            </Badge>
+          ) : null}
+          <MerchantDescriptionField
+            description={desc}
+            unknownMerchant={unknownMerchant}
+            onDescriptionChange={(v) => {
+              setDesc(v);
+              patchRowLocal(row.id, { raw_description: v });
+              scheduleRowPatch(row.id, { raw_description: v });
+            }}
+            onBlur={() => {
+              flushRowDebounced(row.id);
+            }}
+            onMerchantPicked={(m) => {
+              onMerchantPicked(row.id, m);
+            }}
+          />
+        </div>
       </td>
       <td className="py-2 pr-2">
         <Select
@@ -889,6 +965,7 @@ const ReviewMobileCard = memo(function ReviewMobileCard(
 
   const lowConfidence = row.parse_confidence === 'low';
   const unknownMerchant = !row.merchant_id;
+  const isLikelyAtm = row.is_likely_atm;
   const categorizationMeta = categorizationBadgeMeta(row.categorization_source);
 
   return (
@@ -918,13 +995,20 @@ const ReviewMobileCard = memo(function ReviewMobileCard(
         />
       </div>
       <div className="pr-14">
-        <Badge
-          variant="outline"
-          className={cn('mb-2 h-8 px-2 text-xs', categorizationMeta.className)}
-        >
-          {categorizationMeta.label} ·{' '}
-          {formatCategorizationConfidence(row.categorization_confidence)}
-        </Badge>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className={cn('h-8 px-2 text-xs', categorizationMeta.className)}>
+            {categorizationMeta.label} ·{' '}
+            {formatCategorizationConfidence(row.categorization_confidence)}
+          </Badge>
+          {isLikelyAtm ? (
+            <Badge
+              variant="outline"
+              className="h-8 border-primary/40 bg-primary/10 px-2 text-xs font-medium text-foreground"
+            >
+              🏧 Bankomat
+            </Badge>
+          ) : null}
+        </div>
         <input
           type="date"
           className="mb-2 h-11 w-full rounded-md border border-input bg-background px-2 text-sm tabular-nums"

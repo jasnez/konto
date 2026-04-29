@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { bs } from 'date-fns/locale';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { isLikelyAtmDescription } from '@/lib/parser/atm-detect';
 import { ImportBatchAwaitParse } from '../import-batch-await-parse';
 import { ImportBatchEmptyClient } from '../import-batch-empty-client';
 import { ImportBatchFailedClient } from '../import-batch-failed-client';
@@ -220,6 +221,7 @@ export default async function ImportBatchPage(props: PageProps) {
     parse_confidence: narrowConfidence(r.parse_confidence),
     categorization_source: narrowCategorizationSource(r.categorization_source),
     categorization_confidence: r.categorization_confidence ?? 0,
+    is_likely_atm: isLikelyAtmDescription(r.raw_description),
   }));
 
   if (initialRows.length === 0) {

@@ -121,6 +121,164 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+const ReconcileCashAccountSchema = z.object({
+  account_id: z.uuid(),
+  actual_balance_cents: z.bigint(),
+});
+
+export type ReconcileCashAccountResult =
+  | { success: true; data: { transactionId: string; deltaCents: string } }
+  | { success: true; data: { transactionId: null; deltaCents: '0' } }
+  | { success: false; error: 'VALIDATION_ERROR'; details: { _root: string[] } }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'NOT_FOUND' }
+  | { success: false; error: 'NOT_CASH_ACCOUNT' }
+  | { success: false; error: 'CATEGORY_MISSING' }
+  | { success: false; error: 'EXTERNAL_SERVICE_ERROR' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
+/**
+ * @public
+ * Reconcile a cash account against the actual amount the user has on hand.
+ *
+ * Computes delta = actual - currentLedger. Posts a single transaction in the
+ * "Gotovinski troškovi" system category to absorb the gap (expense if cash
+ * was lost / spent untracked, income if found). When delta is zero we return
+ * a no-op success so the dialog can close cleanly.
+ */
+export async function reconcileCashAccount(input: unknown): Promise<ReconcileCashAccountResult> {
+  const parsed = ReconcileCashAccountSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: 'VALIDATION_ERROR',
+      details: { _root: parsed.error.issues.map((issue) => issue.message) },
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  const { data: account, error: aErr } = await supabase
+    .from('accounts')
+    .select('id, type, currency, current_balance_cents')
+    .eq('id', parsed.data.account_id)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (aErr) {
+    logSafe('reconcile_cash_account_select', { userId: user.id, error: aErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  if (!account) {
+    return { success: false, error: 'NOT_FOUND' };
+  }
+  if (account.type !== 'cash') {
+    return { success: false, error: 'NOT_CASH_ACCOUNT' };
+  }
+
+  const currentCents = BigInt(account.current_balance_cents);
+  const deltaCents = parsed.data.actual_balance_cents - currentCents;
+
+  if (deltaCents === 0n) {
+    return { success: true, data: { transactionId: null, deltaCents: '0' } };
+  }
+
+  const { data: cat, error: cErr } = await supabase
+    .from('categories')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('slug', 'gotovinski-troskovi')
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (cErr) {
+    logSafe('reconcile_cash_account_cat', { userId: user.id, error: cErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  if (!cat) {
+    return { success: false, error: 'CATEGORY_MISSING' };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('base_currency')
+    .eq('id', user.id)
+    .maybeSingle();
+  const baseCurrency = profile?.base_currency ?? 'BAM';
+  const txDate = todayIsoDate();
+
+  let fxConversion: Awaited<ReturnType<typeof convertToBase>>;
+  try {
+    fxConversion = await convertToBase(deltaCents, account.currency, baseCurrency, txDate);
+  } catch (error) {
+    logSafe('reconcile_cash_account_fx', {
+      userId: user.id,
+      error: error instanceof Error ? error.message : 'unknown',
+    });
+    return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+  }
+
+  let ledgerCents: bigint;
+  try {
+    ledgerCents = await computeAccountLedgerCents(
+      account.currency,
+      deltaCents,
+      account.currency,
+      fxConversion.baseCents,
+      baseCurrency,
+      txDate,
+    );
+  } catch (error) {
+    logSafe('reconcile_cash_account_ledger', {
+      userId: user.id,
+      error: error instanceof Error ? error.message : 'unknown',
+    });
+    return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+  }
+
+  const { data: tx, error: txErr } = await supabase
+    .from('transactions')
+    .insert({
+      user_id: user.id,
+      account_id: account.id,
+      original_amount_cents: centsToDbInt(deltaCents),
+      original_currency: account.currency,
+      base_amount_cents: centsToDbInt(fxConversion.baseCents),
+      base_currency: baseCurrency,
+      account_ledger_cents: centsToDbInt(ledgerCents),
+      fx_rate: fxConversion.fxRate,
+      fx_rate_date: fxConversion.fxRateDate,
+      fx_stale: fxConversion.fxStale,
+      transaction_date: txDate,
+      source: 'manual',
+      category_id: cat.id,
+      category_source: 'user',
+      notes: `Usklađivanje gotovine ${txDate}`,
+    })
+    .select('id')
+    .single();
+
+  if (txErr) {
+    logSafe('reconcile_cash_account_tx', { userId: user.id, error: txErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidatePath('/racuni');
+  revalidatePath('/pocetna');
+  revalidatePath(`/racuni/${account.id}`);
+
+  return {
+    success: true,
+    data: { transactionId: tx.id, deltaCents: deltaCents.toString() },
+  };
+}
+
 /**
  * @public helper for createAccount flow + tests
  */
@@ -408,6 +566,97 @@ export async function deleteAccount(id: unknown): Promise<DeleteAccountResult> {
   revalidatePath('/racuni');
   revalidatePath(`/racuni/${idParse.data}`);
   return { success: true };
+}
+
+export type CreateCashAccountResult =
+  | { success: true; data: { id: string } }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'ALREADY_EXISTS'; data: { id: string } }
+  | { success: false; error: 'DATABASE_ERROR' };
+
+/**
+ * @public
+ * Quick-create a "Gotovina" cash account for the signed-in user.
+ *
+ * Used by the ATM-withdrawal preset in Quick Add (and the import-review
+ * "Transfer u Gotovinu" suggestion) when the user has no cash account yet.
+ * Returns ALREADY_EXISTS with the existing id if one is already present so
+ * the caller can chain into the transfer flow without surfacing an error.
+ */
+export async function createCashAccount(name?: unknown): Promise<CreateCashAccountResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  const { data: existing, error: existingErr } = await supabase
+    .from('accounts')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('type', 'cash')
+    .is('deleted_at', null)
+    .order('sort_order', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingErr) {
+    logSafe('create_cash_account_existing_select', { userId: user.id, error: existingErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  if (existing) {
+    return { success: false, error: 'ALREADY_EXISTS', data: { id: existing.id } };
+  }
+
+  const trimmed = typeof name === 'string' ? name.trim() : '';
+  const accountName = trimmed.length > 0 ? trimmed.slice(0, 100) : 'Gotovina';
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('base_currency')
+    .eq('id', user.id)
+    .maybeSingle();
+  const currency = profile?.base_currency ?? 'BAM';
+
+  const { data: lastAccount } = await supabase
+    .from('accounts')
+    .select('sort_order')
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextOrder = (lastAccount?.sort_order ?? -1) + 1;
+
+  const { data: newRow, error: insertError } = await supabase
+    .from('accounts')
+    .insert({
+      user_id: user.id,
+      name: accountName,
+      type: 'cash',
+      institution: null,
+      currency,
+      initial_balance_cents: 0,
+      current_balance_cents: 0,
+      icon: '💵',
+      color: null,
+      include_in_net_worth: true,
+      sort_order: nextOrder,
+    })
+    .select('id')
+    .single();
+
+  if (insertError) {
+    logSafe('create_cash_account_insert', { userId: user.id, error: insertError.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidatePath('/racuni');
+  revalidatePath('/pocetna');
+  return { success: true, data: { id: newRow.id } };
 }
 
 /**
