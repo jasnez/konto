@@ -7,7 +7,7 @@ import type { AccountOption } from '@/components/account-select';
 import { recoverStuckImports } from '@/lib/server/actions/recover-stuck-imports';
 import { ImportBatchesTable } from './import-batches-table';
 import { ImportStatementClient } from './import-client';
-import type { ImportListRow, ImportStatus } from './types';
+import { IMPORT_BATCH_STATUSES, type ImportBatchStatus, type ImportListRow } from './types';
 import { logSafe } from '@/lib/logger';
 
 export const metadata: Metadata = {
@@ -16,8 +16,8 @@ export const metadata: Metadata = {
 
 export const maxDuration = 60;
 
-function isImportStatus(s: string): s is ImportStatus {
-  return s === 'uploaded' || s === 'parsing' || s === 'ready' || s === 'imported' || s === 'failed';
+function isImportStatus(s: string): s is ImportBatchStatus {
+  return (IMPORT_BATCH_STATUSES as readonly string[]).includes(s);
 }
 
 export default async function ImportPage() {
