@@ -1016,7 +1016,7 @@ const MerchantDescriptionField = memo(function MerchantDescriptionField({
         type="text"
         className="h-11 w-full min-w-[10rem] rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         value={description}
-        placeholder={unknownMerchant ? 'Novi merchant — dodaj' : undefined}
+        placeholder={unknownMerchant ? 'Novi trgovac — dodaj' : undefined}
         onChange={(e) => {
           const v = e.target.value;
           onDescriptionChange(v);

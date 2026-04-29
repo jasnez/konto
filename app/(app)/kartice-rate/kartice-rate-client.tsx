@@ -6,6 +6,7 @@ import { bs } from 'date-fns/locale';
 import { CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { cancelInstallmentPlan, markOccurrencePaid } from './actions';
+import { formatMoney } from '@/lib/format/format-money';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
@@ -34,10 +35,6 @@ export interface PlanRow {
   notes: string | null;
   status: 'active' | 'completed' | 'cancelled';
   occurrences: OccurrenceRow[];
-}
-
-function formatMoney(cents: number, currency: string): string {
-  return new Intl.NumberFormat('bs-BA', { style: 'currency', currency }).format(cents / 100);
 }
 
 function formatDate(iso: string): string {
@@ -95,9 +92,11 @@ function PlanCard({ plan, onChanged }: { plan: PlanRow; onChanged: () => Promise
 
       <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
         <span className="text-muted-foreground">Ukupno</span>
-        <span className="font-medium">{formatMoney(plan.total_cents, plan.currency)}</span>
+        <span className="font-medium">
+          {formatMoney(BigInt(plan.total_cents), plan.currency, 'bs-BA')}
+        </span>
         <span className="text-muted-foreground">Rata</span>
-        <span>{formatMoney(plan.installment_cents, plan.currency)}</span>
+        <span>{formatMoney(BigInt(plan.installment_cents), plan.currency, 'bs-BA')}</span>
         <span className="text-muted-foreground">Početak</span>
         <span>{formatDate(plan.start_date)}</span>
         <span className="text-muted-foreground">Dan u mj.</span>
@@ -121,7 +120,7 @@ function PlanCard({ plan, onChanged }: { plan: PlanRow; onChanged: () => Promise
               {occ.occurrence_num}. {formatDate(occ.due_date)}
             </span>
             <div className="flex items-center gap-2">
-              <span>{formatMoney(occ.amount_cents, plan.currency)}</span>
+              <span>{formatMoney(BigInt(occ.amount_cents), plan.currency, 'bs-BA')}</span>
               {occ.state === 'posted' ? (
                 <CheckCircle2 className="h-3.5 w-3.5 text-green-600" aria-label="Plaćeno" />
               ) : occ.state === 'skipped' ? (

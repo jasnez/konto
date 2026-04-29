@@ -168,7 +168,7 @@ describe('QuickAddTransaction', () => {
     const toastPayload = toastErrorMock.mock.calls[0]?.[1] as
       | { action?: ToastActionLike }
       | undefined;
-    expect(toastPayload?.action?.label).toBe('Retry');
+    expect(toastPayload?.action?.label).toBe('Pokušaj ponovo');
     toastPayload?.action?.onClick?.();
     expect(onOpenChange).toHaveBeenCalledWith(true);
   });

@@ -174,7 +174,7 @@ export function TransactionEditForm({
             name="merchant_raw"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Merchant</FormLabel>
+                <FormLabel>Trgovac</FormLabel>
                 <FormControl>
                   <MerchantCombobox
                     value={field.value ?? ''}
