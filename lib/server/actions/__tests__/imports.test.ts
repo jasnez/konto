@@ -65,8 +65,16 @@ const upload = vi.fn();
 const remove = vi.fn();
 const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
 
-function makePdfFile(content: string, name = 'statement.pdf') {
-  return new File([content], name, { type: 'application/pdf' });
+// SE-5: prefix with PDF magic bytes so the server-side magic-byte check passes.
+const PDF_MAGIC = '%PDF-1.4\n';
+
+function makePdfFile(content = 'fake body', name = 'statement.pdf') {
+  return new File([PDF_MAGIC + content], name, { type: 'application/pdf' });
+}
+
+/** File that claims to be PDF but has wrong magic bytes (e.g. renamed JPEG). */
+function makeSpoofedFile(name = 'evil.pdf') {
+  return new File(['\xFF\xD8\xFF fake jpeg content'], name, { type: 'application/pdf' });
 }
 
 describe('uploadStatement', () => {
@@ -186,6 +194,45 @@ describe('uploadStatement', () => {
       expect(result.error).toBe('VALIDATION_ERROR');
       expect(result.details._root[0]).toContain('PDF');
     }
+  });
+
+  it('odbija fajl sa PDF MIME ali krivim magic bajtovima — SE-5', async () => {
+    // Simulates a renamed JPEG/EXE that claims application/pdf.
+    from.mockImplementation((table: string) => {
+      if (table === 'accounts') {
+        const q: AccountsQuery = {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                is: () => ({
+                  maybeSingle: () =>
+                    Promise.resolve({
+                      data: { id: 'acc-1', user_id: 'user-1', institution: null },
+                      error: null,
+                    }),
+                }),
+              }),
+            }),
+          }),
+        };
+        return q;
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    const formData = new FormData();
+    formData.set('accountId', '123e4567-e89b-12d3-a456-426614174000');
+    formData.set('file', makeSpoofedFile());
+
+    const result = await uploadStatement(formData);
+
+    expect(result.success).toBe(false);
+    if (!result.success && result.error === 'VALIDATION_ERROR') {
+      expect(result.details._root[0]).toContain('PDF');
+    }
+    // Magic-byte check fires before rate-limit and storage — neither touched.
+    expect(rpc).not.toHaveBeenCalled();
+    expect(upload).not.toHaveBeenCalled();
   });
 
   it('odbija ako account ne pripada useru', async () => {
