@@ -10,6 +10,13 @@ export interface ResolvedFxRate {
 interface Row {
   currency: string;
   transaction_date: string;
+  /**
+   * When the row will be materialised as a transfer-pair, this is the cash
+   * account's currency. The resolver pre-fetches the cross rate
+   * (source → destCurrency) and the destCurrency → base rate so the to-leg
+   * can be priced without an extra round-trip during prepareImportRows.
+   */
+  destCurrency?: string;
 }
 
 export async function resolveFxRatesForBatch(
@@ -29,6 +36,16 @@ export async function resolveFxRatesForBatch(
 
     if (from !== acct && base !== acct) {
       keysToResolve.add(cacheKey(from, acct, row.transaction_date));
+    }
+
+    if (row.destCurrency) {
+      const dest = row.destCurrency.trim().toUpperCase();
+      if (dest !== from) {
+        keysToResolve.add(cacheKey(from, dest, row.transaction_date));
+      }
+      if (dest !== base) {
+        keysToResolve.add(cacheKey(dest, base, row.transaction_date));
+      }
     }
   }
 

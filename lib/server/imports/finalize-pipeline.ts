@@ -55,7 +55,7 @@ export async function loadFinalizeContext(
   const { data: staged, error: sErr } = await supabase
     .from('parsed_transactions')
     .select(
-      'id, transaction_date, amount_minor, currency, raw_description, merchant_id, category_id, categorization_source, categorization_confidence',
+      'id, transaction_date, amount_minor, currency, raw_description, merchant_id, category_id, categorization_source, categorization_confidence, convert_to_transfer_to_account_id',
     )
     .eq('batch_id', batchId)
     .eq('user_id', userId)
@@ -99,6 +99,39 @@ export async function loadFinalizeContext(
     return { ok: false, error: 'NOT_FOUND' };
   }
 
+  // Pre-load destination account currencies for any row that's been flagged
+  // for transfer-pair conversion. We need these up front so prepareImportRows
+  // can pre-compute FX cross rates for the to-leg without going back to the DB.
+  const destAccountIds = Array.from(
+    new Set(
+      staging
+        .map((row) => row.convert_to_transfer_to_account_id)
+        .filter((id): id is string => typeof id === 'string'),
+    ),
+  );
+  const destAccountCurrencies = new Map<string, string>();
+  if (destAccountIds.length > 0) {
+    const { data: destAccounts, error: destErr } = await supabase
+      .from('accounts')
+      .select('id, currency')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .in('id', destAccountIds);
+
+    if (destErr) {
+      logSafe('finalize_import_dest_accounts', { userId, error: destErr.message });
+      return { ok: false, error: 'DATABASE_ERROR' };
+    }
+    if (destAccounts.length !== destAccountIds.length) {
+      // A flagged destination is missing or no longer the user's. Reject the
+      // batch — the user must clear the conversion before re-trying.
+      return { ok: false, error: 'NOT_FOUND' };
+    }
+    for (const acc of destAccounts) {
+      destAccountCurrencies.set(acc.id, acc.currency);
+    }
+  }
+
   return {
     ok: true,
     ctx: {
@@ -111,6 +144,7 @@ export async function loadFinalizeContext(
       baseCurrency,
       accountCurrency: importAccount.currency,
       staging,
+      destAccountCurrencies,
     },
   };
 }
@@ -125,12 +159,23 @@ export async function prepareImportRows(
   userId: string,
   deps: FinalizeDependencies = defaultDeps,
 ): Promise<PrepareImportRowsResult> {
-  const { batch, baseCurrency, accountCurrency, staging } = ctx;
+  const { batch, baseCurrency, accountCurrency, staging, destAccountCurrencies } = ctx;
   const accountId = batch.account_id;
+
+  // Tag each staging row with the destination currency (if any) so the FX
+  // resolver can also pre-compute the cross-currency rates we'll need to
+  // price the to-leg of a transfer pair.
+  const fxRows = staging.map((row) => ({
+    currency: row.currency,
+    transaction_date: row.transaction_date,
+    destCurrency: row.convert_to_transfer_to_account_id
+      ? destAccountCurrencies.get(row.convert_to_transfer_to_account_id)
+      : undefined,
+  }));
 
   let fxCache;
   try {
-    fxCache = await deps.fxResolver(staging, baseCurrency, accountCurrency);
+    fxCache = await deps.fxResolver(fxRows, baseCurrency, accountCurrency);
   } catch (error) {
     logSafe('finalize_import_fx_batch', {
       userId,
@@ -139,11 +184,12 @@ export async function prepareImportRows(
     return { ok: false, error: 'EXTERNAL_SERVICE_ERROR' };
   }
 
+  const baseCurrencyNorm = baseCurrency.trim().toUpperCase();
+  const accountCurrencyNorm = accountCurrency.trim().toUpperCase();
+
   const prepared: PreparedImportRow[] = [];
   for (const row of staging) {
     const fromCurrency = row.currency.trim().toUpperCase();
-    const baseCurrencyNorm = baseCurrency.trim().toUpperCase();
-    const accountCurrencyNorm = accountCurrency.trim().toUpperCase();
 
     const fxKey = `${fromCurrency}|${baseCurrencyNorm}|${row.transaction_date}`;
     const baseFxRate = fxCache.get(fxKey);
@@ -169,6 +215,76 @@ export async function prepareImportRows(
       ledgerCents = toCents(BigInt(row.amount_minor), ledgerFxRate.fxRate);
     }
 
+    // Default the to-leg fields to null. Populated below when the row is
+    // flagged for transfer-pair conversion.
+    let toLeg: {
+      original_amount_cents: number;
+      original_currency: string;
+      base_amount_cents: number;
+      account_ledger_cents: number;
+      fx_rate: number;
+      fx_rate_date: string;
+      fx_stale: boolean;
+    } | null = null;
+
+    if (row.convert_to_transfer_to_account_id) {
+      const destCurrency = destAccountCurrencies.get(row.convert_to_transfer_to_account_id);
+      if (!destCurrency) {
+        // Defensive: loadFinalizeContext should have failed already.
+        return { ok: false, error: 'EXTERNAL_SERVICE_ERROR' };
+      }
+      const destCurrencyNorm = destCurrency.trim().toUpperCase();
+
+      // Source amount in the bank statement is signed (e.g. -10000 cents for
+      // an ATM withdrawal). The to-leg credits the cash account by the
+      // absolute value, in the cash account's own currency.
+      const fromCents = BigInt(row.amount_minor);
+      const absFromCents = fromCents < 0n ? -fromCents : fromCents;
+
+      let toAmountCents: bigint;
+      if (destCurrencyNorm === fromCurrency) {
+        toAmountCents = absFromCents;
+      } else {
+        const crossKey = `${fromCurrency}|${destCurrencyNorm}|${row.transaction_date}`;
+        const crossRate = fxCache.get(crossKey);
+        if (!crossRate) {
+          logSafe('finalize_import_missing_cross_fx_cache', { userId, key: crossKey });
+          return { ok: false, error: 'EXTERNAL_SERVICE_ERROR' };
+        }
+        toAmountCents = toCents(absFromCents, crossRate.fxRate);
+      }
+
+      let toBaseRate;
+      if (destCurrencyNorm === baseCurrencyNorm) {
+        toBaseRate = {
+          fxRate: 1,
+          fxRateDate: baseFxRate.fxRateDate,
+          fxSource: 'identity' as const,
+          fxStale: false,
+        };
+      } else {
+        const toBaseKey = `${destCurrencyNorm}|${baseCurrencyNorm}|${row.transaction_date}`;
+        const cached = fxCache.get(toBaseKey);
+        if (!cached) {
+          logSafe('finalize_import_missing_to_base_fx_cache', { userId, key: toBaseKey });
+          return { ok: false, error: 'EXTERNAL_SERVICE_ERROR' };
+        }
+        toBaseRate = cached;
+      }
+
+      const toBaseCents = toCents(toAmountCents, toBaseRate.fxRate);
+
+      toLeg = {
+        original_amount_cents: bigintToDbInt(toAmountCents),
+        original_currency: destCurrency,
+        base_amount_cents: bigintToDbInt(toBaseCents),
+        account_ledger_cents: bigintToDbInt(toAmountCents),
+        fx_rate: toBaseRate.fxRate,
+        fx_rate_date: toBaseRate.fxRateDate,
+        fx_stale: toBaseRate.fxStale,
+      };
+    }
+
     const dedupHash = computeDedupHash({
       account_id: accountId,
       amount_cents: BigInt(row.amount_minor),
@@ -178,6 +294,7 @@ export async function prepareImportRows(
 
     prepared.push({
       account_id: accountId,
+      to_account_id: row.convert_to_transfer_to_account_id,
       original_amount_cents: row.amount_minor,
       original_currency: row.currency,
       base_amount_cents: bigintToDbInt(baseCents),
@@ -186,12 +303,28 @@ export async function prepareImportRows(
       fx_rate: baseFxRate.fxRate,
       fx_rate_date: baseFxRate.fxRateDate,
       fx_stale: baseFxRate.fxStale,
+      to_original_amount_cents: toLeg?.original_amount_cents ?? null,
+      to_original_currency: toLeg?.original_currency ?? null,
+      to_base_amount_cents: toLeg?.base_amount_cents ?? null,
+      to_account_ledger_cents: toLeg?.account_ledger_cents ?? null,
+      to_fx_rate: toLeg?.fx_rate ?? null,
+      to_fx_rate_date: toLeg?.fx_rate_date ?? null,
+      to_fx_stale: toLeg?.fx_stale ?? null,
       transaction_date: row.transaction_date,
       merchant_raw: row.raw_description,
       merchant_id: row.merchant_id,
-      category_id: row.category_id,
-      category_source: row.category_id ? (row.categorization_source ?? 'user') : null,
-      category_confidence: row.category_id ? (row.categorization_confidence ?? 1) : null,
+      // Transfers carry no merchant or category at the data layer.
+      category_id: row.convert_to_transfer_to_account_id ? null : row.category_id,
+      category_source: row.convert_to_transfer_to_account_id
+        ? null
+        : row.category_id
+          ? (row.categorization_source ?? 'user')
+          : null,
+      category_confidence: row.convert_to_transfer_to_account_id
+        ? null
+        : row.category_id
+          ? (row.categorization_confidence ?? 1)
+          : null,
       dedup_hash: dedupHash,
     });
   }
@@ -243,6 +376,7 @@ export async function persistFinalizedBatch(
 ): Promise<PersistFinalizedBatchResult> {
   const rpcPayload = toInsert.map((r) => ({
     account_id: r.account_id,
+    to_account_id: r.to_account_id,
     original_amount_cents: r.original_amount_cents,
     original_currency: r.original_currency,
     base_amount_cents: r.base_amount_cents,
@@ -251,6 +385,13 @@ export async function persistFinalizedBatch(
     fx_rate: r.fx_rate,
     fx_rate_date: r.fx_rate_date,
     fx_stale: r.fx_stale,
+    to_original_amount_cents: r.to_original_amount_cents,
+    to_original_currency: r.to_original_currency,
+    to_base_amount_cents: r.to_base_amount_cents,
+    to_account_ledger_cents: r.to_account_ledger_cents,
+    to_fx_rate: r.to_fx_rate,
+    to_fx_rate_date: r.to_fx_rate_date,
+    to_fx_stale: r.to_fx_stale,
     transaction_date: r.transaction_date,
     merchant_raw: r.merchant_raw,
     merchant_id: r.merchant_id,

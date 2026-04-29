@@ -121,4 +121,60 @@ describe('resolveFxRatesForBatch', () => {
     expect(resolveFxRateMock).toHaveBeenCalledWith('EUR', 'EUR', '2026-04-28');
     expect(cache.get('EUR|EUR|2026-04-28')?.fxRate).toBe(1.0);
   });
+
+  it('pre-fetches transfer-pair cross rates when destCurrency is provided', async () => {
+    const resolveFxRateMock = vi.spyOn(convert, 'resolveFxRate');
+    resolveFxRateMock.mockResolvedValue({
+      fxRate: 0.51,
+      fxRateDate: '2026-04-28',
+      fxSource: 'currency_board',
+      fxStale: false,
+    });
+
+    // Source = BAM, base = EUR, dest = USD. Resolver must fetch:
+    //   BAM|EUR (source→base), BAM|USD (cross), USD|EUR (dest→base).
+    const rows = [{ currency: 'BAM', transaction_date: '2026-04-28', destCurrency: 'USD' }];
+    const cache = await resolveFxRatesForBatch(rows, 'EUR', 'BAM');
+
+    expect(cache.get('BAM|EUR|2026-04-28')).toBeDefined();
+    expect(cache.get('BAM|USD|2026-04-28')).toBeDefined();
+    expect(cache.get('USD|EUR|2026-04-28')).toBeDefined();
+  });
+
+  it('skips destCurrency cross rate when it equals the source currency', async () => {
+    const resolveFxRateMock = vi.spyOn(convert, 'resolveFxRate');
+    resolveFxRateMock.mockResolvedValue({
+      fxRate: 1,
+      fxRateDate: '2026-04-28',
+      fxSource: 'identity',
+      fxStale: false,
+    });
+
+    // BAM bank → BAM cash. Cross rate is identity, no extra lookup needed.
+    const rows = [{ currency: 'BAM', transaction_date: '2026-04-28', destCurrency: 'BAM' }];
+    const cache = await resolveFxRatesForBatch(rows, 'EUR', 'BAM');
+
+    // Only source→base — no BAM|BAM cross rate, and BAM→base is the same as
+    // the source→base lookup we already do.
+    expect(cache.has('BAM|BAM|2026-04-28')).toBe(false);
+    expect(cache.has('BAM|EUR|2026-04-28')).toBe(true);
+  });
+
+  it('skips destCurrency→base when destCurrency equals base', async () => {
+    const resolveFxRateMock = vi.spyOn(convert, 'resolveFxRate');
+    resolveFxRateMock.mockResolvedValue({
+      fxRate: 0.51,
+      fxRateDate: '2026-04-28',
+      fxSource: 'currency_board',
+      fxStale: false,
+    });
+
+    // Source = BAM, base = EUR, dest = EUR. Cross rate (BAM→EUR) is already
+    // the source→base lookup; dest→base is identity and elided.
+    const rows = [{ currency: 'BAM', transaction_date: '2026-04-28', destCurrency: 'EUR' }];
+    const cache = await resolveFxRatesForBatch(rows, 'EUR', 'BAM');
+
+    expect(cache.has('BAM|EUR|2026-04-28')).toBe(true);
+    expect(cache.has('EUR|EUR|2026-04-28')).toBe(false);
+  });
 });

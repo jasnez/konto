@@ -606,6 +606,7 @@ export type Database = {
           categorization_confidence: number | null;
           categorization_source: string | null;
           category_id: string | null;
+          convert_to_transfer_to_account_id: string | null;
           created_at: string;
           currency: string;
           id: string;
@@ -626,6 +627,7 @@ export type Database = {
           categorization_confidence?: number | null;
           categorization_source?: string | null;
           category_id?: string | null;
+          convert_to_transfer_to_account_id?: string | null;
           created_at?: string;
           currency: string;
           id?: string;
@@ -646,6 +648,7 @@ export type Database = {
           categorization_confidence?: number | null;
           categorization_source?: string | null;
           category_id?: string | null;
+          convert_to_transfer_to_account_id?: string | null;
           created_at?: string;
           currency?: string;
           id?: string;
@@ -673,6 +676,13 @@ export type Database = {
             columns: ['category_id'];
             isOneToOne: false;
             referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'parsed_transactions_convert_to_transfer_to_account_id_fkey';
+            columns: ['convert_to_transfer_to_account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
             referencedColumns: ['id'];
           },
           {

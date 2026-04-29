@@ -211,6 +211,105 @@ export async function updateParsedTransaction(
 }
 
 // ------------------------------------------------------------------
+// setTransferConversion: flag a parsed row to be materialised as a transfer
+// pair at finalize time (or clear the flag).
+// ------------------------------------------------------------------
+
+const SetTransferConversionSchema = z.object({
+  id: z.uuid(),
+  batchId: z.uuid(),
+  // null clears the flag; a uuid sets the destination account.
+  toAccountId: z.union([z.uuid(), z.null()]),
+});
+
+export type SetTransferConversionResult =
+  | { success: true }
+  | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'NOT_FOUND' }
+  | { success: false; error: 'NOT_CASH_ACCOUNT' }
+  | { success: false; error: 'SAME_ACCOUNT' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
+export async function setTransferConversion(input: unknown): Promise<SetTransferConversionResult> {
+  const parsed = SetTransferConversionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: 'VALIDATION_ERROR',
+      details: buildValidationDetails(parsed.error),
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  // Verify the parsed row is the user's and still pending review. Also fetch
+  // the source account so we can reject a same-account conversion attempt
+  // before we write it.
+  const { data: row, error: loadErr } = await supabase
+    .from('parsed_transactions')
+    .select('id, batch_id, user_id, status, import_batches ( account_id )')
+    .eq('id', parsed.data.id)
+    .eq('batch_id', parsed.data.batchId)
+    .maybeSingle();
+
+  if (loadErr) {
+    logSafe('set_transfer_conversion_load', { userId: user.id, error: loadErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  if (row?.user_id !== user.id || row.status !== 'pending_review') {
+    return { success: false, error: 'NOT_FOUND' };
+  }
+
+  if (parsed.data.toAccountId !== null) {
+    if (row.import_batches.account_id === parsed.data.toAccountId) {
+      return { success: false, error: 'SAME_ACCOUNT' };
+    }
+
+    // The target must be one of the user's cash accounts (any other type
+    // would surprise the user — this UI only models ATM-to-cash conversion).
+    const { data: dest, error: destErr } = await supabase
+      .from('accounts')
+      .select('id, type')
+      .eq('id', parsed.data.toAccountId)
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (destErr) {
+      logSafe('set_transfer_conversion_dest', { userId: user.id, error: destErr.message });
+      return { success: false, error: 'DATABASE_ERROR' };
+    }
+    if (!dest) {
+      return { success: false, error: 'NOT_FOUND' };
+    }
+    if (dest.type !== 'cash') {
+      return { success: false, error: 'NOT_CASH_ACCOUNT' };
+    }
+  }
+
+  const { error: upErr } = await supabase
+    .from('parsed_transactions')
+    .update({ convert_to_transfer_to_account_id: parsed.data.toAccountId })
+    .eq('id', parsed.data.id)
+    .eq('user_id', user.id);
+
+  if (upErr) {
+    logSafe('set_transfer_conversion_update', { userId: user.id, error: upErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidatePath(`/import/${parsed.data.batchId}`);
+  return { success: true };
+}
+
+// ------------------------------------------------------------------
 // togglePartialExclusion(ids[], excluded)
 // ------------------------------------------------------------------
 

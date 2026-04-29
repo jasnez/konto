@@ -11,6 +11,7 @@ export type StagingRow = Pick<
   | 'category_id'
   | 'categorization_source'
   | 'categorization_confidence'
+  | 'convert_to_transfer_to_account_id'
 >;
 
 export interface FinalizeBatch {
@@ -25,10 +26,17 @@ export interface FinalizeContext {
   baseCurrency: string;
   accountCurrency: string;
   staging: StagingRow[];
+  /**
+   * Currency of every account referenced as a transfer-conversion destination
+   * by some row in `staging`. Empty when no row has a conversion target.
+   */
+  destAccountCurrencies: Map<string, string>;
 }
 
 export interface PreparedImportRow {
   account_id: string;
+  /** When set, the row materialises as a transfer pair instead of a regular tx. */
+  to_account_id: string | null;
   original_amount_cents: number;
   original_currency: string;
   base_amount_cents: number;
@@ -37,6 +45,14 @@ export interface PreparedImportRow {
   fx_rate: number;
   fx_rate_date: string;
   fx_stale: boolean;
+  /** Transfer-pair to-leg fields. Null for regular rows. */
+  to_original_amount_cents: number | null;
+  to_original_currency: string | null;
+  to_base_amount_cents: number | null;
+  to_account_ledger_cents: number | null;
+  to_fx_rate: number | null;
+  to_fx_rate_date: string | null;
+  to_fx_stale: boolean | null;
   transaction_date: string;
   merchant_raw: string;
   merchant_id: string | null;

@@ -175,25 +175,37 @@ export default async function ImportBatchPage(props: PageProps) {
     );
   }
 
-  const [{ data: parsedRows, error: parsedErr }, { data: categoryRows, error: catErr }] =
-    await Promise.all([
-      supabase
-        .from('parsed_transactions')
-        .select(
-          'id, transaction_date, raw_description, amount_minor, currency, category_id, merchant_id, selected_for_import, parse_confidence, categorization_source, categorization_confidence, status',
-        )
-        .eq('batch_id', batchId)
-        .eq('user_id', user.id)
-        .eq('status', 'pending_review')
-        .order('transaction_date', { ascending: false }),
-      supabase
-        .from('categories')
-        .select('id, name, sort_order')
-        .eq('user_id', user.id)
-        .is('deleted_at', null)
-        .order('sort_order', { ascending: true })
-        .order('name', { ascending: true }),
-    ]);
+  const [
+    { data: parsedRows, error: parsedErr },
+    { data: categoryRows, error: catErr },
+    { data: cashRow },
+  ] = await Promise.all([
+    supabase
+      .from('parsed_transactions')
+      .select(
+        'id, transaction_date, raw_description, amount_minor, currency, category_id, merchant_id, selected_for_import, parse_confidence, categorization_source, categorization_confidence, status, convert_to_transfer_to_account_id',
+      )
+      .eq('batch_id', batchId)
+      .eq('user_id', user.id)
+      .eq('status', 'pending_review')
+      .order('transaction_date', { ascending: false }),
+    supabase
+      .from('categories')
+      .select('id, name, sort_order')
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true }),
+    supabase
+      .from('accounts')
+      .select('id, name, currency')
+      .eq('user_id', user.id)
+      .eq('type', 'cash')
+      .is('deleted_at', null)
+      .order('sort_order', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   if (parsedErr) {
     logSafe('import_batch_parsed', { userId: user.id, error: parsedErr.message });
@@ -222,7 +234,10 @@ export default async function ImportBatchPage(props: PageProps) {
     categorization_source: narrowCategorizationSource(r.categorization_source),
     categorization_confidence: r.categorization_confidence ?? 0,
     is_likely_atm: isLikelyAtmDescription(r.raw_description),
+    convert_to_transfer_to_account_id: r.convert_to_transfer_to_account_id ?? null,
   }));
+
+  const cashAccount = cashRow ? { id: cashRow.id, name: cashRow.name } : null;
 
   if (initialRows.length === 0) {
     return (
@@ -265,6 +280,7 @@ export default async function ImportBatchPage(props: PageProps) {
           batchId={batch.id}
           initialRows={initialRows}
           categories={categories}
+          cashAccount={cashAccount}
           batch={{
             bankLabel,
             fileName: batch.original_filename,
