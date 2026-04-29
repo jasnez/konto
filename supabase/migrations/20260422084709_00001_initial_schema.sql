@@ -124,9 +124,7 @@ language plpgsql
 set search_path = public, pg_temp
 as $$
 begin
-  -- TODO(balance): implement once business rules (splits, transfers,
-  -- multi-currency FX) are finalized. Keep NEW/OLD passthrough so this
-  -- placeholder is safe on all trigger events.
+  -- NOTE: balance trigger implementiran u migracijama 00013, 00035, 00036.
   if tg_op = 'DELETE' then
     return old;
   end if;

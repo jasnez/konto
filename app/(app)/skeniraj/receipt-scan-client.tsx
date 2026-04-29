@@ -43,7 +43,7 @@ const ACCEPT_MIME = new Set([
   'image/heif',
 ]);
 
-function toCents(amount: number | null): bigint {
+function majorToCents(amount: number | null): bigint {
   if (amount === null || !Number.isFinite(amount) || amount <= 0) return 0n;
   return BigInt(Math.round(Math.abs(amount) * 100));
 }
@@ -217,7 +217,7 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
     const firstAccount = accounts.find((a) => a.id === fallbackAccountId);
     const fallbackCurrency = firstAccount?.currency ?? 'BAM';
 
-    setAmountCents(toCents(extracted?.total_amount ?? null));
+    setAmountCents(majorToCents(extracted?.total_amount ?? null));
     setCurrency((extracted?.currency ?? fallbackCurrency).toUpperCase());
     setTransactionDate(extracted?.date ?? getTodayIsoDate());
     setMerchantRaw(extracted?.merchant_name ?? lastUsed?.merchant_raw ?? '');
