@@ -392,9 +392,9 @@ export function QuickAddTransaction({
         onSubmit={(event) => {
           void form.handleSubmit(onSubmit)(event);
         }}
-        className="flex h-full flex-col gap-4"
+        className="flex min-h-0 flex-1 flex-col gap-4"
       >
-        <div className="space-y-4 overflow-y-auto pr-1">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           <Button asChild type="button" variant="outline" className="h-11 min-h-[44px] w-full">
             <Link
               href="/skeniraj"
@@ -817,7 +817,7 @@ export function QuickAddTransaction({
         <SheetContent
           side="bottom"
           className={cn(
-            'h-[100dvh] max-h-[100dvh] rounded-none px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5 sm:max-w-none',
+            'flex h-[100dvh] max-h-[100dvh] flex-col rounded-none px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5 sm:max-w-none',
           )}
         >
           <SheetHeader className="mb-2 text-left">
@@ -832,7 +832,7 @@ export function QuickAddTransaction({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-xl">
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-xl">
         <DialogTitle>Brzi unos</DialogTitle>
         <DialogDescription>Dodaj transakciju bez napuštanja trenutne stranice.</DialogDescription>
         {content}
