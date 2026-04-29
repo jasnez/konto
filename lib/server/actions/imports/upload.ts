@@ -71,6 +71,20 @@ export async function uploadStatement(formData: FormData): Promise<UploadStateme
   if (!account) return { success: false, error: 'NOT_FOUND' };
 
   const arrayBuffer = await file.arrayBuffer();
+
+  // SE-5: verify PDF magic bytes (%PDF = 0x25 0x50 0x44 0x46).
+  // File.type is browser-supplied and trivially spoofed; the magic bytes are
+  // authoritative.  Check before the rate-limit so invalid files don't consume
+  // a slot.
+  const magic = new Uint8Array(arrayBuffer.slice(0, 4));
+  if (magic[0] !== 0x25 || magic[1] !== 0x50 || magic[2] !== 0x44 || magic[3] !== 0x46) {
+    return {
+      success: false,
+      error: 'VALIDATION_ERROR',
+      details: { _root: ['Fajl nije validan PDF.'] },
+    };
+  }
+
   const checksum = createHash('sha256').update(Buffer.from(arrayBuffer)).digest('hex');
 
   const { data: existing, error: existingErr } = await supabase
