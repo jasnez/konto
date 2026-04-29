@@ -6,7 +6,7 @@ import { useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { importBatchErrorMessageForUser } from '@/lib/import/import-batch-error-message';
-import { rejectImport, retryImportParse } from '@/lib/server/actions/imports';
+import { rejectImport, retryImportParse, retryImportFinalize } from '@/lib/server/actions/imports';
 
 interface ImportBatchFailedClientProps {
   batchId: string;
@@ -23,7 +23,11 @@ export function ImportBatchFailedClient({
 
   function onRetry() {
     startTransition(async () => {
-      const result = await retryImportParse({ batchId });
+      const isFxFailure = errorMessageRaw === 'fx_unavailable';
+      const result = isFxFailure
+        ? await retryImportFinalize({ batchId })
+        : await retryImportParse({ batchId });
+
       if (!result.success) {
         let msg = 'Ponovni pokušaj nije uspio.';
         if (result.error === 'VALIDATION_ERROR') {
@@ -38,7 +42,9 @@ export function ImportBatchFailedClient({
         toast.error(msg);
         return;
       }
-      toast.message('Ponovo pokrećem obradu izvoda…');
+      toast.message(
+        isFxFailure ? 'Ponovo pokrećem finalizaciju…' : 'Ponovo pokrećem obradu izvoda…',
+      );
       router.refresh();
     });
   }

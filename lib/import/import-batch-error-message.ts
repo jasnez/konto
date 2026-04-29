@@ -19,6 +19,8 @@ export function importBatchErrorMessageForUser(raw: string | null): string {
       return 'PDF je skeniran i ne možemo ga pročitati automatski.';
     case 'pdf_not_found':
       return 'Nismo pronašli fajl izvoda. Pokušaj otpremiti PDF ponovo.';
+    case 'fx_unavailable':
+      return 'Servis za valutne tečajeve nije dostupan. Pokušaj ponovo za nekoliko minuta.';
     default:
       return 'Uvoz nije uspio. Možeš pokušati ponovo ili unijeti transakcije ručno.';
   }

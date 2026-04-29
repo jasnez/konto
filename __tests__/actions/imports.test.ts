@@ -3,17 +3,19 @@ import {
   finalizeImport,
   rejectImport,
   retryImportParse,
+  retryImportFinalize,
   togglePartialExclusion,
   updateParsedTransaction,
 } from '@/lib/server/actions/imports';
 import { convertToBase } from '@/lib/fx/convert';
 import { createClient } from '@/lib/supabase/server';
 import { resolveFxRatesForBatch } from '@/lib/fx/batch-resolver';
+import type { ResolvedFxRate } from '@/lib/fx/batch-resolver';
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }));
 vi.mock('@/lib/fx/convert', () => ({
   convertToBase: vi.fn(),
-  resolveFxRate: vi.fn(async (from: string, to: string, date: string) => {
+  resolveFxRate: vi.fn((from: string, to: string, date: string) => {
     if (from === to) {
       return { fxRate: 1, fxRateDate: date, fxSource: 'identity', fxStale: false };
     }
@@ -32,15 +34,20 @@ vi.mock('@/lib/fx/batch-resolver', () => ({
 }));
 
 function makeFxCacheFromRows(
-  rows: Array<{ currency: string; transaction_date: string }>,
+  rows: { currency: string; transaction_date: string }[],
   baseCurrency: string,
   accountCurrency: string,
-): Promise<Map<string, { fxRate: number; fxRateDate: string; fxSource: string; fxStale: boolean }>> {
+): Promise<
+  Map<string, { fxRate: number; fxRateDate: string; fxSource: string; fxStale: boolean }>
+> {
   const RATES: Record<string, { fxRate: number; fxSource: string }> = {
     'EUR|BAM': { fxRate: 1.95583, fxSource: 'currency_board' },
     'BAM|EUR': { fxRate: 1 / 1.95583, fxSource: 'currency_board' },
   };
-  const map = new Map<string, { fxRate: number; fxRateDate: string; fxSource: string; fxStale: boolean }>();
+  const map = new Map<
+    string,
+    { fxRate: number; fxRateDate: string; fxSource: string; fxStale: boolean }
+  >();
   const keysToResolve = new Set<string>();
   for (const row of rows) {
     const from = row.currency.trim().toUpperCase();
@@ -54,7 +61,10 @@ function makeFxCacheFromRows(
   for (const key of keysToResolve) {
     const [from, to, date] = key.split('|');
     const pairKey = `${from}|${to}`;
-    const rateData = from === to ? { fxRate: 1, fxSource: 'identity' } : (RATES[pairKey] ?? { fxRate: 1.5, fxSource: 'ecb' });
+    const rateData =
+      from === to
+        ? { fxRate: 1, fxSource: 'identity' }
+        : (RATES[pairKey] ?? { fxRate: 1.5, fxSource: 'ecb' });
     map.set(key, { ...rateData, fxRateDate: date, fxStale: false });
   }
   return Promise.resolve(map);
@@ -115,6 +125,7 @@ interface BatchRow {
   status: string;
   account_id: string | null;
   storage_path: string | null;
+  error_message?: string | null;
 }
 
 interface StagedRow {
@@ -821,7 +832,7 @@ describe('finalizeImport', () => {
     expect(row.fx_stale).toBe(false);
   });
 
-  it('returns EXTERNAL_SERVICE_ERROR and skips the RPC when FX fetch fails', async () => {
+  it('returns EXTERNAL_SERVICE_ERROR and marks batch failed when FX fetch fails', async () => {
     const stub = buildSupabase({
       user: { id: USER_ID },
       batch: {
@@ -850,11 +861,13 @@ describe('finalizeImport', () => {
     const result = await finalizeImport({ batchId: BATCH_ID });
     expect(result).toEqual({ success: false, error: 'EXTERNAL_SERVICE_ERROR' });
     expect(stub.rpcSpy).not.toHaveBeenCalled();
+    expect(stub.batchUpdatePayloads[0]).toEqual({
+      status: 'failed',
+      error_message: 'fx_unavailable',
+    });
   });
 
-  it('MT-4/fx-failure: batch status not modified when FX conversion throws', async () => {
-    // Verifies DL audit concern: FX failure must NOT leave batch in a corrupted state
-    // (status stays 'ready', not silently flipped to 'importing').
+  it('AV-6/fx-failure: marks batch as failed with fx_unavailable when FX conversion throws', async () => {
     const stub = buildSupabase({
       user: { id: USER_ID },
       batch: {
@@ -883,10 +896,14 @@ describe('finalizeImport', () => {
     const result = await finalizeImport({ batchId: BATCH_ID });
 
     expect(result).toEqual({ success: false, error: 'EXTERNAL_SERVICE_ERROR' });
-    // finalize_import_batch RPC (which atomically writes status + rows) was never called.
+    // finalize_import_batch RPC was never called (no data committed).
     expect(stub.rpcSpy.mock.calls.some((c) => c[0] === 'finalize_import_batch')).toBe(false);
-    // No direct status UPDATE was issued on import_batches either.
-    expect(stub.batchUpdatePayloads).toHaveLength(0);
+    // Batch marked as failed with fx_unavailable error code.
+    expect(stub.batchUpdatePayloads).toHaveLength(1);
+    expect(stub.batchUpdatePayloads[0]).toEqual({
+      status: 'failed',
+      error_message: 'fx_unavailable',
+    });
     // Storage not touched.
     expect(stub.storageRemoveSpy).not.toHaveBeenCalled();
   });
@@ -909,6 +926,86 @@ describe('finalizeImport', () => {
 
     const result = await finalizeImport({ batchId: BATCH_ID });
     expect(result).toEqual({ success: false, error: 'NOT_FOUND' });
+  });
+
+  it('AV-6/missing-base-fx: marks batch failed when base FX rate cache lookup fails', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'ready',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+      },
+      staging: [
+        {
+          id: PARSED_ID_A,
+          transaction_date: '2026-04-10',
+          amount_minor: -5000,
+          currency: 'USD',
+          raw_description: 'Amazon',
+          merchant_id: null,
+          category_id: null,
+        },
+      ],
+      profile: { base_currency: 'BAM' },
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+    // Mock incomplete cache: missing USD|BAM key
+    vi.mocked(resolveFxRatesForBatch).mockResolvedValueOnce(new Map());
+
+    const result = await finalizeImport({ batchId: BATCH_ID });
+
+    expect(result).toEqual({ success: false, error: 'EXTERNAL_SERVICE_ERROR' });
+    expect(stub.batchUpdatePayloads[0]).toEqual({
+      status: 'failed',
+      error_message: 'fx_unavailable',
+    });
+  });
+
+  it('AV-6/missing-ledger-fx: marks batch failed when ledger FX rate cache lookup fails', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'ready',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+      },
+      staging: [
+        {
+          id: PARSED_ID_A,
+          transaction_date: '2026-04-10',
+          amount_minor: -5000,
+          currency: 'USD',
+          raw_description: 'Amazon',
+          merchant_id: null,
+          category_id: null,
+        },
+      ],
+      profile: { base_currency: 'EUR' },
+      account: { currency: 'BAM' },
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+    // Mock cache with base FX but missing ledger FX (USD|BAM key)
+    const partialCache = new Map<string, ResolvedFxRate>();
+    partialCache.set('USD|EUR|2026-04-10', {
+      fxRate: 0.92,
+      fxRateDate: '2026-04-10',
+      fxSource: 'ecb',
+      fxStale: false,
+    });
+    vi.mocked(resolveFxRatesForBatch).mockResolvedValueOnce(partialCache);
+
+    const result = await finalizeImport({ batchId: BATCH_ID });
+
+    expect(result).toEqual({ success: false, error: 'EXTERNAL_SERVICE_ERROR' });
+    expect(stub.batchUpdatePayloads[0]).toEqual({
+      status: 'failed',
+      error_message: 'fx_unavailable',
+    });
   });
 });
 
@@ -1369,5 +1466,62 @@ describe('retryImportParse', () => {
     const result = await retryImportParse({ batchId: BATCH_ID });
     expect(result).toEqual({ success: false, error: 'BAD_STATE' });
     expect(stub.parsedDeleteCalls).toBe(0);
+  });
+});
+
+describe('retryImportFinalize', () => {
+  it('flips fx-failed batch back to ready without touching parsed_transactions', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'failed',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+        error_message: 'fx_unavailable',
+      },
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+
+    const result = await retryImportFinalize({ batchId: BATCH_ID });
+
+    expect(result).toEqual({ success: true });
+    expect(stub.parsedDeleteCalls).toBe(0);
+    expect(stub.batchUpdatePayloads[0]).toEqual({
+      status: 'ready',
+      error_message: null,
+    });
+  });
+
+  it('returns BAD_STATE if batch is not failed with fx_unavailable error', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: {
+        id: BATCH_ID,
+        user_id: USER_ID,
+        status: 'ready',
+        account_id: ACCOUNT_ID,
+        storage_path: null,
+      },
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+
+    const result = await retryImportFinalize({ batchId: BATCH_ID });
+
+    expect(result).toEqual({ success: false, error: 'BAD_STATE' });
+    expect(stub.batchUpdatePayloads).toHaveLength(0);
+  });
+
+  it('returns NOT_FOUND for missing batch', async () => {
+    const stub = buildSupabase({
+      user: { id: USER_ID },
+      batch: null,
+    });
+    vi.mocked(createClient).mockResolvedValue(stub.client as never);
+
+    const result = await retryImportFinalize({ batchId: BATCH_ID });
+
+    expect(result).toEqual({ success: false, error: 'NOT_FOUND' });
   });
 });

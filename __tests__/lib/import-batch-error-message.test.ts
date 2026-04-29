@@ -6,6 +6,7 @@ describe('importBatchErrorMessageForUser', () => {
     expect(importBatchErrorMessageForUser('parse_failed')).toContain('PDF iz banke');
     expect(importBatchErrorMessageForUser('ocr_failed')).toContain('skeniran');
     expect(importBatchErrorMessageForUser('duplicate_batch')).toContain('već uvezao');
+    expect(importBatchErrorMessageForUser('fx_unavailable')).toContain('valutne tečajeve');
   });
 
   it('maps no_text_extracted to OCR-style message', () => {
