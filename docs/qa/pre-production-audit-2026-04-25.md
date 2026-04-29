@@ -479,16 +479,16 @@ The "Retry" button is the highest-severity: it is the only English word a user s
 
 ### Security Risks
 
-| Risk ID | Description                                                                     | Probability | Impact | Severity   |
-| ------- | ------------------------------------------------------------------------------- | ----------- | ------ | ---------- |
-| SE-1    | Cancel-token no replay protection; captured link replays magic-link to attacker | Med         | High   | **High**   |
-| SE-2    | Non-constant-time bearer compare in cron                                        | Low         | High   | Med        |
-| SE-3    | Gemini prompt injection; no post-parse plausibility validation                  | Med         | Med    | **High**   |
-| SE-4    | No CSP/HSTS/X-Frame-Options/Referrer-Policy                                     | High        | Med    | **High**   |
-| SE-5    | PDF MIME by claim only; no magic-byte sniff                                     | Med         | Low    | Low        |
-| SE-6    | PII leaks into Vercel logs via error strings                                    | High        | Med    | **High**   |
-| SE-7    | PII redaction misses names, phones, emails, non-BiH IBANs                       | High        | Med    | **High**   |
-| SE-8    | Unnecessary `rate_limits` INSERT policy                                         | Low         | Low    | Negligible |
+| Risk ID  | Description                                                                     | Probability | Impact | Severity    |
+| -------- | ------------------------------------------------------------------------------- | ----------- | ------ | ----------- |
+| SE-1     | Cancel-token no replay protection; captured link replays magic-link to attacker | Med         | High   | **High**    |
+| SE-2     | Non-constant-time bearer compare in cron                                        | Low         | High   | Med         |
+| SE-3     | Gemini prompt injection; no post-parse plausibility validation                  | Med         | Med    | **High**    |
+| ~~SE-4~~ | ~~No CSP/HSTS/X-Frame-Options/Referrer-Policy~~ — **shipped 2026-04-29**        | n/a         | n/a    | ✅ Resolved |
+| SE-5     | PDF MIME by claim only; no magic-byte sniff                                     | Med         | Low    | Low         |
+| SE-6     | PII leaks into Vercel logs via error strings                                    | High        | Med    | **High**    |
+| SE-7     | PII redaction misses names, phones, emails, non-BiH IBANs                       | High        | Med    | **High**    |
+| SE-8     | Unnecessary `rate_limits` INSERT policy                                         | Low         | Low    | Negligible  |
 
 ### Downtime / Availability Risks
 

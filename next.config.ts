@@ -5,14 +5,8 @@ import type { NextConfig } from 'next';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
-  // SE-4: Security hardening headers.
-  // CSP rolled back to report-only on 2026-04-28 because the enforce flip
-  // (PR #18) blanked the production app — at least one critical inline
-  // script (Next.js hydration / Sentry / Vercel Analytics) is not yet
-  // covered by the directive set. Re-enable enforce only after auditing
-  // browser console violations during a full user flow and adjusting the
-  // directives (likely needs nonce-based script-src or 'unsafe-inline'
-  // on a narrowed set).
+  // SE-4: Static security headers. CSP is nonce-based and therefore
+  // generated per-request in middleware.ts (nonce must change each request).
   async headers() {
     return [
       {
@@ -37,27 +31,6 @@ const nextConfig: NextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()',
-          },
-          // Report-only CSP. Violations are logged to the browser console
-          // (and reported if a report-uri is added later) but not enforced.
-          // Do NOT flip back to 'Content-Security-Policy' until the
-          // directive set is verified against an actual full user flow:
-          // login → dashboard → transactions → import → categories →
-          // accounts → security settings → insights, with DevTools open.
-          // The previous flip (PR #18) blanked the app, so the policy is
-          // currently known to be too strict for real traffic.
-          {
-            key: 'Content-Security-Policy-Report-Only',
-            value:
-              "default-src 'self'; " +
-              "script-src 'self'; " +
-              "style-src 'self' 'unsafe-inline'; " +
-              "img-src 'self' data: blob:; " +
-              "font-src 'self' data:; " +
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://api.frankfurter.app; " +
-              "frame-ancestors 'none'; " +
-              "base-uri 'self'; " +
-              "form-action 'self'",
           },
         ],
       },
