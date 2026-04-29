@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { bulkDeleteTransactions, createTransaction, deleteTransaction } from './actions';
+import {
+  bulkDeleteTransactions,
+  createTransaction,
+  deleteTransaction,
+  updateTransaction,
+} from './actions';
 import { createClient } from '@/lib/supabase/server';
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -294,6 +299,19 @@ describe('transaction actions', () => {
     const result = await deleteTransaction('123e4567-e89b-12d3-a456-426614174000');
     expect(result).toEqual({ success: true });
     expect(typeof updatePayload?.deleted_at).toBe('string');
+  });
+
+  it('UX-3: updateTransaction with zero amount returns field-level error on amount_cents', async () => {
+    const result = await updateTransaction('123e4567-e89b-12d3-a456-426614174000', {
+      amount_cents: 0n,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success && result.error === 'VALIDATION_ERROR') {
+      expect(result.details.amount_cents?.[0]).toBeTruthy();
+      expect(result.details._root).toBeUndefined();
+    }
+    expect(vi.mocked(createClient)).not.toHaveBeenCalled();
   });
 
   it('bulk delete handles 50+ ids in one update call', async () => {
