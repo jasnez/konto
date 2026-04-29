@@ -5,12 +5,14 @@ import { ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { ImportListRow, ImportStatus } from './types';
+import type { ImportBatchStatus, ImportListRow } from './types';
 
-function statusLabel(status: ImportStatus): string {
+function statusLabel(status: ImportBatchStatus): string {
   switch (status) {
     case 'uploaded':
       return 'Učitano';
+    case 'enqueued':
+      return 'Na čekanju';
     case 'parsing':
       return 'Obrada';
     case 'ready':
@@ -19,14 +21,18 @@ function statusLabel(status: ImportStatus): string {
       return 'Uvezeno';
     case 'failed':
       return 'Neuspjelo';
+    case 'rejected':
+      return 'Odbijeno';
     default:
       return status;
   }
 }
 
-function statusBadgeClass(status: ImportStatus): string {
+function statusBadgeClass(status: ImportBatchStatus): string {
   switch (status) {
     case 'uploaded':
+      return 'border-border bg-muted text-muted-foreground';
+    case 'enqueued':
       return 'border-border bg-muted text-muted-foreground';
     case 'parsing':
       return 'border-[hsl(var(--warning))] bg-[hsl(var(--warning))]/15 text-foreground';
@@ -35,6 +41,8 @@ function statusBadgeClass(status: ImportStatus): string {
     case 'imported':
       return 'border-primary/40 bg-primary/10 text-foreground';
     case 'failed':
+      return 'border-destructive/40 bg-destructive/10 text-destructive';
+    case 'rejected':
       return 'border-destructive/40 bg-destructive/10 text-destructive';
     default:
       return 'border-border bg-muted text-muted-foreground';

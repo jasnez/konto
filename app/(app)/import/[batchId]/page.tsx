@@ -13,6 +13,7 @@ import {
   type ReviewParsedRow,
 } from '../import-review-client';
 import { logSafe } from '@/lib/logger';
+import type { ImportBatchStatus } from '../types';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
@@ -27,14 +28,8 @@ export const metadata: Metadata = {
 export const maxDuration = 60;
 
 type ConfidenceLevel = 'high' | 'medium' | 'low' | null;
-type BatchStatus =
-  | 'uploaded'
-  | 'enqueued'
-  | 'parsing'
-  | 'ready'
-  | 'imported'
-  | 'failed'
-  | 'rejected';
+// UX-2: use the canonical type from types.ts instead of a local duplicate.
+type BatchStatus = ImportBatchStatus;
 type CategorizationSource =
   | 'rule'
   | 'alias_exact'
