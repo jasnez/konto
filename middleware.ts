@@ -28,10 +28,7 @@ export async function middleware(request: NextRequest) {
 
   const response = await updateSession(request, requestHeaders);
 
-  // Step 1 (SE-4): report-only mode — violations logged to browser console
-  // but not blocked. Flip to 'Content-Security-Policy' once a Vercel preview
-  // deploy confirms zero violations across the full user flow.
-  response.headers.set('Content-Security-Policy-Report-Only', buildCsp(nonce));
+  response.headers.set('Content-Security-Policy', buildCsp(nonce));
 
   return response;
 }
