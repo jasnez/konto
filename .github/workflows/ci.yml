@@ -130,6 +130,30 @@ jobs:
         if: always()
         run: supabase stop --no-backup || true
 
+  e2e:
+    name: E2E (non-slow) — PR & main
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_GEN_SKIP: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: supabase/setup-cli@v1
+        with: { version: 2.90.0 }
+      - run: pnpm exec playwright install chromium --with-deps
+      - name: E2E smoke tests (non-@slow)
+        run: pnpm test:e2e --project chromium
+        env:
+          CI: 'true'
+          GITHUB_REF: ${{ github.ref }}
+
   e2e-slow:
     name: E2E @slow (cijeli import) — main
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
