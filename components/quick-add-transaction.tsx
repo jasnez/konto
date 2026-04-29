@@ -832,7 +832,7 @@ export function QuickAddTransaction({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-xl">
         <DialogTitle>Brzi unos</DialogTitle>
         <DialogDescription>Dodaj transakciju bez napuštanja trenutne stranice.</DialogDescription>
         {content}
