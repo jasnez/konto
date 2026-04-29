@@ -61,6 +61,28 @@ export async function handleHardDeleteAccounts(request: Request): Promise<Respon
   let deleted = 0;
 
   for (const id of ids) {
+    // DL-3: Re-check immediately before deleting to close the race window with
+    // runCancelDeletion. Between the initial bulk SELECT and this point the user
+    // may have clicked their cancellation link and cleared deleted_at. Without
+    // this check the cron would delete them anyway. The re-check collapses the
+    // race window from the full batch-processing duration to microseconds.
+    const { data: fresh, error: recheckError } = await admin
+      .from('profiles')
+      .select('deleted_at')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (recheckError) {
+      console.error('hard_delete_accounts_recheck', { userId: id, error: recheckError.message });
+      continue;
+    }
+
+    if (!fresh?.deleted_at || fresh.deleted_at > cutoff) {
+      // Deletion was cancelled between the bulk query and now — skip.
+      console.log('hard_delete_accounts_skipped_cancelled', { userId: id });
+      continue;
+    }
+
     const { error: deleteError } = await admin.auth.admin.deleteUser(id);
     if (deleteError) {
       console.error('hard_delete_accounts_delete_user', { userId: id, error: deleteError.message });
