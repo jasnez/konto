@@ -30,7 +30,7 @@ export default async function ObrisiNalogPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-4 sm:gap-8 sm:px-6 sm:py-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Obriši svoj nalog</h1>
         <p className="text-sm text-muted-foreground">
@@ -65,8 +65,8 @@ export default async function ObrisiNalogPage() {
         <CardHeader>
           <CardTitle>Potvrda</CardTitle>
           <CardDescription>
-            Dobijećeš email sa linkom za otkazivanje (važi 24 sata). Nakon toga možeš se samo prijaviti
-            ponovo ako otkažeš brisanje.
+            Dobijećeš email sa linkom za otkazivanje (važi 24 sata). Nakon toga možeš se samo
+            prijaviti ponovo ako otkažeš brisanje.
           </CardDescription>
         </CardHeader>
         <CardContent>

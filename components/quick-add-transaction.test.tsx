@@ -312,6 +312,6 @@ describe('QuickAddTransaction', () => {
     const merchantInput = await screen.findByDisplayValue('Kafeterija');
     expect(merchantInput).toBeInTheDocument();
     expect(screen.getByText('EUR')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Prihod' })).toHaveAttribute('data-state', 'active');
+    expect(screen.getByRole('button', { name: 'Prihod' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
