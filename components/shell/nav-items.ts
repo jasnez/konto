@@ -60,12 +60,17 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/podesavanja', label: 'Podešavanja', mobileLabel: 'Više', icon: Settings },
 ];
 
-/** On mobile, the bottom nav reshuffles around the FAB. Desktop uses the full list. */
+/**
+ * On mobile, the bottom nav has exactly 4 link slots — Početna, Računi |
+ * (FAB centre) | Transakcije, Više — plus the FAB rendered as the 5th slot
+ * by <BottomNav/> itself. Kategorije is intentionally not in the mobile nav
+ * (less daily-frequency than Transakcije / Računi); it remains reachable
+ * via the desktop sidebar and direct URL.
+ */
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
   { href: '/pocetna', label: 'Početna', mobileLabel: 'Početna', icon: Home },
   { href: '/racuni', label: 'Računi', mobileLabel: 'Računi', icon: Wallet },
   // FAB sits here in the middle — rendered by <BottomNav/> itself.
-  { href: '/kategorije', label: 'Kategorije', mobileLabel: 'Kat.', icon: Tags },
   { href: '/transakcije', label: 'Transakcije', mobileLabel: 'Tx', icon: Receipt },
   { href: '/podesavanja', label: 'Više', mobileLabel: 'Više', icon: MoreHorizontal },
 ];

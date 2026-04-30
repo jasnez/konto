@@ -8,40 +8,31 @@ import { BOTTOM_NAV_ITEMS, isActive } from './nav-items';
 import { MobileFab } from './fab';
 
 /**
- * Fixed bottom navigation for mobile. The FAB floats above the bar in the
- * centre slot; the nav items split 2 + FAB + 2. Includes iOS/Android safe-area
- * padding and is hidden on md+ screens where the sidebar takes over.
+ * Fixed bottom navigation for mobile. 5 inline slots: 2 nav links | FAB |
+ * 2 nav links — symmetric layout, FAB sits flush inside the bar (no
+ * floating overlay) so it stops "sticking out" of the chrome. Includes
+ * iOS/Android safe-area padding and is hidden on md+ screens where the
+ * sidebar takes over.
  */
 export function BottomNav() {
   const pathname = usePathname();
-
-  /** 2 items left of FAB, 3 right (Kategorije, Transakcije, Više). */
   const [leftItems, rightItems] = [BOTTOM_NAV_ITEMS.slice(0, 2), BOTTOM_NAV_ITEMS.slice(2)];
 
   return (
-    <>
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden"
-      >
-        <div className="mb-4">
-          <MobileFab />
-        </div>
+    <nav
+      aria-label="Glavna navigacija"
+      className="fixed inset-x-0 bottom-0 z-30 flex min-h-16 items-stretch border-t border-border/80 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md supports-[backdrop-filter]:bg-background/80 md:hidden"
+    >
+      {leftItems.map((item) => (
+        <NavSlot key={item.href} item={item} active={isActive(pathname, item.href)} />
+      ))}
+      <div className="flex flex-1 items-center justify-center">
+        <MobileFab />
       </div>
-
-      <nav
-        aria-label="Glavna navigacija"
-        className="fixed inset-x-0 bottom-0 z-30 flex min-h-16 items-stretch border-t border-border/80 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md supports-[backdrop-filter]:bg-background/80 md:hidden"
-      >
-        {leftItems.map((item) => (
-          <NavSlot key={item.href} item={item} active={isActive(pathname, item.href)} />
-        ))}
-        <div className="flex-1" aria-hidden />
-        {rightItems.map((item) => (
-          <NavSlot key={item.href} item={item} active={isActive(pathname, item.href)} />
-        ))}
-      </nav>
-    </>
+      {rightItems.map((item) => (
+        <NavSlot key={item.href} item={item} active={isActive(pathname, item.href)} />
+      ))}
+    </nav>
   );
 }
 

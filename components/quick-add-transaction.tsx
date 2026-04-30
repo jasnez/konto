@@ -394,7 +394,7 @@ export function QuickAddTransaction({
         }}
         className="flex min-h-0 flex-1 flex-col gap-4"
       >
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto sm:space-y-3">
           <Button asChild type="button" variant="outline" className="h-11 w-full">
             <Link
               href="/skeniraj"

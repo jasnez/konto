@@ -76,9 +76,10 @@ function shortcutTitleSuffix(): string {
 }
 
 /**
- * Floating Action Button used by the mobile bottom nav. Centered over the
- * bottom nav bar, always visible on mobile. Hidden on md+ because the
- * sidebar already has a "Dodaj" button.
+ * Action button rendered as the centre slot of the mobile bottom nav.
+ * Sits flush inside the nav (no floating overlay) at 48px so it reads as
+ * part of the chrome instead of sticking out above it. Hidden on md+
+ * because the sidebar already has a "Dodaj" button.
  */
 export function MobileFab() {
   const openQuickAdd = useUiStore((s) => s.openQuickAdd);
@@ -100,8 +101,8 @@ export function MobileFab() {
       title={`Dodaj transakciju (${titleSuffix})`}
       aria-label="Brzi unos"
       className={cn(
-        'pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full',
-        'bg-primary text-primary-foreground shadow-lg',
+        'flex h-12 w-12 items-center justify-center rounded-full',
+        'bg-primary text-primary-foreground shadow-md',
         'transition-transform active:scale-95 focus-visible:outline-none',
         'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
       )}
