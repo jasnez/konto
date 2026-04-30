@@ -310,11 +310,17 @@ export function TransactionsClient({
       ) : null}
 
       {transactions.length === 0 ? (
-        <div className="flex min-h-[35vh] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">
+        <div className="flex min-h-[35vh] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed p-8 text-center">
+          <span className="text-4xl" aria-hidden>
+            {hasActiveFilters ? '🔍' : '💸'}
+          </span>
+          <p className="max-w-sm text-base font-medium">
+            {hasActiveFilters ? 'Nema transakcija za ove filtere.' : 'Još nema transakcija.'}
+          </p>
+          <p className="max-w-sm text-sm text-muted-foreground">
             {hasActiveFilters
-              ? 'Nema transakcija za ove filtere. Pokušaj smanjiti filtere ili ih očistiti.'
-              : 'Još nema transakcija. Koristi brzi unos (ili + Dodaj) da dodaš prvu — pojaviće se ovdje.'}
+              ? 'Pokušaj smanjiti filtere ili ih očistiti.'
+              : 'Koristi brzi unos (ili + Dodaj) da dodaš prvu — pojaviće se ovdje.'}
           </p>
           {hasActiveFilters ? null : (
             <QuickAddTrigger className="h-11 w-full max-w-xs" variant="default" size="default">

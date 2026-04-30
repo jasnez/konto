@@ -37,9 +37,14 @@ export function RecentTransactions({ items }: RecentTransactionsProps) {
       </CardHeader>
       <CardContent className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
         {items.length === 0 ? (
-          <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-            Još nema transakcija. Dodaj prvu da vidiš pregled ovdje.
-          </p>
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-6 text-center">
+            <span className="text-3xl" aria-hidden>
+              💸
+            </span>
+            <p className="text-sm text-muted-foreground">
+              Još nema transakcija. Dodaj prvu da vidiš pregled ovdje.
+            </p>
+          </div>
         ) : (
           <ul className="space-y-2">
             {items.map((item) => (

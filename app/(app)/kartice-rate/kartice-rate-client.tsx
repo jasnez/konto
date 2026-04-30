@@ -197,10 +197,13 @@ export function KarticeRateClient({
 }) {
   if (initialPlans.length === 0) {
     return (
-      <div className="flex min-h-[35vh] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-8 text-center">
-        <p className="text-muted-foreground">
-          Nema aktivnih planova na rate. Odaberi kreditnu karticu u brzom unosu i uključi &ldquo;Na
-          rate&rdquo;.
+      <div className="flex min-h-[35vh] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed p-8 text-center">
+        <span className="text-4xl" aria-hidden>
+          💳
+        </span>
+        <p className="max-w-sm text-base font-medium">Nema aktivnih planova na rate.</p>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          Odaberi kreditnu karticu u brzom unosu i uključi &ldquo;Na rate&rdquo;.
         </p>
       </div>
     );

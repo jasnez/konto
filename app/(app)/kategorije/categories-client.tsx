@@ -340,7 +340,10 @@ export function CategoriesClient({ categories }: { categories: CategoryListItem[
           <TabsContent key={t.id} value={t.id} className="mt-4">
             {t.id === tab ? (
               orderedRows.length === 0 ? (
-                <div className="flex min-h-[30vh] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-8 text-center">
+                <div className="flex min-h-[30vh] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed p-8 text-center">
+                  <span className="text-4xl" aria-hidden>
+                    🏷️
+                  </span>
                   <p className="text-muted-foreground text-sm">Nema kategorija u ovoj grupi.</p>
                   <Button
                     type="button"
