@@ -7,7 +7,6 @@ import {
   RecentTransactions,
   type RecentTransactionItem,
 } from '@/components/dashboard/recent-transactions';
-import { TrendPlaceholder } from '@/components/dashboard/trend-placeholder';
 import {
   DashboardHeroSkeleton,
   DashboardMetricsSkeleton,
@@ -221,7 +220,7 @@ export default async function PocetnaPage() {
           {greeting}, {firstName}
         </h2>
         {showMotivation ? (
-          <p className="text-sm text-muted-foreground sm:text-base">
+          <p className="text-xs text-muted-foreground sm:text-sm">
             Odlično vrijeme da postaviš bazu: dodaj račun ili unesi prvu transakciju.
           </p>
         ) : null}
@@ -238,8 +237,6 @@ export default async function PocetnaPage() {
       <Suspense fallback={<DashboardRecentTransactionsSkeleton />}>
         <RecentTransactionsSection recentPromise={recentPromise} />
       </Suspense>
-
-      <TrendPlaceholder />
     </PullToRefreshWrapper>
   );
 }

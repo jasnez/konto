@@ -27,14 +27,14 @@ export function BalanceHero({
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 p-4 sm:p-6">
         <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">Stanje (uključeni računi)</p>
+          <p className="text-sm text-muted-foreground">Stanje</p>
           <CardTitle className="text-2xl font-medium tracking-tight sm:text-3xl">
             <Money cents={totalBalanceCents} currency={baseCurrency} tone="default" />
           </CardTitle>
           {totalLiabilitiesCents > 0n ? (
             <div className="pt-2">
-              <p className="text-sm text-muted-foreground">Zaduženja (krediti i kartice)</p>
-              <p className="text-lg font-medium tabular-nums tracking-tight sm:text-xl">
+              <p className="text-xs text-muted-foreground">Zaduženja</p>
+              <p className="text-base font-medium tabular-nums tracking-tight sm:text-lg">
                 <Money cents={totalLiabilitiesCents} currency={baseCurrency} tone="expense" />
               </p>
             </div>
@@ -60,7 +60,7 @@ export function BalanceHero({
           >
             {formatPercent(netChangePercent)}
           </Badge>
-          <span className="text-sm text-muted-foreground">u odnosu na prošli mjesec</span>
+          <span className="text-sm text-muted-foreground">vs prošli mjesec</span>
         </div>
       </CardContent>
     </Card>
