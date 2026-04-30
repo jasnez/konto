@@ -27,6 +27,7 @@ import { DatePicker } from '@/components/date-picker';
 import { MerchantCombobox } from '@/components/merchant-combobox';
 import { MoneyInput } from '@/components/money-input';
 import { Button } from '@/components/ui/button';
+import { Chip } from '@/components/ui/chip';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import {
   Form,
@@ -517,11 +518,11 @@ export function QuickAddTransaction({
                 {KIND_OPTIONS.map(({ value, label }) => {
                   const active = kind === value;
                   return (
-                    <button
+                    <Chip
                       key={value}
-                      type="button"
                       role="tab"
                       aria-selected={active}
+                      active={active}
                       onClick={() => {
                         setKind(value);
                         const currentAmount = form.getValues('amount_cents');
@@ -542,15 +543,9 @@ export function QuickAddTransaction({
                         }
                         if (value !== 'expense') setIsInstallment(false);
                       }}
-                      className={cn(
-                        'inline-flex h-9 min-h-9 items-center justify-center rounded-full border px-3 text-xs font-medium transition-colors',
-                        active
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-input bg-background text-foreground hover:bg-accent',
-                      )}
                     >
                       {label}
-                    </button>
+                    </Chip>
                   );
                 })}
               </div>

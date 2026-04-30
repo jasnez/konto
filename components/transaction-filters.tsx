@@ -1,11 +1,11 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import type { AccountOption } from '@/components/account-select';
 import type { CategoryOption } from '@/components/category-select';
 import { DatePicker } from '@/components/date-picker';
 import { Button } from '@/components/ui/button';
+import { Chip } from '@/components/ui/chip';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -17,7 +17,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { cn } from '@/lib/utils';
 import type { TransactionsFilters } from '@/app/(app)/transakcije/types';
 
 interface TransactionFiltersProps {
@@ -40,48 +39,6 @@ const TYPE_OPTIONS: { value: '' | 'income' | 'expense' | 'transfer'; label: stri
 
 function typeLabel(type: string): string {
   return TYPE_OPTIONS.find((opt) => opt.value === type)?.label ?? '';
-}
-
-interface FilterChipProps {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}
-
-function FilterChip({ active, onClick, children }: FilterChipProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'inline-flex h-9 min-h-9 items-center justify-center gap-1 rounded-full border px-3 text-xs font-medium transition-colors',
-        active
-          ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-input bg-background text-foreground hover:bg-accent',
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-interface ActiveChipProps {
-  label: string;
-  onRemove: () => void;
-}
-
-function ActiveChip({ label, onRemove }: ActiveChipProps) {
-  return (
-    <button
-      type="button"
-      onClick={onRemove}
-      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
-      aria-label={`Ukloni filter: ${label}`}
-    >
-      <span>{label}</span>
-      <X className="h-3 w-3" aria-hidden />
-    </button>
-  );
 }
 
 export function TransactionFilters({
@@ -175,7 +132,7 @@ export function TransactionFilters({
                       const active =
                         value === '' ? filters.type.length === 0 : filters.type === value;
                       return (
-                        <FilterChip
+                        <Chip
                           key={value || 'all'}
                           active={active}
                           onClick={() => {
@@ -183,7 +140,7 @@ export function TransactionFilters({
                           }}
                         >
                           <span className="truncate">{label}</span>
-                        </FilterChip>
+                        </Chip>
                       );
                     })}
                   </div>
@@ -196,7 +153,7 @@ export function TransactionFilters({
                       {accounts.map((account) => {
                         const active = filters.accountIds.includes(account.id);
                         return (
-                          <FilterChip
+                          <Chip
                             key={account.id}
                             active={active}
                             onClick={() => {
@@ -204,7 +161,7 @@ export function TransactionFilters({
                             }}
                           >
                             {account.name}
-                          </FilterChip>
+                          </Chip>
                         );
                       })}
                     </div>
@@ -218,7 +175,7 @@ export function TransactionFilters({
                       {categories.map((category) => {
                         const active = filters.categoryIds.includes(category.id);
                         return (
-                          <FilterChip
+                          <Chip
                             key={category.id}
                             active={active}
                             onClick={() => {
@@ -227,7 +184,7 @@ export function TransactionFilters({
                           >
                             {category.icon ? <span aria-hidden>{category.icon}</span> : null}
                             <span>{category.name}</span>
-                          </FilterChip>
+                          </Chip>
                         );
                       })}
                     </div>
@@ -259,54 +216,80 @@ export function TransactionFilters({
         <div className="-mx-4 mb-2 mt-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6">
           <div className="flex min-w-max gap-2">
             {filters.from ? (
-              <ActiveChip
-                label={`Od: ${filters.from}`}
-                onRemove={() => {
+              <Chip
+                variant="removable"
+                size="sm"
+                onClick={() => {
                   onUpdate({ from: null, page: '1' });
                 }}
-              />
+                aria-label={`Ukloni filter: Od ${filters.from}`}
+              >
+                <span>Od: {filters.from}</span>
+                <X className="h-3 w-3" aria-hidden />
+              </Chip>
             ) : null}
             {filters.to ? (
-              <ActiveChip
-                label={`Do: ${filters.to}`}
-                onRemove={() => {
+              <Chip
+                variant="removable"
+                size="sm"
+                onClick={() => {
                   onUpdate({ to: null, page: '1' });
                 }}
-              />
+                aria-label={`Ukloni filter: Do ${filters.to}`}
+              >
+                <span>Do: {filters.to}</span>
+                <X className="h-3 w-3" aria-hidden />
+              </Chip>
             ) : null}
             {filters.accountIds.map((id) => {
               const account = accounts.find((a) => a.id === id);
               if (!account) return null;
               return (
-                <ActiveChip
+                <Chip
                   key={`account-${id}`}
-                  label={account.name}
-                  onRemove={() => {
+                  variant="removable"
+                  size="sm"
+                  onClick={() => {
                     onToggleMulti('account', id, false);
                   }}
-                />
+                  aria-label={`Ukloni filter: ${account.name}`}
+                >
+                  <span>{account.name}</span>
+                  <X className="h-3 w-3" aria-hidden />
+                </Chip>
               );
             })}
             {filters.categoryIds.map((id) => {
               const category = categories.find((c) => c.id === id);
               if (!category) return null;
+              const label = category.icon ? `${category.icon} ${category.name}` : category.name;
               return (
-                <ActiveChip
+                <Chip
                   key={`category-${id}`}
-                  label={category.icon ? `${category.icon} ${category.name}` : category.name}
-                  onRemove={() => {
+                  variant="removable"
+                  size="sm"
+                  onClick={() => {
                     onToggleMulti('category', id, false);
                   }}
-                />
+                  aria-label={`Ukloni filter: ${category.name}`}
+                >
+                  <span>{label}</span>
+                  <X className="h-3 w-3" aria-hidden />
+                </Chip>
               );
             })}
             {filters.type.length > 0 ? (
-              <ActiveChip
-                label={typeLabel(filters.type)}
-                onRemove={() => {
+              <Chip
+                variant="removable"
+                size="sm"
+                onClick={() => {
                   onUpdate({ type: null, page: '1' });
                 }}
-              />
+                aria-label={`Ukloni filter: ${typeLabel(filters.type)}`}
+              >
+                <span>{typeLabel(filters.type)}</span>
+                <X className="h-3 w-3" aria-hidden />
+              </Chip>
             ) : null}
           </div>
         </div>
