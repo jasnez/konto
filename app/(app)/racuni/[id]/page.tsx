@@ -1,7 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { formatMinorUnits } from '@/lib/format/amount';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AccountDetailHeader } from './account-detail-header';
 import { CashReconcileButton } from './cash-reconcile-button';
 
@@ -80,15 +79,16 @@ export default async function AccountDetailPage({ params }: PageProps) {
           Transakcije
         </h3>
         {list.length === 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Još nema transakcija</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed p-6 text-center">
+            <span className="text-3xl" aria-hidden>
+              💸
+            </span>
+            <p className="text-base font-medium">Još nema transakcija</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
               Kad bude Faza 1 transakcija, ovdje će se pojaviti zadnje 50. Za sada možeš ručno
               unositi s ekrana Transakcije (uskoro) ili pripremi PDF.
-            </CardContent>
-          </Card>
+            </p>
+          </div>
         ) : (
           <ul className="space-y-2" aria-label="Zadnje transakcije">
             {list.map((t) => (
