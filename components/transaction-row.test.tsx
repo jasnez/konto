@@ -36,6 +36,7 @@ interface RenderProps {
   ) => void;
   onLongPressSelect?: (index: number) => void;
   onRequestDelete?: (tx: TransactionListItem) => void;
+  onRequestCategorize?: (tx: TransactionListItem) => void;
 }
 
 function renderRow({
@@ -49,6 +50,7 @@ function renderRow({
   >(),
   onLongPressSelect = vi.fn<(index: number) => void>(),
   onRequestDelete = vi.fn<(tx: TransactionListItem) => void>(),
+  onRequestCategorize,
 }: RenderProps = {}) {
   const result = render(
     <ul>
@@ -61,10 +63,18 @@ function renderRow({
         onToggleSelection={onToggleSelection}
         onLongPressSelect={onLongPressSelect}
         onRequestDelete={onRequestDelete}
+        onRequestCategorize={onRequestCategorize}
       />
     </ul>,
   );
-  return { ...result, onOpen, onToggleSelection, onLongPressSelect, onRequestDelete };
+  return {
+    ...result,
+    onOpen,
+    onToggleSelection,
+    onLongPressSelect,
+    onRequestDelete,
+    onRequestCategorize,
+  };
 }
 
 describe('TransactionRow — click', () => {
@@ -151,6 +161,38 @@ describe('TransactionRow — nested action buttons (stopPropagation)', () => {
     expect(onRequestDelete).toHaveBeenCalledTimes(1);
     expect(onRequestDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 'tx-1' }));
     // Critical: outer onOpen should NOT fire when inner stopPropagation works
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+});
+
+describe('TransactionRow — categorize button', () => {
+  it('renders Kategoriziraj button when handler provided AND row is not a transfer', () => {
+    const onRequestCategorize = vi.fn<(tx: TransactionListItem) => void>();
+    renderRow({ onRequestCategorize });
+    expect(screen.getByRole('button', { name: 'Promijeni kategoriju' })).toBeInTheDocument();
+  });
+
+  it('hides Kategoriziraj button when no handler is provided', () => {
+    renderRow();
+    expect(screen.queryByRole('button', { name: 'Promijeni kategoriju' })).toBeNull();
+  });
+
+  it('hides Kategoriziraj button on transfer rows even when handler is provided', () => {
+    const onRequestCategorize = vi.fn<(tx: TransactionListItem) => void>();
+    renderRow({
+      tx: makeTx({ is_transfer: true, transfer_pair_id: 'pair-1' }),
+      onRequestCategorize,
+    });
+    expect(screen.queryByRole('button', { name: 'Promijeni kategoriju' })).toBeNull();
+  });
+
+  it('clicking Kategoriziraj fires handler with the tx and does NOT trigger row onOpen', async () => {
+    const user = userEvent.setup();
+    const onRequestCategorize = vi.fn<(tx: TransactionListItem) => void>();
+    const { onOpen } = renderRow({ onRequestCategorize });
+    await user.click(screen.getByRole('button', { name: 'Promijeni kategoriju' }));
+    expect(onRequestCategorize).toHaveBeenCalledTimes(1);
+    expect(onRequestCategorize).toHaveBeenCalledWith(expect.objectContaining({ id: 'tx-1' }));
     expect(onOpen).not.toHaveBeenCalled();
   });
 });

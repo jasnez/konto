@@ -585,6 +585,92 @@ export async function updateTransaction(
   return { success: true };
 }
 
+export type UpdateTransactionCategoryResult =
+  | { success: true }
+  | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'FORBIDDEN' }
+  | { success: false; error: 'NOT_FOUND' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
+const UpdateCategorySchema = z.object({ category_id: z.uuid().nullable() }).strict();
+
+/**
+ * Category-only update — the swipe-to-categorize path on the mobile transaction
+ * row. Skips FX recompute and dedup checks because changing only `category_id`
+ * cannot affect amount, account, date, or merchant — i.e. nothing that goes
+ * into the dedup hash or base-currency conversion. `null` clears the category.
+ */
+export async function updateTransactionCategory(
+  id: unknown,
+  categoryId: unknown,
+): Promise<UpdateTransactionCategoryResult> {
+  const idParsed = TransactionIdSchema.safeParse(id);
+  if (!idParsed.success) {
+    return {
+      success: false,
+      error: 'VALIDATION_ERROR',
+      details: buildValidationDetails(idParsed.error),
+    };
+  }
+
+  const bodyParsed = UpdateCategorySchema.safeParse({ category_id: categoryId });
+  if (!bodyParsed.success) {
+    return {
+      success: false,
+      error: 'VALIDATION_ERROR',
+      details: buildValidationDetails(bodyParsed.error),
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from('transactions')
+    .select('id,account_id,deleted_at')
+    .eq('id', idParsed.data)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (existingError) {
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  if (!existing) {
+    return { success: false, error: 'FORBIDDEN' };
+  }
+  if (existing.deleted_at) {
+    return { success: false, error: 'NOT_FOUND' };
+  }
+
+  const ownedCategory = await ensureOwnedCategory(supabase, user.id, bodyParsed.data.category_id);
+  if (!ownedCategory.ok) {
+    return { success: false, error: ownedCategory.error };
+  }
+
+  const { error: updateError } = await supabase
+    .from('transactions')
+    .update({
+      category_id: bodyParsed.data.category_id,
+      category_source: bodyParsed.data.category_id ? 'user' : null,
+    })
+    .eq('id', existing.id)
+    .eq('user_id', user.id)
+    .is('deleted_at', null);
+
+  if (updateError) {
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidateTransactionViews([existing.account_id]);
+  return { success: true };
+}
+
 export async function deleteTransaction(id: unknown): Promise<DeleteTransactionResult> {
   const parsed = TransactionIdSchema.safeParse(id);
   if (!parsed.success) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Pencil, Trash2 } from 'lucide-react';
+import { AlertTriangle, FolderInput, Pencil, Trash2 } from 'lucide-react';
 import { Money, type MoneyTone } from '@/components/money';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,8 @@ interface TransactionRowProps {
   ) => void;
   onLongPressSelect: (index: number) => void;
   onRequestDelete: (tx: TransactionListItem) => void;
+  /** Optional — when omitted (or for transfers), the Kategoriziraj button is hidden. */
+  onRequestCategorize?: (tx: TransactionListItem) => void;
 }
 
 export function TransactionRow({
@@ -32,6 +34,7 @@ export function TransactionRow({
   onToggleSelection,
   onLongPressSelect,
   onRequestDelete,
+  onRequestCategorize,
 }: TransactionRowProps) {
   const [swipeOffset, setSwipeOffset] = useState(0);
   const touchStartX = useRef<number | null>(null);
@@ -67,15 +70,40 @@ export function TransactionRow({
     }
   }
 
+  // Categorize is only meaningful for non-transfer rows. Transfers get the
+  // 2-button drawer (edit + delete) and the original swipe geometry; expense /
+  // income rows get a 3-button drawer with a wider reveal threshold so all
+  // three buttons fit comfortably on small phones.
+  const categorizeHandler = tx.is_transfer ? null : (onRequestCategorize ?? null);
+  const drawerWidthClass = categorizeHandler ? 'w-40' : 'w-28';
+  const swipeSnapDistance = categorizeHandler ? -144 : -96;
+  const swipeTriggerThreshold = categorizeHandler ? -72 : -48;
+  const swipeMaxDistance = categorizeHandler ? -160 : -112;
+
   return (
     <li className="relative list-none overflow-hidden rounded-xl bg-card">
       <div
         className={cn(
-          'absolute inset-y-0 right-0 z-20 flex w-28 items-center justify-end gap-1 pr-2 md:hidden',
+          'absolute inset-y-0 right-0 z-20 flex items-center justify-end gap-1 pr-2 md:hidden',
+          drawerWidthClass,
           // Kad nije otkriveno swipom, gumbi su ispod retka; kad jeste, moraju primiti klik.
           swipeOffset < -20 ? 'pointer-events-auto' : 'pointer-events-none',
         )}
       >
+        {categorizeHandler ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            className="h-9 w-9"
+            aria-label="Promijeni kategoriju"
+            onClick={() => {
+              categorizeHandler(tx);
+            }}
+          >
+            <FolderInput className="h-4 w-4" aria-hidden />
+          </Button>
+        ) : null}
         <Button
           type="button"
           variant="secondary"
@@ -157,12 +185,12 @@ export function TransactionRow({
           const currentX = event.touches[0].clientX;
           const delta = currentX - startX;
           if (delta < 0) {
-            setSwipeOffset(Math.max(delta, -112));
+            setSwipeOffset(Math.max(delta, swipeMaxDistance));
           }
         }}
         onTouchEnd={() => {
           touchStartX.current = null;
-          setSwipeOffset((current) => (current < -48 ? -96 : 0));
+          setSwipeOffset((current) => (current < swipeTriggerThreshold ? swipeSnapDistance : 0));
         }}
       >
         {selectionMode ? (
