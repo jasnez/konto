@@ -88,9 +88,14 @@ export function MoneyInput({
     }
   }, [value, focused, currency, locale]);
 
+  // size=lg uses a much larger font (text-2xl/3xl). With `text-right`, the
+  // leftmost digits can clip against the input's left edge if there's no
+  // horizontal padding, especially in narrow Sheet containers on mobile.
+  // `px-3` gives a buffer on both sides; the default size keeps the shadcn
+  // Input's built-in padding.
   const sizeClass =
     size === 'lg'
-      ? 'min-h-12 h-12 text-2xl font-semibold md:min-h-[3rem] md:text-3xl'
+      ? 'min-h-12 h-12 px-3 text-2xl font-semibold md:min-h-[3rem] md:text-3xl'
       : 'h-11 text-base';
 
   const commitBlur = React.useCallback(

@@ -80,8 +80,13 @@ const SelectContent = React.forwardRef<
       <SelectPrimitive.Viewport
         className={cn(
           'p-1',
-          position === 'popper' &&
-            'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]',
+          // The shadcn template applied `h-[var(--radix-select-trigger-height)]`
+          // here in popper mode, which clamps the viewport to the trigger's
+          // height (e.g., 44px) and clips long item lists with no visible
+          // scroll. The parent `SelectContent` already sets
+          // `max-h-[--radix-select-content-available-height] overflow-y-auto`,
+          // so we let the viewport grow to its natural content height instead.
+          position === 'popper' && 'w-full min-w-[var(--radix-select-trigger-width)]',
         )}
       >
         {children}

@@ -26,6 +26,16 @@ function toIsoDate(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
 
+/**
+ * `EEEEEE` (narrow) for `bs` would still emit short names; we want exactly
+ * one capital letter per weekday header to keep the calendar readable on
+ * small screens. Falls back to ASCII first char for unsupported locales.
+ */
+export function formatWeekdayInitial(date: Date): string {
+  const narrow = format(date, 'EEEEEE', { locale: bs });
+  return narrow.charAt(0).toUpperCase();
+}
+
 export function DatePicker({ value, onChange, disabled = false }: DatePickerProps) {
   const date = toDate(value);
 
@@ -52,6 +62,7 @@ export function DatePicker({ value, onChange, disabled = false }: DatePickerProp
           }}
           locale={bs}
           weekStartsOn={1}
+          formatters={{ formatWeekdayName: formatWeekdayInitial }}
         />
       </PopoverContent>
     </Popover>

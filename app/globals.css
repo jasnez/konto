@@ -4,6 +4,14 @@
 @custom-variant dark (&:is(.dark *));
 
 @layer base {
+  /* Reserve the scrollbar gutter even when scrollbars are hidden — prevents
+   * horizontal layout shift when Radix Dialog/Sheet locks body scroll while
+   * opening (otherwise the page jumps left by the scrollbar width every time
+   * a sheet opens). */
+  html {
+    scrollbar-gutter: stable;
+  }
+
   /* iOS: minimalno 16px u poljima smanjuje auto-zoom na fokus */
   @supports (-webkit-touch-callout: none) {
     input,
