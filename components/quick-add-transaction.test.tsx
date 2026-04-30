@@ -314,4 +314,69 @@ describe('QuickAddTransaction', () => {
     expect(screen.getByText('EUR')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Prihod' })).toHaveAttribute('aria-pressed', 'true');
   });
+
+  it('clicking a Type chip updates aria-pressed across the group', async () => {
+    const user = userEvent.setup();
+    render(
+      <QuickAddTransaction
+        open
+        onOpenChange={vi.fn()}
+        accounts={accounts}
+        categories={categories}
+      />,
+    );
+
+    // Default: expense (Trošak) is active
+    expect(screen.getByRole('button', { name: 'Trošak' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Prihod' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Transfer' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+
+    // Click Prihod — pressed state migrates
+    await user.click(screen.getByRole('button', { name: 'Prihod' }));
+    expect(screen.getByRole('button', { name: 'Trošak' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Prihod' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Transfer' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+
+    // Click Transfer — pressed state migrates again
+    await user.click(screen.getByRole('button', { name: 'Transfer' }));
+    expect(screen.getByRole('button', { name: 'Trošak' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Prihod' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Transfer' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('Type chips are wrapped in a labeled role="group" for screen readers', () => {
+    render(
+      <QuickAddTransaction
+        open
+        onOpenChange={vi.fn()}
+        accounts={accounts}
+        categories={categories}
+      />,
+    );
+    expect(screen.getByRole('group', { name: 'Tip transakcije' })).toBeInTheDocument();
+  });
+
+  it('Type chips have type="button" so clicking does not submit the form', () => {
+    render(
+      <QuickAddTransaction
+        open
+        onOpenChange={vi.fn()}
+        accounts={accounts}
+        categories={categories}
+      />,
+    );
+    // All three Type chips render as <button type="button"> via the Chip primitive default
+    expect(screen.getByRole('button', { name: 'Trošak' })).toHaveAttribute('type', 'button');
+    expect(screen.getByRole('button', { name: 'Prihod' })).toHaveAttribute('type', 'button');
+    expect(screen.getByRole('button', { name: 'Transfer' })).toHaveAttribute('type', 'button');
+  });
 });
