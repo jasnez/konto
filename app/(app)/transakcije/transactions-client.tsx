@@ -102,6 +102,16 @@ export function TransactionsClient({
     filters.search.length > 0 ||
     filters.type.length > 0;
 
+  // True when at least one filter chip renders in the active-filter strip.
+  // Search is NOT in the strip (it has its own visible input), so this differs
+  // from `hasActiveFilters`. Drives the sticky date-header offset below.
+  const hasFilterChips =
+    filters.accountIds.length > 0 ||
+    filters.categoryIds.length > 0 ||
+    filters.from.length > 0 ||
+    filters.to.length > 0 ||
+    filters.type.length > 0;
+
   useEffect(() => {
     setSearchDraft(filters.search);
   }, [filters.search]);
@@ -202,6 +212,16 @@ export function TransactionsClient({
 
   return (
     <div
+      // `--filter-region-height` matches the actual rendered height of the
+      // sticky TransactionFilters region: ~3.75rem (60px) without filter chips,
+      // ~6.75rem (108px) with the chip strip below the search row. Date headers
+      // in the list use `top: calc(4rem + var(--filter-region-height))` to stay
+      // flush against the filter region without hardcoded magic numbers.
+      style={
+        {
+          '--filter-region-height': hasFilterChips ? '6.75rem' : '3.75rem',
+        } as React.CSSProperties
+      }
       className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-6"
       onTouchStart={(event) => {
         if (window.scrollY === 0) {
@@ -310,7 +330,7 @@ export function TransactionsClient({
         <ul className="space-y-3">
           {grouped.map((group) => (
             <li key={group.label} className="list-none">
-              <div className="sticky top-[8rem] z-10 mb-2 rounded-md bg-background/95 px-2 py-1 text-[11px] font-medium tracking-wide text-muted-foreground backdrop-blur-sm">
+              <div className="sticky top-[calc(4rem+var(--filter-region-height,3.75rem))] z-10 mb-2 rounded-md bg-background/95 px-2 py-1 text-[11px] font-medium tracking-wide text-muted-foreground backdrop-blur-sm">
                 {group.label}
               </div>
               <ul className="space-y-2">

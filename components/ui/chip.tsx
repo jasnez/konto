@@ -44,22 +44,42 @@ export interface ChipProps
     Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'type'>,
     VariantProps<typeof chipVariants> {
   /**
-   * Convenience shorthand: when `true`, applies the `active` variant style.
-   * Ignored if `variant` is explicitly provided.
+   * Convenience shorthand for selectable chips:
+   *   - `<Chip active={true}>` → `variant: 'active'` (primary fill)
+   *   - `<Chip variant="default" active={true}>` → `variant: 'active'`
+   *   - `<Chip variant="active" active={false}>` → `variant: 'active'` (explicit wins)
+   *   - `<Chip variant="removable">` → `variant: 'removable'` (active is no-op)
+   *
+   * For non-default variants (`removable`), `active` is intentionally ignored —
+   * removable chips don't have an active state. If you need an "active removable"
+   * visual, add a new variant rather than combining.
    */
   active?: boolean;
   /** Defaults to `"button"` so callers don't accidentally submit forms. */
   type?: 'button' | 'submit' | 'reset';
 }
 
+type ChipVariant = NonNullable<VariantProps<typeof chipVariants>['variant']>;
+
+/**
+ * Resolves the visual variant from explicit `variant` + `active` shorthand.
+ * Rules: explicit non-default `variant` wins; otherwise `active` selects between
+ * `'active'` and `'default'`.
+ */
+function resolveVariant(variant: ChipVariant | null | undefined, active: boolean): ChipVariant {
+  if (variant && variant !== 'default') return variant;
+  if (active) return 'active';
+  return variant ?? 'default';
+}
+
 const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
-  ({ className, variant, size, active, type = 'button', ...props }, ref) => {
-    const resolvedVariant = variant ?? (active ? 'active' : 'default');
+  ({ className, variant, size, active = false, type = 'button', ...props }, ref) => {
+    const resolved = resolveVariant(variant, active);
     return (
       <button
         ref={ref}
         type={type}
-        className={cn(chipVariants({ variant: resolvedVariant, size }), className)}
+        className={cn(chipVariants({ variant: resolved, size }), className)}
         {...props}
       />
     );
