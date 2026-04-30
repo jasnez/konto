@@ -71,7 +71,7 @@ export function DashboardTrendSkeleton() {
 
 export function DashboardPageSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+    <div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
       <DashboardGreetingSkeleton />
       <DashboardHeroSkeleton />
       <DashboardMetricsSkeleton />

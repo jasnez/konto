@@ -48,7 +48,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
   const list = txErr ? [] : txRows;
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-8 px-4 py-6 sm:px-6 sm:py-8">
+    <div className="mx-auto w-full max-w-4xl space-y-8 px-4 py-4 sm:px-6 sm:py-6">
       <AccountDetailHeader
         account={{
           id: acc.id,

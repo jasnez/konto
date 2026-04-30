@@ -68,7 +68,7 @@ export function TransactionRow({
   }
 
   return (
-    <li className="relative list-none overflow-hidden rounded-xl border bg-card">
+    <li className="relative list-none overflow-hidden rounded-xl bg-card">
       <div
         className={cn(
           'absolute inset-y-0 right-0 z-20 flex w-28 items-center justify-end gap-1 pr-2 md:hidden',
@@ -105,7 +105,7 @@ export function TransactionRow({
       <button
         type="button"
         className={cn(
-          'group relative z-10 flex min-h-16 w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-transform md:hover:bg-muted/40',
+          'group relative z-10 flex min-h-14 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-transform md:hover:bg-muted/40',
           selected && 'bg-accent',
         )}
         style={{ transform: `translateX(${String(swipeOffset)}px)` }}

@@ -139,7 +139,7 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
       tx.original_amount_cents !== tx.base_amount_cents);
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-4 sm:px-6 sm:py-6">
       <Button
         asChild
         variant="ghost"

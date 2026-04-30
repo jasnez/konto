@@ -102,7 +102,7 @@ export function TransactionEditForm({
   const selectedAccount = accounts.find((account) => account.id === form.watch('account_id'));
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="mx-auto w-full max-w-3xl px-4 py-4 sm:px-6 sm:py-6">
       <Button
         asChild
         variant="ghost"
