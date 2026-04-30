@@ -83,10 +83,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar />
           {/*
-           * Bottom padding = 64px bottom nav + ~56px FAB overshoot + safe area.
+           * Bottom padding reserves space for the mobile bottom nav (~64px tall)
+           * + safe-area inset. The FAB now sits flush inside the nav (no float
+           * above), so we don't reserve any extra overshoot.
            * `md:!pb-0` drops the reserve on desktop where the sidebar takes over.
            */}
-          <main className="flex-1 pb-[calc(8.5rem+env(safe-area-inset-bottom))] md:!pb-0">
+          <main className="flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:!pb-0">
             {children}
           </main>
         </div>

@@ -140,14 +140,14 @@ async function MetricsSection({
       className="-mx-4 flex snap-x snap-proximity gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-2 md:gap-4 md:overflow-visible md:px-0 md:pb-0"
     >
       <MetricCard
-        title="Potrošeno ovaj mjesec"
+        title="Potrošnja"
         amountCents={summary.monthExpense}
         currency={baseCurrency}
         tone="expense"
         className="w-44 shrink-0 snap-start md:w-auto"
       />
       <MetricCard
-        title="Prihodi ovaj mjesec"
+        title="Prihodi"
         amountCents={summary.monthIncome}
         currency={baseCurrency}
         tone="income"
@@ -160,7 +160,7 @@ async function MetricsSection({
         className="w-44 shrink-0 snap-start md:w-auto"
       />
       <MetricCard
-        title="Prosječno dnevno"
+        title="Dnevno"
         amountCents={summary.avgDailySpend}
         currency={baseCurrency}
         className="w-44 shrink-0 snap-start md:w-auto"
