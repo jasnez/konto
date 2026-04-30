@@ -309,7 +309,7 @@ function AccountFormFields(props: FieldsProps) {
                   {...field}
                   autoComplete="off"
                   maxLength={100}
-                  className="h-11 min-h-[44px] text-base"
+                  className="h-11 text-base"
                   placeholder="npr. Zaba tekući"
                 />
               </FormControl>
@@ -332,7 +332,7 @@ function AccountFormFields(props: FieldsProps) {
                 value={field.value}
               >
                 <FormControl>
-                  <SelectTrigger className="h-11 min-h-[44px] text-base">
+                  <SelectTrigger className="h-11 text-base">
                     <SelectValue placeholder="Tip računa" />
                   </SelectTrigger>
                 </FormControl>
@@ -378,7 +378,7 @@ function AccountFormFields(props: FieldsProps) {
               <FormLabel>Valuta</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger className="h-11 min-h-[44px] text-base">
+                  <SelectTrigger className="h-11 text-base">
                     <SelectValue />
                   </SelectTrigger>
                 </FormControl>
@@ -469,18 +469,14 @@ function AccountFormFields(props: FieldsProps) {
             <Button
               type="button"
               variant="outline"
-              className="h-11 min-h-[44px] w-full sm:w-auto"
+              className="h-11 w-full sm:w-auto"
               onClick={() => {
                 router.back();
               }}
             >
               Odustani
             </Button>
-            <Button
-              type="submit"
-              className="h-11 min-h-[44px] w-full sm:w-auto"
-              disabled={isSubmitting}
-            >
+            <Button type="submit" className="h-11 w-full sm:w-auto" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {mode === 'create' ? 'Dodaj račun' : 'Sačuvaj'}
             </Button>

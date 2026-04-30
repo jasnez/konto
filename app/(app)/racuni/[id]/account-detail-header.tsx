@@ -56,7 +56,7 @@ export function AccountDetailHeader({ account }: Props) {
           <Button
             asChild
             variant="ghost"
-            className="mb-1 -ml-2 h-11 min-h-[44px] touch-manipulation px-2 text-muted-foreground"
+            className="mb-1 -ml-2 h-11 touch-manipulation px-2 text-muted-foreground"
           >
             <Link href="/racuni" className="inline-flex items-center gap-1">
               <ArrowLeft className="h-4 w-4" aria-hidden />
@@ -88,7 +88,7 @@ export function AccountDetailHeader({ account }: Props) {
               type="button"
               variant="outline"
               size="icon"
-              className="h-11 w-11 min-h-[44px] min-w-[44px] shrink-0"
+              className="h-11 w-11 shrink-0"
               aria-label="Akcije računa"
             >
               <MoreHorizontal className="h-5 w-5" />

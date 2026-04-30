@@ -29,7 +29,7 @@ export function RecentTransactions({ items }: RecentTransactionsProps) {
         <CardTitle className="text-lg">Zadnje transakcije</CardTitle>
         <Link
           href="/transakcije"
-          className="inline-flex h-11 min-h-[44px] items-center gap-1 rounded-md px-3 text-sm font-medium text-primary transition-colors hover:bg-accent"
+          className="inline-flex h-11 items-center gap-1 rounded-md px-3 text-sm font-medium text-primary transition-colors hover:bg-accent"
         >
           Vidi sve
           <ArrowRight className="h-4 w-4" aria-hidden />

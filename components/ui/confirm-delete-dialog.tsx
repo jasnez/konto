@@ -58,11 +58,11 @@ export function ConfirmDeleteDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="h-11 min-h-[44px]" disabled={busy}>
+          <AlertDialogCancel className="h-11" disabled={busy}>
             {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
-            className="h-11 min-h-[44px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className="h-11 bg-destructive text-destructive-foreground hover:bg-destructive/90"
             disabled={busy}
             onClick={(event) => {
               event.preventDefault();

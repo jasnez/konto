@@ -96,7 +96,7 @@ export function MerchantCombobox({
         disabled={disabled}
         autoComplete="off"
         placeholder="npr. Konzum"
-        className="h-11 min-h-[44px]"
+        className="h-11"
         onFocus={() => {
           setOpen(true);
         }}

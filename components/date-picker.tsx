@@ -36,7 +36,7 @@ export function DatePicker({ value, onChange, disabled = false }: DatePickerProp
           type="button"
           variant="outline"
           disabled={disabled}
-          className={cn('h-11 min-h-[44px] w-full justify-start text-left font-normal')}
+          className={cn('h-11 w-full justify-start text-left font-normal')}
         >
           <CalendarIcon className="mr-2 h-4 w-4" aria-hidden />
           {format(date, 'd. MMM yyyy.', { locale: bs })}

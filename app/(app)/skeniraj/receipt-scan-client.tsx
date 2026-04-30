@@ -325,7 +325,7 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-11 min-h-[44px]"
+                className="h-11"
                 onClick={cancelScan}
               >
                 <X className="mr-2 size-4" aria-hidden />
@@ -340,7 +340,7 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
                 <p className="text-xs text-muted-foreground">JPEG, PNG, WEBP, HEIC · max 10 MB</p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
-                <Button type="button" size="lg" className="h-11 min-h-[44px]" onClick={openCamera}>
+                <Button type="button" size="lg" className="h-11" onClick={openCamera}>
                   <Camera className="mr-2 size-4" aria-hidden />
                   Uslikaj
                 </Button>
@@ -348,7 +348,7 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
                   type="button"
                   size="lg"
                   variant="outline"
-                  className="h-11 min-h-[44px]"
+                  className="h-11"
                   onClick={openFilePicker}
                 >
                   <Upload className="mr-2 size-4" aria-hidden />
@@ -379,13 +379,7 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
           </div>
           <p className="text-xs">Obično 3–10 s, maksimalno 25 s.</p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-11 min-h-[44px]"
-          onClick={cancelScan}
-        >
+        <Button type="button" variant="outline" size="sm" className="h-11" onClick={cancelScan}>
           <X className="mr-2 size-4" aria-hidden />
           Otkaži
         </Button>
@@ -443,7 +437,7 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
               onChange={(e) => {
                 setTransactionDate(e.target.value);
               }}
-              className="h-11 min-h-[44px]"
+              className="h-11"
             />
           </div>
 
@@ -456,7 +450,7 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
                 setMerchantRaw(e.target.value);
               }}
               placeholder="npr. Konzum"
-              className="h-11 min-h-[44px]"
+              className="h-11"
             />
           </div>
 
@@ -517,19 +511,14 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
           <Button
             type="button"
             variant="outline"
-            className="h-11 min-h-[44px] flex-1"
+            className="h-11 flex-1"
             onClick={reset}
             disabled={pending}
           >
             <RefreshCw className="mr-2 size-4" aria-hidden />
             Nova slika
           </Button>
-          <Button
-            type="button"
-            className="h-11 min-h-[44px] flex-[2]"
-            onClick={handleSubmit}
-            disabled={pending}
-          >
+          <Button type="button" className="h-11 flex-[2]" onClick={handleSubmit} disabled={pending}>
             {pending ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />

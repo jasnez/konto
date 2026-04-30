@@ -140,11 +140,7 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-4 sm:px-6 sm:py-6">
-      <Button
-        asChild
-        variant="ghost"
-        className="-ml-2 h-11 min-h-[44px] px-2 text-muted-foreground"
-      >
+      <Button asChild variant="ghost" className="-ml-2 h-11 px-2 text-muted-foreground">
         <Link href="/transakcije" className="inline-flex items-center gap-1">
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Nazad na transakcije
@@ -177,7 +173,7 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
             }}
             disabled={busyCategory}
           >
-            <SelectTrigger className="h-11 min-h-[44px]">
+            <SelectTrigger className="h-11">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -216,20 +212,20 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
       <section className="space-y-3 rounded-2xl border bg-card p-5">
         <h2 className="text-lg font-semibold">Akcije</h2>
         <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" className="h-11 min-h-[44px]">
+          <Button asChild variant="outline" className="h-11">
             <Link href={`/transakcije/${tx.id}/uredi`}>
               <Pencil className="h-4 w-4" />
               Uredi
             </Link>
           </Button>
-          <Button type="button" variant="outline" className="h-11 min-h-[44px]" disabled>
+          <Button type="button" variant="outline" className="h-11" disabled>
             <GitBranchPlus className="h-4 w-4" />
             Split (Faza 3+)
           </Button>
           <Button
             type="button"
             variant="outline"
-            className="h-11 min-h-[44px]"
+            className="h-11"
             onClick={() => {
               toast.message('Mark as transfer dolazi u Fazi 3+.');
             }}
@@ -240,7 +236,7 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
           <Button
             type="button"
             variant="destructive"
-            className="h-11 min-h-[44px]"
+            className="h-11"
             onClick={() => {
               setDeleteOpen(true);
             }}

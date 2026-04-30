@@ -20,7 +20,7 @@ export function MetricCard({
   return (
     <Card className={cn('h-full', className)}>
       <CardHeader className="space-y-1 p-4">
-        <CardTitle className="text-base font-medium">{title}</CardTitle>
+        <CardTitle className="font-medium">{title}</CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-4 pt-0">
         <Money

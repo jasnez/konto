@@ -73,7 +73,7 @@ export function AccountCard({ account }: AccountCardProps) {
               type="button"
               variant="ghost"
               size="icon"
-              className="h-11 min-h-[44px] w-11 min-w-[44px] shrink-0"
+              className="h-11 w-11 min-w-[44px] shrink-0"
               aria-label="Meni za račun"
               onClick={(e) => {
                 e.preventDefault();

@@ -103,11 +103,7 @@ export function TransactionEditForm({
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-4 sm:px-6 sm:py-6">
-      <Button
-        asChild
-        variant="ghost"
-        className="-ml-2 mb-3 h-11 min-h-[44px] px-2 text-muted-foreground"
-      >
+      <Button asChild variant="ghost" className="-ml-2 mb-3 h-11 px-2 text-muted-foreground">
         <Link href={`/transakcije/${transactionId}`} className="inline-flex items-center gap-1">
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Nazad na detalj

@@ -179,7 +179,7 @@ export function MerchantFormDialog({
                   <FormControl>
                     <Input
                       {...field}
-                      className="h-11 min-h-[44px]"
+                      className="h-11"
                       autoComplete="off"
                       onBlur={(e) => {
                         field.onBlur();
@@ -208,7 +208,7 @@ export function MerchantFormDialog({
                     <Input
                       {...field}
                       value={field.value}
-                      className="h-11 min-h-[44px]"
+                      className="h-11"
                       autoComplete="off"
                       onChange={(ev) => {
                         setSyncDisplay(false);
@@ -233,7 +233,7 @@ export function MerchantFormDialog({
                     value={field.value ?? '__none__'}
                   >
                     <FormControl>
-                      <SelectTrigger className="h-11 min-h-[44px]">
+                      <SelectTrigger className="h-11">
                         <SelectValue placeholder="Bez kategorije" />
                       </SelectTrigger>
                     </FormControl>
@@ -257,12 +257,7 @@ export function MerchantFormDialog({
                 <FormItem>
                   <FormLabel>Ikonica (emoji)</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      value={field.value ?? ''}
-                      className="h-11 min-h-[44px]"
-                      maxLength={10}
-                    />
+                    <Input {...field} value={field.value ?? ''} className="h-11" maxLength={10} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -278,7 +273,7 @@ export function MerchantFormDialog({
                     <Input
                       {...field}
                       value={field.value ?? ''}
-                      className="h-11 min-h-[44px] font-mono text-sm"
+                      className="h-11 font-mono text-sm"
                       placeholder="#RRGGBB"
                     />
                   </FormControl>
