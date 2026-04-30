@@ -6,6 +6,7 @@ import type { AccountOption } from '@/components/account-select';
 import type { CategoryOption } from '@/components/category-select';
 import { QuickAddTransaction } from '@/components/quick-add-transaction';
 import { Button, type buttonVariants } from '@/components/ui/button';
+import { useHapticFeedback } from '@/hooks/use-haptic-feedback';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { VariantProps } from 'class-variance-authority';
@@ -52,13 +53,17 @@ export function QuickAddTrigger({
   size?: VariantProps<typeof buttonVariants>['size'];
 }) {
   const openQuickAdd = useUiStore((s) => s.openQuickAdd);
+  const haptic = useHapticFeedback();
   return (
     <Button
       type="button"
       variant={variant}
       size={size}
       className={className}
-      onClick={openQuickAdd}
+      onClick={() => {
+        haptic('tap');
+        openQuickAdd();
+      }}
     >
       {children}
     </Button>
@@ -77,6 +82,7 @@ function shortcutTitleSuffix(): string {
  */
 export function MobileFab() {
   const openQuickAdd = useUiStore((s) => s.openQuickAdd);
+  const haptic = useHapticFeedback();
   const [titleSuffix, setTitleSuffix] = useState('Ctrl+K');
 
   useEffect(() => {
@@ -87,7 +93,10 @@ export function MobileFab() {
     <button
       type="button"
       data-testid="fab-brzi-unos"
-      onClick={openQuickAdd}
+      onClick={() => {
+        haptic('tap');
+        openQuickAdd();
+      }}
       title={`Dodaj transakciju (${titleSuffix})`}
       aria-label="Brzi unos"
       className={cn(
