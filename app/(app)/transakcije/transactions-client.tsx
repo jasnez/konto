@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { format, isThisWeek, isToday, isYesterday, parseISO } from 'date-fns';
 import { bs } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -15,6 +15,7 @@ import { TransactionFilters } from '@/components/transaction-filters';
 import { TransactionRow } from '@/components/transaction-row';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import type { TransactionListItem, TransactionsFilters } from './types';
 
 interface TransactionsClientProps {
@@ -89,9 +90,12 @@ export function TransactionsClient({
   const [pendingDeleteTx, setPendingDeleteTx] = useState<TransactionListItem | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
-  const [pullStartY, setPullStartY] = useState<number | null>(null);
-  const [pullDistance, setPullDistance] = useState(0);
-  const refreshingRef = useRef(false);
+  const { pullDistance, handlers: pullHandlers } = usePullToRefresh({
+    onRefresh: () => {
+      toast.message('Osvježavam transakcije...');
+      router.refresh();
+    },
+  });
 
   const grouped = useMemo(() => groupTransactions(transactions), [transactions]);
   const selectionMode = selectedIds.size > 0;
@@ -223,31 +227,7 @@ export function TransactionsClient({
         } as React.CSSProperties
       }
       className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-6"
-      onTouchStart={(event) => {
-        if (window.scrollY === 0) {
-          setPullStartY(event.touches[0].clientY);
-        }
-      }}
-      onTouchMove={(event) => {
-        if (pullStartY === null || refreshingRef.current) return;
-        const currentY = event.touches[0].clientY;
-        const delta = currentY - pullStartY;
-        if (delta > 0) {
-          setPullDistance(Math.min(delta, 90));
-        }
-      }}
-      onTouchEnd={() => {
-        if (pullDistance > 70 && !refreshingRef.current) {
-          refreshingRef.current = true;
-          toast.message('Osvježavam transakcije...');
-          router.refresh();
-          window.setTimeout(() => {
-            refreshingRef.current = false;
-          }, 700);
-        }
-        setPullStartY(null);
-        setPullDistance(0);
-      }}
+      {...pullHandlers}
     >
       <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-semibold tracking-tight">Transakcije</h2>

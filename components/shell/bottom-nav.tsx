@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useHapticFeedback } from '@/hooks/use-haptic-feedback';
 import { cn } from '@/lib/utils';
 import { BOTTOM_NAV_ITEMS, isActive } from './nav-items';
 import { MobileFab } from './fab';
@@ -46,10 +47,16 @@ export function BottomNav() {
 
 function NavSlot({ item, active }: { item: (typeof BOTTOM_NAV_ITEMS)[number]; active: boolean }) {
   const Icon = item.icon;
+  const haptic = useHapticFeedback();
   return (
     <Link
       href={item.href}
       aria-current={active ? 'page' : undefined}
+      onClick={() => {
+        // Soft tap on every nav switch — no-op on iOS Safari / desktop where
+        // the Vibration API is unsupported, no-op when prefers-reduced-motion.
+        haptic('tap');
+      }}
       className={cn(
         'flex flex-1 flex-col items-center justify-center gap-0.5 text-xs',
         active ? 'font-semibold text-primary' : 'text-muted-foreground hover:text-foreground',

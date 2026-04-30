@@ -13,6 +13,7 @@ import {
   DashboardMetricsSkeleton,
   DashboardRecentTransactionsSkeleton,
 } from '@/components/dashboard/dashboard-skeletons';
+import { PullToRefreshWrapper } from '@/components/shell/pull-to-refresh-wrapper';
 import { fetchTransferCounterpartyAccountNames } from '@/lib/db/transfer-counterparty-names';
 import { getTransactionPrimaryLabel } from '@/lib/format/transaction-primary-label';
 import {
@@ -207,7 +208,10 @@ export default async function PocetnaPage() {
   const recentPromise = getRecentTransactions(supabase, user.id);
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
+    <PullToRefreshWrapper
+      className="mx-auto w-full max-w-6xl space-y-4 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6"
+      refreshLabel="Osvježavam dashboard..."
+    >
       <Suspense fallback={null}>
         <DeletionCanceledToast />
       </Suspense>
@@ -236,6 +240,6 @@ export default async function PocetnaPage() {
       </Suspense>
 
       <TrendPlaceholder />
-    </div>
+    </PullToRefreshWrapper>
   );
 }
