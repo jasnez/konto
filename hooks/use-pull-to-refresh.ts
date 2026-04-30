@@ -50,26 +50,32 @@ export function usePullToRefresh(opts: UsePullToRefreshOptions): UsePullToRefres
   const { onRefresh, thresholdPx = 70, maxPullPx = 90, cooldownMs = 700 } = opts;
 
   const [pullDistance, setPullDistance] = useState(0);
-  const [pullStartY, setPullStartY] = useState<number | null>(null);
+  const startRef = useRef<{ x: number; y: number } | null>(null);
   const refreshingRef = useRef(false);
 
   const onTouchStart = useCallback((event: React.TouchEvent<HTMLElement>) => {
     if (typeof window === 'undefined') return;
     if (window.scrollY === 0) {
-      setPullStartY(event.touches[0].clientY);
+      startRef.current = { x: event.touches[0].clientX, y: event.touches[0].clientY };
     }
   }, []);
 
   const onTouchMove = useCallback(
     (event: React.TouchEvent<HTMLElement>) => {
-      if (pullStartY === null || refreshingRef.current) return;
-      const currentY = event.touches[0].clientY;
-      const delta = currentY - pullStartY;
-      if (delta > 0) {
-        setPullDistance(Math.min(delta, maxPullPx));
+      const start = startRef.current;
+      if (start === null || refreshingRef.current) return;
+      const deltaY = event.touches[0].clientY - start.y;
+      const deltaX = event.touches[0].clientX - start.x;
+      // Horizontal-vs-vertical dominance: a primarily horizontal gesture
+      // (swipe-to-categorize on a row, accidental tap with sideways drift)
+      // must not commit pullDistance. Otherwise the indicator state toggles
+      // visibly even though the user never intended to refresh.
+      if (Math.abs(deltaX) > Math.abs(deltaY)) return;
+      if (deltaY > 0) {
+        setPullDistance(Math.min(deltaY, maxPullPx));
       }
     },
-    [pullStartY, maxPullPx],
+    [maxPullPx],
   );
 
   const onTouchEnd = useCallback(() => {
@@ -80,7 +86,7 @@ export function usePullToRefresh(opts: UsePullToRefreshOptions): UsePullToRefres
         refreshingRef.current = false;
       }, cooldownMs);
     }
-    setPullStartY(null);
+    startRef.current = null;
     setPullDistance(0);
   }, [pullDistance, thresholdPx, cooldownMs, onRefresh]);
 

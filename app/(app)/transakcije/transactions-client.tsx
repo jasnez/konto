@@ -100,7 +100,8 @@ export function TransactionsClient({
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const [categorizeTx, setCategorizeTx] = useState<TransactionListItem | null>(null);
   const [, startCategoryTransition] = useTransition();
-  const { pullDistance, handlers: pullHandlers } = usePullToRefresh({
+  // No visible pull indicator — see PullToRefreshWrapper for the rationale.
+  const { handlers: pullHandlers } = usePullToRefresh({
     onRefresh: () => {
       toast.message('Osvježavam transakcije...');
       router.refresh();
@@ -283,12 +284,6 @@ export function TransactionsClient({
           router.replace(pathname);
         }}
       />
-
-      {pullDistance > 0 ? (
-        <div className="mb-2 text-center text-xs text-muted-foreground">
-          {pullDistance > 70 ? 'Pusti za osvježavanje' : 'Povuci dole za refresh'}
-        </div>
-      ) : null}
 
       {selectionMode ? (
         <div
