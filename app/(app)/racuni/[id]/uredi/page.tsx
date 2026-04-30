@@ -50,7 +50,7 @@ export default async function UrediRacunPage({ params }: PageProps) {
   };
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="mx-auto w-full max-w-4xl px-4 py-4 sm:px-6 sm:py-6">
       <h2 className="mb-2 text-2xl font-semibold tracking-tight">Uredi račun</h2>
       <p className="mb-6 text-sm text-muted-foreground">
         Promjene se spremaju odmah nakon pritiska.

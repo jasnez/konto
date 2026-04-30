@@ -28,13 +28,13 @@ export function BalanceHero({
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 p-4 sm:p-6">
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">Stanje (uključeni računi)</p>
-          <CardTitle className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          <CardTitle className="text-2xl font-medium tracking-tight sm:text-3xl">
             <Money cents={totalBalanceCents} currency={baseCurrency} tone="default" />
           </CardTitle>
           {totalLiabilitiesCents > 0n ? (
             <div className="pt-2">
               <p className="text-sm text-muted-foreground">Zaduženja (krediti i kartice)</p>
-              <p className="text-xl font-semibold tabular-nums tracking-tight sm:text-2xl">
+              <p className="text-lg font-medium tabular-nums tracking-tight sm:text-xl">
                 <Money cents={totalLiabilitiesCents} currency={baseCurrency} tone="expense" />
               </p>
             </div>

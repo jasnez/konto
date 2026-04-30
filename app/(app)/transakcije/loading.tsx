@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TransakcijeLoading() {
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
       <div className="mb-4 flex items-center justify-between">
         <Skeleton className="h-8 w-40" />
         <Skeleton className="h-11 w-28" />
