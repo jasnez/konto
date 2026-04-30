@@ -52,10 +52,17 @@ export function CategorySelect({
       }}
       disabled={disabled || filtered.length === 0}
     >
-      <SelectTrigger id={id} className="h-11 w-full">
+      <SelectTrigger
+        id={id}
+        // axe-core flags `role="combobox"` buttons that derive their name from
+        // inner SelectValue content as missing accessible name. Explicit
+        // aria-label on the trigger satisfies WAI-ARIA's combobox naming rule
+        // regardless of the inner value content.
+        aria-label={current ? `Kategorija: ${current.name}` : 'Kategorija'}
+        className="h-11 w-full"
+      >
         <SelectValue
           placeholder={filtered.length === 0 ? 'Nema kategorija' : 'Odaberi kategoriju'}
-          aria-label={current ? current.name : undefined}
         />
       </SelectTrigger>
       <SelectContent>
