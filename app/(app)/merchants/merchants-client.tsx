@@ -69,7 +69,7 @@ export function MerchantsClient({
     <div className="mx-auto w-full max-w-4xl px-4 py-4 sm:px-6 sm:py-6">
       <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-semibold tracking-tight">Prodavači</h2>
-        <Button type="button" className="h-11 min-h-[44px] w-full sm:w-auto" onClick={openCreate}>
+        <Button type="button" className="h-11 w-full sm:w-auto" onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" aria-hidden />
           Dodaj merchant
         </Button>

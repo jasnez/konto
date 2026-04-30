@@ -47,7 +47,7 @@ export function InstitutionCombobox({
           disabled={disabled}
           aria-expanded={open}
           className={cn(
-            'h-11 min-h-[44px] w-full justify-between font-normal',
+            'h-11 w-full justify-between font-normal',
             !value && 'text-muted-foreground',
             className,
           )}

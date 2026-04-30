@@ -306,7 +306,7 @@ export function CategoriesClient({ categories }: { categories: CategoryListItem[
             <Button
               type="button"
               variant={reorderMode ? 'secondary' : 'outline'}
-              className="h-11 min-h-[44px] w-full sm:w-auto"
+              className="h-11 w-full sm:w-auto"
               onClick={() => {
                 setReorderMode((v) => !v);
               }}
@@ -314,7 +314,7 @@ export function CategoriesClient({ categories }: { categories: CategoryListItem[
               {reorderMode ? 'Gotovo s redom' : 'Uredi redoslijed'}
             </Button>
           ) : null}
-          <Button type="button" className="h-11 min-h-[44px] w-full sm:w-auto" onClick={openCreate}>
+          <Button type="button" className="h-11 w-full sm:w-auto" onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" aria-hidden />
             Dodaj kategoriju
           </Button>

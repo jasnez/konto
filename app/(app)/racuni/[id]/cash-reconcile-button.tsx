@@ -97,7 +97,7 @@ export function CashReconcileButton({
       <Button
         type="button"
         variant="outline"
-        className="h-11 min-h-[44px]"
+        className="h-11"
         onClick={() => {
           setOpen(true);
         }}

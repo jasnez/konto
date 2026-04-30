@@ -52,7 +52,7 @@ export function CategorySelect({
       }}
       disabled={disabled || filtered.length === 0}
     >
-      <SelectTrigger id={id} className="h-11 min-h-[44px] w-full">
+      <SelectTrigger id={id} className="h-11 w-full">
         <SelectValue
           placeholder={filtered.length === 0 ? 'Nema kategorija' : 'Odaberi kategoriju'}
           aria-label={current ? current.name : undefined}

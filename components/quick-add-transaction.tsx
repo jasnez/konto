@@ -395,7 +395,7 @@ export function QuickAddTransaction({
         className="flex min-h-0 flex-1 flex-col gap-4"
       >
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-          <Button asChild type="button" variant="outline" className="h-11 min-h-[44px] w-full">
+          <Button asChild type="button" variant="outline" className="h-11 w-full">
             <Link
               href="/skeniraj"
               onClick={() => {
@@ -440,7 +440,7 @@ export function QuickAddTransaction({
 
           {atmMode ? (
             <div
-              className="space-y-2.5 rounded-lg border border-primary/30 bg-primary/5 p-2.5"
+              className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3"
               role="region"
               aria-label="Podizanje s bankomata"
             >
@@ -479,7 +479,7 @@ export function QuickAddTransaction({
                       }}
                       maxLength={100}
                       placeholder="Naziv računa"
-                      className="h-11 min-h-[44px] flex-1"
+                      className="h-11 flex-1"
                       aria-label="Naziv novog gotovinskog računa"
                     />
                     <Button
@@ -488,7 +488,7 @@ export function QuickAddTransaction({
                         void handleCreateCashAccount();
                       }}
                       disabled={cashCreating || cashCreateName.trim().length === 0}
-                      className="h-11 min-h-[44px]"
+                      className="h-11"
                     >
                       {cashCreating ? (
                         <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -506,7 +506,7 @@ export function QuickAddTransaction({
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 min-h-[44px] w-full justify-start"
+                  className="h-11 w-full justify-start"
                   onClick={enterAtmMode}
                 >
                   <Banknote className="mr-2 size-4" aria-hidden />
@@ -700,7 +700,7 @@ export function QuickAddTransaction({
                           const v = Math.max(2, Math.min(60, Number(e.target.value)));
                           setInstallmentCount(Number.isFinite(v) ? v : 3);
                         }}
-                        className="h-11 min-h-[44px]"
+                        className="h-11"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -717,7 +717,7 @@ export function QuickAddTransaction({
                           const v = Math.max(1, Math.min(28, Number(e.target.value)));
                           setDayOfMonth(Number.isFinite(v) ? v : 15);
                         }}
-                        className="h-11 min-h-[44px]"
+                        className="h-11"
                       />
                     </div>
                   </div>

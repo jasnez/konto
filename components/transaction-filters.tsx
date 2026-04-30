@@ -43,12 +43,23 @@ function typeLabel(type: string): string {
   return TYPE_OPTIONS.find((opt) => opt.value === type)?.label ?? '';
 }
 
-/** Render an ISO date as `1. apr 2026.` (bs locale). Falls back to raw on parse error. */
+/**
+ * Render an ISO date as `1. apr 2026.` (bs locale).
+ *
+ * On parse error (corrupt URL param like `?from=foo`) returns a clear "?"
+ * marker rather than the raw garbage string. The chip stays clickable so the
+ * user can remove the broken filter; the marker signals "filter is invalid"
+ * better than echoing nonsense back at them.
+ */
 function formatBsDate(iso: string): string {
   try {
-    return format(parseISO(iso), 'd. MMM yyyy.', { locale: bs });
+    const date = parseISO(iso);
+    if (Number.isNaN(date.getTime())) {
+      return '?';
+    }
+    return format(date, 'd. MMM yyyy.', { locale: bs });
   } catch {
-    return iso;
+    return '?';
   }
 }
 
@@ -72,8 +83,13 @@ export function TransactionFilters({
 
   return (
     <>
-      <div className="sticky top-16 z-20 -mx-4 border-b border-border/50 bg-background/95 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6">
-        <div className="flex items-center gap-2">
+      <div className="pointer-events-none sticky top-16 z-20 -mx-4 border-b border-border/50 bg-background/95 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6">
+        {/* The outer sticky wrapper has `pointer-events-none` so a finger pull
+            that lands on the bar's padding/background still bubbles to the
+            wrapper's pull-to-refresh handler in transactions-client.tsx. The
+            interactive children (search input, Filteri button) re-enable
+            pointer events explicitly via this inner div. */}
+        <div className="pointer-events-auto flex items-center gap-2">
           <div className="relative flex-1">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
@@ -85,7 +101,7 @@ export function TransactionFilters({
                 onSearchDraftChange(event.target.value);
               }}
               placeholder="Pretraga..."
-              className="h-11 min-h-[44px] pl-9"
+              className="h-11 pl-9"
               aria-label="Pretraga transakcija"
             />
           </div>
@@ -94,7 +110,7 @@ export function TransactionFilters({
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 min-h-[44px] shrink-0 gap-1.5 px-3"
+                className="h-11 shrink-0 gap-1.5 px-3"
                 aria-label={
                   activeFilterCount > 0
                     ? `Filteri (${String(activeFilterCount)} aktivnih)`
@@ -213,14 +229,14 @@ export function TransactionFilters({
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 min-h-[44px] flex-1"
+                  className="h-11 flex-1"
                   disabled={!hasAnyFilter}
                   onClick={onClearAll}
                 >
                   Očisti sve
                 </Button>
                 <SheetClose asChild>
-                  <Button type="button" className="h-11 min-h-[44px] flex-1">
+                  <Button type="button" className="h-11 flex-1">
                     Gotovo
                   </Button>
                 </SheetClose>
@@ -234,9 +250,12 @@ export function TransactionFilters({
         <div
           role="region"
           aria-label="Aktivni filteri"
-          className="-mx-4 mb-2 mt-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6"
+          // pointer-events-none on the wrapper so a touch landing on the
+          // strip's padding still bubbles to pull-to-refresh; chips re-enable
+          // pointer events on the inner flex container.
+          className="pointer-events-none -mx-4 mb-2 mt-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6"
         >
-          <div className="flex min-w-max gap-2">
+          <div className="pointer-events-auto flex min-w-max gap-2">
             {filters.from ? (
               <Chip
                 variant="removable"

@@ -251,7 +251,7 @@ export function TransactionsClient({
     >
       <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-semibold tracking-tight">Transakcije</h2>
-        <QuickAddTrigger className="h-11 min-h-[44px] w-full sm:w-auto">+ Dodaj</QuickAddTrigger>
+        <QuickAddTrigger className="h-11 w-full sm:w-auto">+ Dodaj</QuickAddTrigger>
       </div>
 
       <TransactionFilters
@@ -317,11 +317,7 @@ export function TransactionsClient({
               : 'Još nema transakcija. Koristi brzi unos (ili + Dodaj) da dodaš prvu — pojaviće se ovdje.'}
           </p>
           {hasActiveFilters ? null : (
-            <QuickAddTrigger
-              className="h-11 min-h-[44px] w-full max-w-xs"
-              variant="default"
-              size="default"
-            >
+            <QuickAddTrigger className="h-11 w-full max-w-xs" variant="default" size="default">
               Otvori brzi unos
             </QuickAddTrigger>
           )}

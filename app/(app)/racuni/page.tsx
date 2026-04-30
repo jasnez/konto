@@ -36,11 +36,7 @@ export default async function RacuniListPage() {
     <div className="mx-auto w-full max-w-4xl px-4 py-4 sm:px-6 sm:py-6">
       <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-semibold tracking-tight">Računi</h2>
-        <Button
-          asChild
-          className="h-11 min-h-[44px] w-full shrink-0 sm:w-auto"
-          data-testid="add-account"
-        >
+        <Button asChild className="h-11 w-full shrink-0 sm:w-auto" data-testid="add-account">
           <Link href="/racuni/novi" className="inline-flex items-center justify-center gap-2">
             <Plus className="h-4 w-4" aria-hidden />
             Dodaj račun
@@ -60,7 +56,7 @@ export default async function RacuniListPage() {
           <p className="max-w-sm text-sm text-muted-foreground">
             Račun može biti banka, gotovina, Revolut, Wise i slično — tu će se zbrajati transakcije.
           </p>
-          <Button asChild className="h-11 min-h-[44px] w-full max-w-xs">
+          <Button asChild className="h-11 w-full max-w-xs">
             <Link href="/racuni/novi">Dodaj račun</Link>
           </Button>
         </div>

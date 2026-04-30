@@ -10,8 +10,9 @@ const MAX_SAFE_CENTS = 9223372036854775807n;
  * period decimal) — i.e., English variants. Everything else is formatted as
  * `1.234,56` (the bs-BA / European convention used by the app).
  *
- * Note: en-IN technically uses Indian numbering (`12,34,567.89`), but no
- * caller in this app passes en-IN so we don't special-case it.
+ * TODO(i18n): when adding India to supported locales, special-case en-IN to
+ * use Indian numbering (`12,34,567.89`). Currently only bs-BA + en-* variants
+ * are passed by callers, so the en-IN miscategorization here is dormant.
  */
 function usesEnglishNumberFormat(locale: string): boolean {
   const l = locale.toLowerCase();

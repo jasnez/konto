@@ -35,7 +35,7 @@ export function AccountIconField({ value, onChange, id, disabled, error }: IconF
               onChange(e);
             }}
             className={cn(
-              'flex h-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border-2 text-xl transition-colors',
+              'flex h-11 min-w-[44px] items-center justify-center rounded-lg border-2 text-xl transition-colors',
               value === e
                 ? 'border-primary bg-accent'
                 : 'border-transparent bg-muted/50 hover:border-muted-foreground/30',
@@ -49,7 +49,7 @@ export function AccountIconField({ value, onChange, id, disabled, error }: IconF
       </div>
       <input
         id={id}
-        className="flex h-11 min-h-[44px] w-full max-w-xs rounded-md border border-input bg-background px-3 text-base"
+        className="flex h-11 w-full max-w-xs rounded-md border border-input bg-background px-3 text-base"
         maxLength={10}
         disabled={disabled}
         value={value ?? ''}
@@ -88,7 +88,7 @@ export function AccountColorField({ value, onChange, id, disabled, error }: Colo
               onChange(hex);
             }}
             className={cn(
-              'h-11 w-11 min-h-[44px] min-w-[44px] rounded-full border-2',
+              'h-11 w-11 rounded-full border-2',
               (value ?? '').toLowerCase() === hex.toLowerCase()
                 ? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background'
                 : 'border-transparent',

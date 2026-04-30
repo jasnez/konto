@@ -183,11 +183,20 @@ describe('TransactionFilters — active-filter chip strip', () => {
 });
 
 describe('TransactionFilters — formatBsDate fallback', () => {
-  it('renders raw ISO when given an unparseable string (current behavior, P2.2 will improve)', () => {
+  it('renders "?" marker for unparseable dates instead of echoing garbage', () => {
     renderFilters({ filters: makeFilters({ from: 'foo' }) });
-    // This documents current graceful behavior — future P2.2 may change to '?'
-    // but the chip stays clickable so user can remove it
-    expect(screen.getByText(/Od:/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Ukloni filter: Od/ })).toBeInTheDocument();
+    // Corrupt URL params shouldn't echo back as "Od: foo"; "?" marks the
+    // filter as invalid without breaking the layout. Chip stays clickable
+    // so user can remove the broken filter.
+    expect(screen.getByText('Od: ?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ukloni filter: Od ?' })).toBeInTheDocument();
+  });
+
+  it('also handles JS Date constructor returning Invalid Date (NaN.getTime())', () => {
+    // parseISO('') returns Invalid Date — this used to slip through the
+    // try/catch since no exception is thrown. Now caught via Number.isNaN().
+    renderFilters({ filters: makeFilters({ to: '' }) });
+    // Empty `to` means no chip should render at all (length === 0)
+    expect(screen.queryByText(/Do:/)).toBeNull();
   });
 });

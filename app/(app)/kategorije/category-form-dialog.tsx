@@ -255,7 +255,7 @@ export function CategoryFormDialog({
                   <FormItem>
                     <FormLabel>Naziv</FormLabel>
                     <FormControl>
-                      <Input {...field} className="h-11 min-h-[44px]" autoComplete="off" />
+                      <Input {...field} className="h-11" autoComplete="off" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -271,7 +271,7 @@ export function CategoryFormDialog({
                       <Input
                         {...field}
                         value={field.value ?? ''}
-                        className="h-11 min-h-[44px]"
+                        className="h-11"
                         placeholder="npr. 🛒"
                         maxLength={10}
                       />
@@ -290,7 +290,7 @@ export function CategoryFormDialog({
                       <Input
                         {...field}
                         value={field.value ?? ''}
-                        className="h-11 min-h-[44px] font-mono text-sm"
+                        className="h-11 font-mono text-sm"
                         placeholder="#RRGGBB"
                       />
                     </FormControl>
@@ -332,7 +332,7 @@ export function CategoryFormDialog({
                     <FormControl>
                       <Input
                         {...field}
-                        className="h-11 min-h-[44px]"
+                        className="h-11"
                         autoComplete="off"
                         onBlur={(e) => {
                           field.onBlur();
@@ -356,7 +356,7 @@ export function CategoryFormDialog({
                     <FormControl>
                       <Input
                         {...field}
-                        className="h-11 min-h-[44px] font-mono text-sm"
+                        className="h-11 font-mono text-sm"
                         autoComplete="off"
                         onChange={(e) => {
                           setSlugManual(true);
@@ -383,7 +383,7 @@ export function CategoryFormDialog({
                       disabled={mode === 'edit'}
                     >
                       <FormControl>
-                        <SelectTrigger className="h-11 min-h-[44px]">
+                        <SelectTrigger className="h-11">
                           <SelectValue placeholder="Odaberi" />
                         </SelectTrigger>
                       </FormControl>
@@ -412,7 +412,7 @@ export function CategoryFormDialog({
                       value={field.value ?? '__none__'}
                     >
                       <FormControl>
-                        <SelectTrigger className="h-11 min-h-[44px]">
+                        <SelectTrigger className="h-11">
                           <SelectValue placeholder="Nijedna" />
                         </SelectTrigger>
                       </FormControl>
@@ -436,12 +436,7 @@ export function CategoryFormDialog({
                   <FormItem>
                     <FormLabel>Ikonica (emoji)</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        value={field.value ?? ''}
-                        className="h-11 min-h-[44px]"
-                        maxLength={10}
-                      />
+                      <Input {...field} value={field.value ?? ''} className="h-11" maxLength={10} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -457,7 +452,7 @@ export function CategoryFormDialog({
                       <Input
                         {...field}
                         value={field.value ?? ''}
-                        className="h-11 min-h-[44px] font-mono text-sm"
+                        className="h-11 font-mono text-sm"
                         placeholder="#RRGGBB"
                       />
                     </FormControl>

@@ -39,7 +39,7 @@ export function AccountSelect({
       onValueChange={onValueChange}
       disabled={disabled || accounts.length === 0}
     >
-      <SelectTrigger id={id} className="h-11 min-h-[44px] w-full">
+      <SelectTrigger id={id} className="h-11 w-full">
         <SelectValue
           placeholder={accounts.length === 0 ? 'Nema računa' : 'Odaberi račun'}
           aria-label={current ? `${current.name} (${current.currency})` : undefined}

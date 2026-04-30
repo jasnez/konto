@@ -13,7 +13,7 @@ export function RestoreDefaultCategoriesButton() {
     <Button
       type="button"
       variant="outline"
-      className="h-11 min-h-[44px]"
+      className="h-11"
       disabled={pending}
       onClick={() => {
         start(async () => {

@@ -91,7 +91,7 @@ export function MoneyInput({
   const sizeClass =
     size === 'lg'
       ? 'min-h-12 h-12 text-2xl font-semibold md:min-h-[3rem] md:text-3xl'
-      : 'h-11 min-h-[44px] text-base';
+      : 'h-11 text-base';
 
   const commitBlur = React.useCallback(
     (raw: string) => {
@@ -157,7 +157,7 @@ export function MoneyInput({
       {onCurrencyChange ? (
         <Select value={currency} onValueChange={onCurrencyChange} disabled={disabled}>
           <SelectTrigger
-            className="h-11 w-auto min-h-[44px] min-w-[4.5rem] shrink-0 sm:min-w-[5rem]"
+            className="h-11 w-auto min-w-[4.5rem] shrink-0 sm:min-w-[5rem]"
             aria-label="Valuta"
           >
             <SelectValue />
@@ -172,7 +172,7 @@ export function MoneyInput({
         </Select>
       ) : (
         <span
-          className="flex h-11 min-h-[44px] w-auto min-w-[2.75rem] shrink-0 select-none items-center justify-center rounded-md border border-input bg-muted px-2.5 text-sm text-muted-foreground"
+          className="flex h-11 w-auto min-w-[2.75rem] shrink-0 select-none items-center justify-center rounded-md border border-input bg-muted px-2.5 text-sm text-muted-foreground"
           aria-hidden
         >
           {currency === 'BAM' ? 'KM' : currency}
