@@ -112,7 +112,11 @@ export function TransactionFilters({
             </SheetTrigger>
             <SheetContent
               side="bottom"
-              className="flex max-h-[85vh] flex-col gap-0 rounded-t-2xl p-0"
+              // Full-height takeover on mobile so the long Categories list is
+              // always reachable (was getting cut off in landscape with the
+              // previous `max-h-[85vh]`). Matches Quick-Add sheet pattern.
+              // Auto-height with cap on tablet+ where vertical space allows.
+              className="flex h-[100dvh] max-h-[100dvh] flex-col gap-0 rounded-none p-0 sm:h-auto sm:max-h-[85vh] sm:rounded-t-2xl"
             >
               <SheetHeader className="border-b p-4 text-left sm:text-left">
                 <SheetTitle>Filteri</SheetTitle>
