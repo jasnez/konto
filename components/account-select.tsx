@@ -39,11 +39,15 @@ export function AccountSelect({
       onValueChange={onValueChange}
       disabled={disabled || accounts.length === 0}
     >
-      <SelectTrigger id={id} className="h-11 w-full">
-        <SelectValue
-          placeholder={accounts.length === 0 ? 'Nema računa' : 'Odaberi račun'}
-          aria-label={current ? `${current.name} (${current.currency})` : undefined}
-        />
+      <SelectTrigger
+        id={id}
+        // axe-core flags `role="combobox"` buttons that derive their name from
+        // inner SelectValue content as missing accessible name. Explicit
+        // aria-label on the trigger satisfies WAI-ARIA's combobox naming rule.
+        aria-label={current ? `Račun: ${current.name} (${current.currency})` : 'Račun'}
+        className="h-11 w-full"
+      >
+        <SelectValue placeholder={accounts.length === 0 ? 'Nema računa' : 'Odaberi račun'} />
       </SelectTrigger>
       <SelectContent>
         {accounts.map((account) => (
