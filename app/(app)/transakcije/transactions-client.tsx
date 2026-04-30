@@ -1,21 +1,28 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { format, isThisWeek, isToday, isYesterday, parseISO } from 'date-fns';
 import { bs } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { bulkDeleteTransactions, deleteTransaction } from '@/app/(app)/transakcije/actions';
+import {
+  bulkDeleteTransactions,
+  deleteTransaction,
+  updateTransactionCategory,
+} from '@/app/(app)/transakcije/actions';
 import type { AccountOption } from '@/components/account-select';
 import { cn } from '@/lib/utils';
 import type { CategoryOption } from '@/components/category-select';
+import { CategoryPickerSheet } from '@/components/category-picker-sheet';
 import { QuickAddTrigger } from '@/components/shell/fab';
 import { TransactionFilters } from '@/components/transaction-filters';
 import { TransactionRow } from '@/components/transaction-row';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
+import { useHapticFeedback } from '@/hooks/use-haptic-feedback';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
+import { getTransactionPrimaryLabel } from '@/lib/format/transaction-primary-label';
 import type { TransactionListItem, TransactionsFilters } from './types';
 
 interface TransactionsClientProps {
@@ -85,11 +92,14 @@ export function TransactionsClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const haptic = useHapticFeedback();
   const [searchDraft, setSearchDraft] = useState(filters.search);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pendingDeleteTx, setPendingDeleteTx] = useState<TransactionListItem | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+  const [categorizeTx, setCategorizeTx] = useState<TransactionListItem | null>(null);
+  const [, startCategoryTransition] = useTransition();
   const { pullDistance, handlers: pullHandlers } = usePullToRefresh({
     onRefresh: () => {
       toast.message('Osvježavam transakcije...');
@@ -199,6 +209,32 @@ export function TransactionsClient({
       return;
     }
     toast.error('Brisanje nije uspjelo.', { description: 'Pokušaj ponovo.' });
+  }
+
+  function handleCategorySelect(categoryId: string | null): void {
+    const targetTx = categorizeTx;
+    if (!targetTx) return;
+
+    haptic('tap');
+    setCategorizeTx(null);
+
+    // Optimistic toast — assume success, revert on error. The server action
+    // revalidates `/transakcije` so the row updates with authoritative state.
+    startCategoryTransition(() => {
+      void (async () => {
+        const result = await updateTransactionCategory(targetTx.id, categoryId);
+        if (result.success) {
+          haptic('success');
+          toast.success(categoryId === null ? 'Kategorija uklonjena.' : 'Kategorija promijenjena.');
+          router.refresh();
+          return;
+        }
+        haptic('error');
+        toast.error('Promjena kategorije nije uspjela.', {
+          description: 'Pokušaj ponovo.',
+        });
+      })();
+    });
   }
 
   async function handleBulkDelete() {
@@ -343,6 +379,9 @@ export function TransactionsClient({
                     onRequestDelete={(targetTx) => {
                       setPendingDeleteTx(targetTx);
                     }}
+                    onRequestCategorize={(targetTx) => {
+                      setCategorizeTx(targetTx);
+                    }}
                   />
                 ))}
               </ul>
@@ -409,6 +448,34 @@ export function TransactionsClient({
         title={`Obrisati ${String(selectedIds.size)} transakcija?`}
         description="Sve odabrane transakcije će biti soft obrisane i možeš ih kasnije vratiti."
         onConfirm={handleBulkDelete}
+      />
+
+      <CategoryPickerSheet
+        open={categorizeTx !== null}
+        onOpenChange={(open) => {
+          if (!open) setCategorizeTx(null);
+        }}
+        categories={categories}
+        // Income transactions store positive amounts, expenses negative.
+        // Transfers don't open this sheet (TransactionRow hides the button).
+        kind={
+          categorizeTx !== null && categorizeTx.original_amount_cents > 0 ? 'income' : 'expense'
+        }
+        currentCategoryId={categorizeTx?.category?.id ?? null}
+        onSelect={handleCategorySelect}
+        transactionLabel={
+          categorizeTx
+            ? getTransactionPrimaryLabel({
+                merchant_display_name: categorizeTx.merchant?.display_name,
+                merchant_raw: categorizeTx.merchant_raw,
+                description: categorizeTx.description,
+                is_transfer: categorizeTx.is_transfer,
+                original_amount_cents: categorizeTx.original_amount_cents,
+                account_name: categorizeTx.account?.name ?? null,
+                transfer_counterparty_account_name: categorizeTx.transfer_counterparty_account_name,
+              })
+            : undefined
+        }
       />
     </div>
   );
