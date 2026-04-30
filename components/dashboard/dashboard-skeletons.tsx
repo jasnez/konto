@@ -26,14 +26,17 @@ export function DashboardHeroSkeleton() {
 
 export function DashboardMetricsSkeleton() {
   return (
-    <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <section
+      aria-hidden
+      className="-mx-4 flex snap-x snap-proximity gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-2 md:gap-4 md:overflow-visible md:px-0 md:pb-0"
+    >
       {Array.from({ length: 4 }).map((_, index) => (
-        <Card key={String(index)}>
+        <Card key={String(index)} className="w-44 shrink-0 snap-start md:w-auto">
           <CardHeader className="space-y-2 p-4">
-            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-24" />
           </CardHeader>
           <CardContent className="px-4 pb-4 pt-0">
-            <Skeleton className="h-8 w-36" />
+            <Skeleton className="h-7 w-28 sm:h-8" />
           </CardContent>
         </Card>
       ))}

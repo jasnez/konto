@@ -3,32 +3,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { format, isThisWeek, isToday, isYesterday, parseISO } from 'date-fns';
 import { bs } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, FilterX, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { bulkDeleteTransactions, deleteTransaction } from '@/app/(app)/transakcije/actions';
 import type { AccountOption } from '@/components/account-select';
 import { cn } from '@/lib/utils';
 import type { CategoryOption } from '@/components/category-select';
-import { DatePicker } from '@/components/date-picker';
 import { QuickAddTrigger } from '@/components/shell/fab';
+import { TransactionFilters } from '@/components/transaction-filters';
 import { TransactionRow } from '@/components/transaction-row';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import type { TransactionListItem, TransactionsFilters } from './types';
 
 interface TransactionsClientProps {
@@ -248,107 +234,19 @@ export function TransactionsClient({
         <QuickAddTrigger className="h-11 min-h-[44px] w-full sm:w-auto">+ Dodaj</QuickAddTrigger>
       </div>
 
-      <div className="sticky top-16 z-20 mb-4 rounded-xl border bg-background/95 p-3 backdrop-blur-sm">
-        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-6">
-          <DatePicker
-            value={filters.from}
-            onChange={(value) => {
-              updateUrl({ from: value, page: '1' });
-            }}
-          />
-          <DatePicker
-            value={filters.to}
-            onChange={(value) => {
-              updateUrl({ to: value, page: '1' });
-            }}
-          />
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" className="h-11 min-h-[44px] justify-start">
-                Računi ({filters.accountIds.length || 'svi'})
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64">
-              {accounts.map((account) => (
-                <DropdownMenuCheckboxItem
-                  key={account.id}
-                  checked={filters.accountIds.includes(account.id)}
-                  onCheckedChange={(checked) => {
-                    toggleMultiParam('account', account.id, checked);
-                  }}
-                >
-                  {account.name}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" className="h-11 min-h-[44px] justify-start">
-                Kategorije ({filters.categoryIds.length || 'sve'})
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64">
-              {categories.map((category) => (
-                <DropdownMenuCheckboxItem
-                  key={category.id}
-                  checked={filters.categoryIds.includes(category.id)}
-                  onCheckedChange={(checked) => {
-                    toggleMultiParam('category', category.id, checked);
-                  }}
-                >
-                  {category.icon ?? '📦'} {category.name}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Select
-            value={filters.type.length > 0 ? filters.type : '__all__'}
-            onValueChange={(value) => {
-              updateUrl({ type: value === '__all__' ? null : value, page: '1' });
-            }}
-          >
-            <SelectTrigger className="h-11 min-h-[44px]">
-              <SelectValue placeholder="Tip transakcije" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">Svi tipovi</SelectItem>
-              <SelectItem value="income">Prihod</SelectItem>
-              <SelectItem value="expense">Trošak</SelectItem>
-              <SelectItem value="transfer">Transfer</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={searchDraft}
-              onChange={(event) => {
-                setSearchDraft(event.target.value);
-              }}
-              placeholder="Pretraga..."
-              className="h-11 min-h-[44px] pl-9"
-            />
-          </div>
-        </div>
-
-        {hasActiveFilters ? (
-          <button
-            type="button"
-            className="mt-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-            onClick={() => {
-              setSearchDraft('');
-              router.replace(pathname);
-            }}
-          >
-            <FilterX className="h-4 w-4" aria-hidden />
-            Očisti filtere
-          </button>
-        ) : null}
-      </div>
+      <TransactionFilters
+        filters={filters}
+        accounts={accounts}
+        categories={categories}
+        searchDraft={searchDraft}
+        onSearchDraftChange={setSearchDraft}
+        onUpdate={updateUrl}
+        onToggleMulti={toggleMultiParam}
+        onClearAll={() => {
+          setSearchDraft('');
+          router.replace(pathname);
+        }}
+      />
 
       {pullDistance > 0 ? (
         <div className="mb-2 text-center text-xs text-muted-foreground">
@@ -412,7 +310,7 @@ export function TransactionsClient({
         <ul className="space-y-3">
           {grouped.map((group) => (
             <li key={group.label} className="list-none">
-              <div className="sticky top-[7.5rem] z-10 mb-2 rounded-md bg-background/95 px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground backdrop-blur-sm">
+              <div className="sticky top-[8rem] z-10 mb-2 rounded-md bg-background/95 px-2 py-1 text-[11px] font-medium tracking-wide text-muted-foreground backdrop-blur-sm">
                 {group.label}
               </div>
               <ul className="space-y-2">

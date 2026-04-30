@@ -27,6 +27,7 @@ import { DatePicker } from '@/components/date-picker';
 import { MerchantCombobox } from '@/components/merchant-combobox';
 import { MoneyInput } from '@/components/money-input';
 import { Button } from '@/components/ui/button';
+import { Chip } from '@/components/ui/chip';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import {
   Form,
@@ -39,14 +40,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { CreateTransactionSchema } from '@/lib/schemas/transaction';
@@ -67,6 +61,12 @@ export interface QuickAddTransactionProps {
   accounts: AccountOption[];
   categories: CategoryOption[];
 }
+
+const KIND_OPTIONS: { value: TransactionKind; label: string }[] = [
+  { value: 'expense', label: 'Trošak' },
+  { value: 'income', label: 'Prihod' },
+  { value: 'transfer', label: 'Transfer' },
+];
 
 export function QuickAddTransaction({
   open,
@@ -394,7 +394,7 @@ export function QuickAddTransaction({
         }}
         className="flex min-h-0 flex-1 flex-col gap-4"
       >
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
           <Button asChild type="button" variant="outline" className="h-11 min-h-[44px] w-full">
             <Link
               href="/skeniraj"
@@ -411,7 +411,6 @@ export function QuickAddTransaction({
             name="amount_cents"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Iznos</FormLabel>
                 <FormControl>
                   <MoneyInput
                     inputRef={amountInputRef}
@@ -441,7 +440,7 @@ export function QuickAddTransaction({
 
           {atmMode ? (
             <div
-              className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3"
+              className="space-y-2.5 rounded-lg border border-primary/30 bg-primary/5 p-2.5"
               role="region"
               aria-label="Podizanje s bankomata"
             >
@@ -515,36 +514,40 @@ export function QuickAddTransaction({
                 </Button>
               ) : null}
               <Label>Tip</Label>
-              <Tabs
-                value={kind}
-                onValueChange={(nextValue) => {
-                  const nextKind = nextValue as TransactionKind;
-                  setKind(nextKind);
-                  const currentAmount = form.getValues('amount_cents');
-                  form.setValue('amount_cents', normalizeAmountForKind(currentAmount, nextKind), {
-                    shouldDirty: true,
-                  });
-                  form.setValue('category_id', null, { shouldDirty: true });
-                  // Smart default: when switching to Transfer and there is exactly
-                  // one cash account, pre-fill it as the destination.
-                  if (
-                    nextKind === 'transfer' &&
-                    cashAccount &&
-                    form.getValues('account_id') !== cashAccount.id
-                  ) {
-                    form.setValue('to_account_id', cashAccount.id, { shouldDirty: true });
-                  } else {
-                    form.setValue('to_account_id', undefined, { shouldDirty: true });
-                  }
-                  if (nextKind !== 'expense') setIsInstallment(false);
-                }}
-              >
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="expense">Trošak</TabsTrigger>
-                  <TabsTrigger value="income">Prihod</TabsTrigger>
-                  <TabsTrigger value="transfer">Transfer</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <div role="group" aria-label="Tip transakcije" className="grid grid-cols-3 gap-2">
+                {KIND_OPTIONS.map(({ value, label }) => {
+                  const active = kind === value;
+                  return (
+                    <Chip
+                      key={value}
+                      active={active}
+                      aria-pressed={active}
+                      onClick={() => {
+                        setKind(value);
+                        const currentAmount = form.getValues('amount_cents');
+                        form.setValue(
+                          'amount_cents',
+                          normalizeAmountForKind(currentAmount, value),
+                          { shouldDirty: true },
+                        );
+                        form.setValue('category_id', null, { shouldDirty: true });
+                        if (
+                          value === 'transfer' &&
+                          cashAccount &&
+                          form.getValues('account_id') !== cashAccount.id
+                        ) {
+                          form.setValue('to_account_id', cashAccount.id, { shouldDirty: true });
+                        } else {
+                          form.setValue('to_account_id', undefined, { shouldDirty: true });
+                        }
+                        if (value !== 'expense') setIsInstallment(false);
+                      }}
+                    >
+                      {label}
+                    </Chip>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -822,7 +825,6 @@ export function QuickAddTransaction({
         >
           <SheetHeader className="mb-2 text-left">
             <SheetTitle>Brzi unos</SheetTitle>
-            <SheetDescription>Dodaj transakciju u par poteza.</SheetDescription>
           </SheetHeader>
           {content}
         </SheetContent>

@@ -20,7 +20,7 @@ export default async function KategorijePage() {
 
   if (error) {
     return (
-      <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto w-full max-w-4xl px-4 py-4 sm:px-6 sm:py-6">
         <p className="text-destructive">Ne mogu učitati kategorije. Pokušaj osvježiti stranicu.</p>
       </div>
     );
