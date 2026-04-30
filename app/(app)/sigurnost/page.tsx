@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function SigurnostPage() {
   return (
-    <div className="mx-auto max-w-2xl space-y-10 px-4 py-6 md:px-6 md:py-8">
+    <div className="mx-auto max-w-2xl space-y-8 px-4 py-4 sm:space-y-10 sm:px-6 sm:py-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Sigurnost i privatnost</h1>
         <p className="text-base text-muted-foreground">
@@ -23,7 +23,7 @@ export default function SigurnostPage() {
       </div>
 
       <section id="uvoz-pdf-izvoda" className="scroll-mt-20 space-y-4">
-        <h2 className="text-lg font-semibold tracking-tight">Uvoz PDF izvoda</h2>
+        <h2 className="text-lg font-medium tracking-tight">Uvoz PDF izvoda</h2>
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Kako obrađujemo tvoj PDF</CardTitle>
