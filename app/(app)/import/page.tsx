@@ -118,7 +118,7 @@ export default async function ImportPage() {
   });
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 px-4 py-6 md:px-6">
+    <div className="mx-auto max-w-3xl space-y-6 px-4 py-4 sm:space-y-8 sm:px-6 sm:py-6">
       <div className="space-y-3">
         <div className="space-y-2">
           <h1 className="text-2xl font-bold tracking-tight">Uvezi izvod</h1>
@@ -141,7 +141,7 @@ export default async function ImportPage() {
       <ImportStatementClient accounts={accountOptions} />
 
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Prethodni uvozi</h2>
+        <h2 className="text-lg font-medium">Prethodni uvozi</h2>
         <ImportBatchesTable rows={listRows} />
       </div>
     </div>

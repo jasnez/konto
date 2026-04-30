@@ -19,6 +19,11 @@ const buttonVariants = cva(
       size: {
         default: 'h-10 px-4 py-2',
         sm: 'h-9 rounded-md px-3',
+        // `compact` — minimal-footprint button for inline toolbars and floating
+        // chrome (selection toolbar, sort/filter strips, table-row actions).
+        // Below WCAG 44px tap target on purpose; reserve for desktop-leaning
+        // contexts or pair with a separate larger trigger on mobile.
+        compact: 'h-8 rounded-md px-2.5 text-xs',
         lg: 'h-11 rounded-md px-8',
         icon: 'h-10 w-10',
       },

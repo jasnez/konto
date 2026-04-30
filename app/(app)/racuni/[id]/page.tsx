@@ -76,7 +76,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
       ) : null}
 
       <section aria-labelledby="tx-heading" className="space-y-3">
-        <h3 id="tx-heading" className="text-lg font-semibold">
+        <h3 id="tx-heading" className="text-lg font-medium">
           Transakcije
         </h3>
         {list.length === 0 ? (

@@ -277,18 +277,21 @@ export function TransactionsClient({
       {selectionMode ? (
         <div
           className={cn(
-            'z-40 flex items-center justify-between rounded-xl border bg-background/95 p-3 shadow-md backdrop-blur-sm',
+            // Quieter floating toolbar: rounded-full pill with subtle border,
+            // backdrop blur, and lighter shadow. Compact buttons inside reduce
+            // vertical footprint (~16px less than the previous bordered card).
+            'z-40 flex items-center justify-between gap-2 rounded-full border border-border/50 bg-background/95 px-3 py-1.5 shadow-lg backdrop-blur',
             'md:sticky md:bottom-0 md:mb-3',
             'max-md:fixed max-md:left-3 max-md:right-3 max-md:mb-0',
             'max-md:bottom-[calc(4.75rem+env(safe-area-inset-bottom))]',
           )}
         >
-          <p className="text-sm">{selectedIds.size} odabrano</p>
-          <div className="flex gap-2">
+          <p className="text-xs font-medium">{selectedIds.size} odabrano</p>
+          <div className="flex gap-1.5">
             <Button
               type="button"
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="compact"
               onClick={() => {
                 setSelectedIds(new Set());
               }}
@@ -298,7 +301,7 @@ export function TransactionsClient({
             <Button
               type="button"
               variant="destructive"
-              size="sm"
+              size="compact"
               onClick={() => {
                 setBulkDeleteOpen(true);
               }}

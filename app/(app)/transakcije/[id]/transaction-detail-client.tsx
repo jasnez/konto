@@ -160,7 +160,7 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
       </section>
 
       <section className="space-y-4 rounded-2xl border bg-card p-5">
-        <h2 className="text-lg font-semibold">Detalji</h2>
+        <h2 className="text-lg font-medium">Detalji</h2>
 
         <DetailRow label="Račun" value={tx.account?.name ?? '—'} />
 
@@ -210,7 +210,7 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
       </section>
 
       <section className="space-y-3 rounded-2xl border bg-card p-5">
-        <h2 className="text-lg font-semibold">Akcije</h2>
+        <h2 className="text-lg font-medium">Akcije</h2>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" className="h-11">
             <Link href={`/transakcije/${tx.id}/uredi`}>
@@ -249,7 +249,7 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
 
       {tx.receipt_scan_id ? (
         <section className="rounded-2xl border bg-card p-5">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <h2 className="flex items-center gap-2 text-lg font-medium">
             <ImageIcon className="size-5" aria-hidden />
             Skenirani račun
           </h2>
@@ -276,7 +276,7 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
       ) : null}
 
       <section className="rounded-2xl border bg-card p-5">
-        <h2 className="text-lg font-semibold">Povezano</h2>
+        <h2 className="text-lg font-medium">Povezano</h2>
         <Button asChild variant="link" className="mt-2 h-auto px-0 text-left">
           <Link href={toSearchShortcut(tx.merchant_raw)}>Sve transakcije sa ovim merchant-om</Link>
         </Button>

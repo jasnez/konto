@@ -140,7 +140,7 @@ export default async function ImportBatchPage(props: PageProps) {
 
   if (batchStatus === 'failed') {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
+      <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
         <p className="text-sm text-muted-foreground">
           <Link className="text-primary hover:underline" href="/import">
             ← Natrag na uvoz
@@ -161,7 +161,7 @@ export default async function ImportBatchPage(props: PageProps) {
 
   if (batchStatus === 'uploaded' || batchStatus === 'enqueued' || batchStatus === 'parsing') {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
+      <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
         <p className="text-sm text-muted-foreground">
           <Link className="text-primary hover:underline" href="/import">
             ← Natrag na uvoz
@@ -241,7 +241,7 @@ export default async function ImportBatchPage(props: PageProps) {
 
   if (initialRows.length === 0) {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
+      <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
         <p className="text-sm text-muted-foreground">
           <Link className="text-primary hover:underline" href="/import">
             ← Natrag na uvoz
@@ -264,7 +264,7 @@ export default async function ImportBatchPage(props: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
       <p className="text-sm text-muted-foreground">
         <Link className="text-primary hover:underline" href="/import">
           ← Natrag na uvoz
