@@ -31,12 +31,23 @@ export function AccountCard({ account, selected = false, onToggleSelection }: Ac
   return (
     <Card
       className={cn(
-        'relative overflow-hidden border-2 transition-colors hover:bg-accent/30',
-        !account.color && 'border-border',
+        'relative overflow-hidden border transition-colors hover:bg-accent/30',
         selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
       )}
-      style={account.color ? { borderColor: account.color } : undefined}
     >
+      {/* Color tag rendered as a 4px left stripe instead of a full 2px
+       * border (audit R3). The full-border treatment read as
+       * "selected/highlighted" and competed visually with the actual
+       * `selected` ring; the stripe is a subtle accent that scales when
+       * the user has many color-tagged accounts. */}
+      {account.color ? (
+        <span
+          aria-hidden
+          className="absolute inset-y-0 left-0 w-1"
+          style={{ backgroundColor: account.color }}
+        />
+      ) : null}
+
       {selectionEnabled ? (
         <Checkbox
           checked={selected}
@@ -79,7 +90,6 @@ export function AccountCard({ account, selected = false, onToggleSelection }: Ac
               >
                 {formatMinorUnits(bal, account.currency)}
               </p>
-              <p className="text-xs text-muted-foreground">{account.currency}</p>
               {!account.include_in_net_worth ? (
                 <p className="text-xs text-muted-foreground">Nije u zbrojku na početnoj</p>
               ) : null}
