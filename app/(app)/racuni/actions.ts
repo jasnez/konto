@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import {
   AccountIdParamSchema,
+  BulkDeleteAccountIdsSchema,
   CreateAccountSchema,
   ReorderAccountsSchema,
   UpdateAccountSchema,
@@ -101,6 +102,13 @@ export type DeleteAccountResult =
   | { success: false; error: 'VALIDATION_ERROR'; details: { _root: string[] } }
   | { success: false; error: 'UNAUTHORIZED' }
   | { success: false; error: 'NOT_FOUND' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
+export type BulkDeleteAccountsResult =
+  | { success: true; data: { accountsCount: number; transactionsCount: number } }
+  | { success: false; error: 'VALIDATION_ERROR'; details: { _root: string[] } }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'FORBIDDEN' }
   | { success: false; error: 'DATABASE_ERROR' };
 
 export type ReorderAccountsResult =
@@ -572,6 +580,89 @@ export async function deleteAccount(id: unknown): Promise<DeleteAccountResult> {
   revalidatePath('/racuni');
   revalidatePath(`/racuni/${idParse.data}`);
   return { success: true };
+}
+
+/**
+ * @public
+ * Soft-delete više računa odjednom, plus sve njihove ne-obrisane transakcije.
+ * Razlika u odnosu na single `deleteAccount`: bulk varijanta također
+ * soft-deletuje pripadajuće transakcije (svjesna odluka korisnika).
+ */
+export async function bulkDeleteAccounts(ids: unknown): Promise<BulkDeleteAccountsResult> {
+  const parsed = BulkDeleteAccountIdsSchema.safeParse(ids);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: 'VALIDATION_ERROR',
+      details: { _root: asErrorTree(z.treeifyError(parsed.error)).errors },
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  const accountIds = parsed.data;
+
+  const { data: ownedRows, error: ownedErr } = await supabase
+    .from('accounts')
+    .select('id')
+    .eq('user_id', user.id)
+    .in('id', accountIds)
+    .is('deleted_at', null);
+
+  if (ownedErr) {
+    logSafe('bulk_delete_accounts_select', { userId: user.id, error: ownedErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  if (ownedRows.length !== accountIds.length) {
+    return { success: false, error: 'FORBIDDEN' };
+  }
+
+  const deletedAt = new Date().toISOString();
+
+  const { error: delAccErr, count: accountsCount } = await supabase
+    .from('accounts')
+    .update({ deleted_at: deletedAt }, { count: 'exact' })
+    .eq('user_id', user.id)
+    .in('id', accountIds)
+    .is('deleted_at', null);
+
+  if (delAccErr) {
+    logSafe('bulk_delete_accounts_update', { userId: user.id, error: delAccErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  const { error: delTxErr, count: transactionsCount } = await supabase
+    .from('transactions')
+    .update({ deleted_at: deletedAt }, { count: 'exact' })
+    .eq('user_id', user.id)
+    .in('account_id', accountIds)
+    .is('deleted_at', null);
+
+  if (delTxErr) {
+    logSafe('bulk_delete_accounts_tx_update', { userId: user.id, error: delTxErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidatePath('/racuni');
+  revalidatePath('/pocetna');
+  revalidatePath('/transakcije');
+  for (const id of accountIds) {
+    revalidatePath(`/racuni/${id}`);
+  }
+
+  return {
+    success: true,
+    data: {
+      accountsCount: accountsCount ?? accountIds.length,
+      transactionsCount: transactionsCount ?? 0,
+    },
+  };
 }
 
 export type CreateCashAccountResult =

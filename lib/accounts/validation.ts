@@ -116,4 +116,15 @@ export const ReorderAccountsSchema = z.array(z.uuid(uuidError));
 
 export const AccountIdParamSchema = z.uuid(uuidError);
 
+const MIN_UUID_LIST_SIZE = 1;
+const MAX_BULK_DELETE_SIZE = 500;
+
+export const BulkDeleteAccountIdsSchema = z
+  .array(z.uuid(uuidError))
+  .min(MIN_UUID_LIST_SIZE)
+  .max(MAX_BULK_DELETE_SIZE)
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: 'Duplirani ID-evi nisu dozvoljeni.',
+  });
+
 export { accountTypes, baseCurrencies };
