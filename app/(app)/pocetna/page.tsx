@@ -107,21 +107,54 @@ async function getRecentTransactions(
   }));
 }
 
+/** True when summary tells us the account is brand-new with no activity. */
+function isSummaryEmpty(summary: MonthlySummary): boolean {
+  return (
+    summary.totalBalance === 0n &&
+    summary.totalLiabilities === 0n &&
+    summary.monthIncome === 0n &&
+    summary.monthExpense === 0n
+  );
+}
+
 async function HeroSection({
   summaryPromise,
   baseCurrency,
+  greeting,
+  firstName,
 }: {
   summaryPromise: Promise<MonthlySummary>;
   baseCurrency: string;
+  greeting: string;
+  firstName: string;
 }) {
   const summary = await summaryPromise;
+  // Empty-state copy ("Odlično vrijeme da postaviš bazu…") only makes sense
+  // when the user really has no data yet. Pre-redesign this was gated on
+  // `onboarding_completed_at`, which stayed null even after activity, so the
+  // motivational subtitle kept reappearing on populated dashboards (audit D1).
+  const showMotivation = isSummaryEmpty(summary);
+
   return (
-    <BalanceHero
-      totalBalanceCents={summary.totalBalance}
-      totalLiabilitiesCents={summary.totalLiabilities}
-      baseCurrency={baseCurrency}
-      netChangePercent={summary.netChangePercent}
-    />
+    <div className="space-y-4">
+      <section className="space-y-1">
+        <h2 className="text-headline sm:text-3xl sm:font-semibold">
+          {greeting}, {firstName}
+        </h2>
+        {showMotivation ? (
+          <p className="text-caption text-muted-foreground">
+            Odlično vrijeme da postaviš bazu: dodaj račun ili unesi prvu transakciju.
+          </p>
+        ) : null}
+      </section>
+
+      <BalanceHero
+        totalBalanceCents={summary.totalBalance}
+        totalLiabilitiesCents={summary.totalLiabilities}
+        baseCurrency={baseCurrency}
+        netChangePercent={summary.netChangePercent}
+      />
+    </div>
   );
 }
 
@@ -134,36 +167,21 @@ async function MetricsSection({
 }) {
   const summary = await summaryPromise;
   return (
-    <section
-      aria-label="Mjesečni pregled"
-      className="-mx-4 flex snap-x snap-proximity gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-2 md:gap-4 md:overflow-visible md:px-0 md:pb-0"
-    >
+    <section aria-label="Mjesečni pregled" className="grid grid-cols-2 gap-3 sm:gap-4">
       <MetricCard
         title="Potrošnja"
         amountCents={summary.monthExpense}
         currency={baseCurrency}
         tone="expense"
-        className="w-44 shrink-0 snap-start md:w-auto"
       />
       <MetricCard
         title="Prihodi"
         amountCents={summary.monthIncome}
         currency={baseCurrency}
         tone="income"
-        className="w-44 shrink-0 snap-start md:w-auto"
       />
-      <MetricCard
-        title="Sačuvano"
-        amountCents={summary.monthNet}
-        currency={baseCurrency}
-        className="w-44 shrink-0 snap-start md:w-auto"
-      />
-      <MetricCard
-        title="Dnevno"
-        amountCents={summary.avgDailySpend}
-        currency={baseCurrency}
-        className="w-44 shrink-0 snap-start md:w-auto"
-      />
+      <MetricCard title="Sačuvano" amountCents={summary.monthNet} currency={baseCurrency} />
+      <MetricCard title="Dnevno" amountCents={summary.avgDailySpend} currency={baseCurrency} />
     </section>
   );
 }
@@ -196,7 +214,6 @@ export default async function PocetnaPage() {
   const baseCurrency = profile?.base_currency ?? 'BAM';
   const firstName = getFirstName(profile?.display_name ?? null, user.email);
   const greeting = getGreetingPart(safeIanaTimeZone(profile?.timezone));
-  const showMotivation = !profile?.onboarding_completed_at;
 
   const summaryPromise = getMonthlySummary(
     supabase,
@@ -215,19 +232,13 @@ export default async function PocetnaPage() {
         <DeletionCanceledToast />
       </Suspense>
 
-      <section className="space-y-1">
-        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-          {greeting}, {firstName}
-        </h2>
-        {showMotivation ? (
-          <p className="text-xs text-muted-foreground sm:text-sm">
-            Odlično vrijeme da postaviš bazu: dodaj račun ili unesi prvu transakciju.
-          </p>
-        ) : null}
-      </section>
-
       <Suspense fallback={<DashboardHeroSkeleton />}>
-        <HeroSection summaryPromise={summaryPromise} baseCurrency={baseCurrency} />
+        <HeroSection
+          summaryPromise={summaryPromise}
+          baseCurrency={baseCurrency}
+          greeting={greeting}
+          firstName={firstName}
+        />
       </Suspense>
 
       <Suspense fallback={<DashboardMetricsSkeleton />}>

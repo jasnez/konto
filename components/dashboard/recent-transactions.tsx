@@ -35,9 +35,9 @@ export function RecentTransactions({ items }: RecentTransactionsProps) {
           <ArrowRight className="h-4 w-4" aria-hidden />
         </Link>
       </CardHeader>
-      <CardContent className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
+      <CardContent className="p-0 sm:p-0">
         {items.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-6 text-center">
+          <div className="m-4 flex flex-col items-center gap-2 rounded-xl border border-dashed p-6 text-center sm:m-6">
             <span className="text-3xl" aria-hidden>
               💸
             </span>
@@ -46,12 +46,15 @@ export function RecentTransactions({ items }: RecentTransactionsProps) {
             </p>
           </div>
         ) : (
-          <ul className="space-y-2">
+          // List-style rows separated by `divide-y` instead of per-row borders.
+          // Premium feel: flatter, less chrome, the row clicked area still has
+          // a clear hover state.
+          <ul className="divide-y">
             {items.map((item) => (
               <li key={item.id}>
                 <Link
                   href={`/transakcije/${item.id}`}
-                  className="flex min-h-16 items-center justify-between gap-3 rounded-xl border px-3 py-3 transition-colors hover:bg-accent/40"
+                  className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-accent/40 sm:px-6"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{item.merchantLabel}</p>
