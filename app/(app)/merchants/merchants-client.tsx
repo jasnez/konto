@@ -71,7 +71,7 @@ export function MerchantsClient({
         <h2 className="text-2xl font-semibold tracking-tight">Prodavači</h2>
         <Button type="button" className="h-11 w-full sm:w-auto" onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" aria-hidden />
-          Dodaj merchant
+          Dodaj prodavača
         </Button>
       </div>
 
@@ -86,7 +86,7 @@ export function MerchantsClient({
             kategorizirati.
           </p>
           <Button type="button" className="min-h-[44px]" onClick={openCreate}>
-            Dodaj merchant
+            Dodaj prodavača
           </Button>
         </div>
       ) : (
@@ -105,10 +105,14 @@ export function MerchantsClient({
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{m.display_name}</p>
-                <p className="text-muted-foreground truncate text-xs">
-                  {m.canonical_name}
-                  {m.category_name ? ` · ${m.category_name}` : ''}
-                </p>
+                {/* Subtitle previously echoed `canonical_name` (a lower-cased
+                 * slug of `display_name`) before the optional category. The
+                 * canonical was the same word twice on the screen — drop it
+                 * and show only the category, which is the actually useful
+                 * metadata (audit N3). */}
+                {m.category_name ? (
+                  <p className="text-muted-foreground truncate text-xs">{m.category_name}</p>
+                ) : null}
               </div>
               <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
                 {m.transaction_count} tx

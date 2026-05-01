@@ -121,9 +121,10 @@ function SortableRow({
           )}
         </span>
         <span className="min-w-0 flex-1 truncate font-medium">{cat.name}</span>
-        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-          {cat.sort_order}
-        </span>
+        {/* Sort_order is an internal display ordering integer; it has no
+         * meaning to the user. Was previously rendered next to each row
+         * (audit N2) — removed. The drag-handle on the left already covers
+         * the reorder use case for users who want to change order. */}
       </button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
