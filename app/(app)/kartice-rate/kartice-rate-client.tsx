@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { bs } from 'date-fns/locale';
-import { CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, Plus, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { cancelInstallmentPlan, markOccurrencePaid } from './actions';
 import { formatMoney } from '@/lib/format/format-money';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { Progress } from '@/components/ui/progress';
+import { useUiStore } from '@/stores/ui';
 
 export interface OccurrenceRow {
   id: string;
@@ -188,6 +189,25 @@ function PlanCard({ plan, onChanged }: { plan: PlanRow; onChanged: () => Promise
   );
 }
 
+function EmptyState() {
+  const openQuickAdd = useUiStore((s) => s.openQuickAdd);
+  return (
+    <div className="flex min-h-[35vh] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed p-8 text-center">
+      <span className="text-4xl" aria-hidden>
+        💳
+      </span>
+      <p className="max-w-sm text-base font-medium">Nema aktivnih planova na rate.</p>
+      <p className="max-w-sm text-sm text-muted-foreground">
+        Odaberi kreditnu karticu u brzom unosu i uključi &ldquo;Na rate&rdquo;.
+      </p>
+      <Button onClick={openQuickAdd} className="mt-2 h-11">
+        <Plus className="h-4 w-4" />
+        Otvori brzi unos
+      </Button>
+    </div>
+  );
+}
+
 export function KarticeRateClient({
   plans: initialPlans,
   onRefresh,
@@ -196,17 +216,7 @@ export function KarticeRateClient({
   onRefresh: () => Promise<unknown>;
 }) {
   if (initialPlans.length === 0) {
-    return (
-      <div className="flex min-h-[35vh] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed p-8 text-center">
-        <span className="text-4xl" aria-hidden>
-          💳
-        </span>
-        <p className="max-w-sm text-base font-medium">Nema aktivnih planova na rate.</p>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          Odaberi kreditnu karticu u brzom unosu i uključi &ldquo;Na rate&rdquo;.
-        </p>
-      </div>
-    );
+    return <EmptyState />;
   }
 
   return (

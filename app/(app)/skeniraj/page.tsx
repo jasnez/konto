@@ -67,7 +67,7 @@ export default async function SkenirajPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Skeniraj račun</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Uslikaj ili uploaduj sliku fiskalnog računa — AI će automatski pročitati iznos, datum i
+          Uslikaj ili učitaj sliku fiskalnog računa — AI će automatski pročitati iznos, datum i
           prodavca pa samo potvrdi.
         </p>
       </div>

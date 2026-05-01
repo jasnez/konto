@@ -15,15 +15,18 @@ interface DatePickerProps {
 }
 
 function toDate(value: string): Date {
+  // Local midnight, NOT UTC — pairing with toIsoDate avoids timezone-shift bugs
+  // where clicking April 15 was stored as April 14 (Date.UTC + toISOString combo).
   const [yearText, monthText, dayText] = value.split('-');
   const year = Number(yearText);
   const month = Number(monthText);
   const day = Number(dayText);
-  return new Date(Date.UTC(year, month - 1, day));
+  return new Date(year, month - 1, day);
 }
 
 function toIsoDate(value: Date): string {
-  return value.toISOString().slice(0, 10);
+  // Format using local timezone components, not toISOString() (which converts to UTC).
+  return format(value, 'yyyy-MM-dd');
 }
 
 /**

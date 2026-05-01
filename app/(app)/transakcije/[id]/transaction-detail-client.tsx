@@ -59,7 +59,22 @@ function formatDateLabel(isoDate: string): string {
 }
 
 function formatDateTimeLabel(isoDateTime: string): string {
-  return format(new Date(isoDateTime), 'd. MMM yyyy. u HH:mm', { locale: bs });
+  return format(new Date(isoDateTime), "d. MMM yyyy. 'u' HH:mm", { locale: bs });
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  manual: 'Ručno',
+  quick_add: 'Brzi unos',
+  import_pdf: 'Iz PDF izvoda',
+  import_csv: 'Iz CSV-a',
+  import_xlsx: 'Iz Excel-a',
+  voice: 'Glasovni unos',
+  recurring: 'Pretplata',
+  split: 'Split',
+};
+
+function formatSourceLabel(source: string): string {
+  return SOURCE_LABELS[source] ?? source;
 }
 
 function toSearchShortcut(value: string | null): string {
@@ -204,7 +219,7 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
           />
         ) : null}
 
-        <DetailRow label="Source" value={tx.source} />
+        <DetailRow label="Izvor" value={formatSourceLabel(tx.source)} />
         <DetailRow label="Kreirano" value={formatDateTimeLabel(tx.created_at)} />
         <DetailRow label="Zadnji edit" value={formatDateTimeLabel(tx.updated_at)} />
       </section>
@@ -220,18 +235,18 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
           </Button>
           <Button type="button" variant="outline" className="h-11" disabled>
             <GitBranchPlus className="h-4 w-4" />
-            Split (Faza 3+)
+            Podijeli (uskoro)
           </Button>
           <Button
             type="button"
             variant="outline"
             className="h-11"
             onClick={() => {
-              toast.message('Mark as transfer dolazi u Fazi 3+.');
+              toast.message('Ova akcija dolazi uskoro.');
             }}
           >
             <Repeat className="h-4 w-4" />
-            Mark as transfer
+            Označi kao transfer
           </Button>
           <Button
             type="button"
@@ -278,7 +293,7 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
       <section className="rounded-2xl border bg-card p-5">
         <h2 className="text-lg font-medium">Povezano</h2>
         <Button asChild variant="link" className="mt-2 h-auto px-0 text-left">
-          <Link href={toSearchShortcut(tx.merchant_raw)}>Sve transakcije sa ovim merchant-om</Link>
+          <Link href={toSearchShortcut(tx.merchant_raw)}>Sve transakcije ovog prodavača</Link>
         </Button>
       </section>
 

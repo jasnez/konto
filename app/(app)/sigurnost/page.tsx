@@ -14,11 +14,7 @@ export default function SigurnostPage() {
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Sigurnost i privatnost</h1>
         <p className="text-base text-muted-foreground">
-          Sažetak onoga što u Fazi 2 trebaš znati. Proširena pravila za developere: u repou pogledaj
-          <code className="mx-1 rounded bg-muted px-1.5 py-0.5 text-sm">
-            docs/02-security-privacy.md
-          </code>
-          .
+          Sažetak onoga što trebaš znati o tome kako Konto čuva i obrađuje tvoje podatke.
         </p>
       </div>
 

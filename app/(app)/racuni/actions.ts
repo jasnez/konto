@@ -118,7 +118,13 @@ function centsToDbInt(c: bigint): number {
 }
 
 function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
+  // Local-date format; toISOString would shift to UTC and return prior day for
+  // users in negative-offset timezones around midnight.
+  const now = new Date();
+  const y = String(now.getFullYear());
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 const ReconcileCashAccountSchema = z.object({
