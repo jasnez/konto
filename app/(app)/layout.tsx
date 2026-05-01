@@ -78,6 +78,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AuthSessionListener />
       <QuickAddHotkeys />
       <KeyboardShortcutsDialog />
+      {/* Triggers Next.js font preload of JetBrains Mono for amount inputs */}
+      <span className="sr-only font-mono" aria-hidden>
+        0
+      </span>
       <div className="flex min-h-screen">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
