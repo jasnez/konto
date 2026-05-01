@@ -12,26 +12,26 @@ export function DashboardGreetingSkeleton() {
 
 export function DashboardHeroSkeleton() {
   return (
-    <Card>
-      <CardHeader className="space-y-3 p-4 sm:p-6">
-        <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-10 w-64" />
-      </CardHeader>
-      <CardContent className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
-        <Skeleton className="h-6 w-44" />
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <DashboardGreetingSkeleton />
+      <Card>
+        <CardHeader className="space-y-3 p-4 sm:p-6">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-12 w-72 sm:h-14" />
+        </CardHeader>
+        <CardContent className="space-y-2 px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
+          <Skeleton className="h-5 w-44" />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
 export function DashboardMetricsSkeleton() {
   return (
-    <section
-      aria-hidden
-      className="-mx-4 flex snap-x snap-proximity gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-2 md:gap-4 md:overflow-visible md:px-0 md:pb-0"
-    >
+    <section aria-hidden className="grid grid-cols-2 gap-3 sm:gap-4">
       {Array.from({ length: 4 }).map((_, index) => (
-        <Card key={String(index)} className="w-44 shrink-0 snap-start md:w-auto">
+        <Card key={String(index)}>
           <CardHeader className="space-y-2 p-4">
             <Skeleton className="h-4 w-24" />
           </CardHeader>
@@ -75,7 +75,6 @@ export function DashboardTrendSkeleton() {
 export function DashboardPageSkeleton() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
-      <DashboardGreetingSkeleton />
       <DashboardHeroSkeleton />
       <DashboardMetricsSkeleton />
       <DashboardRecentTransactionsSkeleton />
