@@ -27,10 +27,12 @@ interface MoneyProps {
   className?: string;
 }
 
+// Use semantic tokens (defined in app/globals.css :root + .dark) so light/dark
+// saturation lives in the design system, not in component code.
 const TONE_CLASS: Record<Exclude<MoneyTone, 'auto' | 'default'>, string> = {
-  income: 'text-green-600 dark:text-green-400',
-  expense: 'text-red-600 dark:text-red-400',
-  transfer: 'text-blue-600 dark:text-blue-400',
+  income: 'text-income',
+  expense: 'text-expense',
+  transfer: 'text-transfer',
   neutral: 'text-muted-foreground',
 };
 
