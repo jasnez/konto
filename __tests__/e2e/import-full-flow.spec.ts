@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
+import { format, subDays } from 'date-fns';
 import {
   cleanupTestUser,
   e2eDeleteImportBatchById,
@@ -33,6 +34,15 @@ test('F2: cijeli import flow @slow', async ({ page }, testInfo) => {
 
   const pdfPath = join(process.cwd(), 'tests', 'fixtures', 'pdfs', 'raiffeisen-sample.pdf');
 
+  // Dates are dynamic so the test stays month-rollover-safe. The
+  // /transakcije page applies a default current-month filter; STAVKA_OSTAJE
+  // must fall inside that window to be asserted as visible after import.
+  // STAVKA_ISKLJUCENA never lands on /transakcije (we uncheck it before
+  // confirming), so its date only needs to be earlier than STAVKA_OSTAJE
+  // for the review table's date-desc ordering.
+  const ostajeDate = format(new Date(), 'yyyy-MM-dd');
+  const iskljucenaDate = format(subDays(new Date(), 10), 'yyyy-MM-dd');
+
   let batchIdForCleanup: string | null = null;
 
   await page.route('**/api/imports/*/parse', async (route, request) => {
@@ -54,13 +64,13 @@ test('F2: cijeli import flow @slow', async ({ page }, testInfo) => {
       userId: session.userId,
       transactions: [
         {
-          transaction_date: '2026-04-20',
+          transaction_date: ostajeDate,
           amount_minor: -10_000,
           currency: 'BAM',
           raw_description: STAVKA_OSTAJE,
         },
         {
-          transaction_date: '2026-04-10',
+          transaction_date: iskljucenaDate,
           amount_minor: -5_000,
           currency: 'BAM',
           raw_description: STAVKA_ISKLJUCENA,
