@@ -64,7 +64,7 @@ const faqBlocks = [
     title: 'Koje banke podržavamo?',
     body: (
       <p className="text-sm leading-relaxed text-muted-foreground">
-        U Fazi 2 ne nametamo zatvorenu listu banki: pokušavamo parsirati standardne redove
+        Trenutno ne nametamo zatvorenu listu banki: pokušavamo parsirati standardne redove
         transakcija s izvoda na bosanskom/hrvatskom/srpskom tržištu. Rezultat ovisi o tome jesu li
         podaci u PDF-u strojno čitljivi (tekst) i jasno strukturirani. Kako produkt sazrijeva,
         nadograđujemo primjere i učenje. Ako nešto ne prođe, javi kroz povrat (kad bude u

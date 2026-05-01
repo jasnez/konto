@@ -349,7 +349,23 @@ export function TransactionsClient({
               ? 'Pokušaj smanjiti filtere ili ih očistiti.'
               : 'Koristi brzi unos (ili + Dodaj) da dodaš prvu — pojaviće se ovdje.'}
           </p>
-          {hasActiveFilters ? null : (
+          {hasActiveFilters ? (
+            // The "no matches for filters" branch needs an explicit way out.
+            // Without it, the user has to scroll back up to the filter strip
+            // and click each chip's X. Mirrors the /racuni filter empty state
+            // (audit F4 polish).
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full max-w-xs"
+              onClick={() => {
+                setSearchDraft('');
+                router.replace(pathname);
+              }}
+            >
+              Očisti filtere
+            </Button>
+          ) : (
             <QuickAddTrigger className="h-11 w-full max-w-xs" variant="default" size="default">
               Otvori brzi unos
             </QuickAddTrigger>

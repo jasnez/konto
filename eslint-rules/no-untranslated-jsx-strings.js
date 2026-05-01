@@ -35,7 +35,10 @@ const BANNED_PATTERNS = [
   { regex: /\bMark\s+as\s+transfer\b/i, hint: 'Koristi "Označi kao transfer".' },
   { regex: /\bmerchant-om\b/i, hint: 'Koristi "ovog prodavača" ili "prodavača".' },
   { regex: /\buploaduj\b/i, hint: 'Koristi "učitaj".' },
-  { regex: /Faza\s+\d/i, hint: 'Internal phase markers ne smiju biti u user-facing tekstu.' },
+  // Catch every Bosnian/Croatian declension of "Faza" (Faza/Fazu/Faze/Fazi…)
+  // followed by a digit. Phase F4 caught "u Fazi 3" leaking past the original
+  // narrower rule that only matched the nominative form.
+  { regex: /\bFaz[a-z]*\s+\d/i, hint: 'Internal phase markers ne smiju biti u user-facing tekstu.' },
   { regex: /\bSplit\s*\(/i, hint: 'Koristi "Podijeli" za korisnički vidljiv tekst.' },
 ];
 
