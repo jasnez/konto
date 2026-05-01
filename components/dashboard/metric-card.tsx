@@ -18,7 +18,14 @@ export function MetricCard({
   className,
 }: MetricCardProps) {
   return (
-    <Card className={cn('h-full', className)}>
+    <Card
+      className={cn(
+        'h-full transition-all duration-fast ease-out',
+        // Same hover-lift idiom as AccountCard — desktop-only, subtle.
+        'md:hover:-translate-y-0.5 md:hover:shadow-md',
+        className,
+      )}
+    >
       <CardHeader className="space-y-1 p-4">
         <CardTitle className="text-sm font-medium md:text-base">{title}</CardTitle>
       </CardHeader>
