@@ -136,6 +136,17 @@ export type BulkDeleteTransactionsResult =
   | { success: false; error: 'FORBIDDEN' }
   | { success: false; error: 'DATABASE_ERROR' };
 
+export type ConvertToTransferResult =
+  | { success: true; data: { fromId: string; toId: string } }
+  | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'FORBIDDEN' }
+  | { success: false; error: 'NOT_FOUND' }
+  | { success: false; error: 'ALREADY_TRANSFER' }
+  | { success: false; error: 'SAME_ACCOUNT' }
+  | { success: false; error: 'CROSS_CURRENCY_NOT_SUPPORTED' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
 function buildValidationDetails(error: z.ZodError): ValidationDetails {
   return { _root: error.issues.map((issue) => issue.message) };
 }
@@ -888,4 +899,101 @@ export async function bulkDeleteTransactions(ids: unknown): Promise<BulkDeleteTr
 
   revalidateTransactionViews(allAccountIds);
   return { success: true, data: { count: txIds.length } };
+}
+
+const ConvertToTransferSchema = z.object({
+  transaction_id: z.uuid(),
+  counterparty_account_id: z.uuid(),
+});
+
+interface ConvertRpcResult {
+  from_id: string;
+  to_id: string;
+  deleted_id: string;
+}
+
+/**
+ * @public
+ * Convert a non-transfer transaction (Income or Expense) into a Transfer pair
+ * between the original account and a chosen counterparty. Atomic: the
+ * underlying RPC soft-deletes the original row and inserts the two paired
+ * legs in one transaction. Direction is derived from the original amount sign
+ * (income → counterparty is the FROM, expense → counterparty is the TO), so
+ * the caller never specifies it explicitly.
+ *
+ * Same-currency only in v1. Cross-currency surfaces an explicit error so the
+ * UI can fall back to the regular transfer-creation flow where the user
+ * enters the converted amount themselves.
+ *
+ * Audit item: N15.
+ */
+export async function convertTransactionToTransfer(
+  input: unknown,
+): Promise<ConvertToTransferResult> {
+  const parsed = ConvertToTransferSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: 'VALIDATION_ERROR',
+      details: buildValidationDetails(parsed.error),
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  const { data, error } = await (
+    supabase.rpc as (fn: string, args: Record<string, unknown>) => ReturnType<typeof supabase.rpc>
+  )('convert_transaction_to_transfer', {
+    p_transaction_id: parsed.data.transaction_id,
+    p_counterparty_account_id: parsed.data.counterparty_account_id,
+  });
+
+  if (error) {
+    // The RPC raises specific exception messages we surface back unchanged so
+    // the caller can render a precise toast. Anything else collapses to a
+    // generic database error.
+    const message = error.message || '';
+    if (message.includes('UNAUTHORIZED')) {
+      return { success: false, error: 'UNAUTHORIZED' };
+    }
+    if (message.includes('NOT_FOUND')) {
+      return { success: false, error: 'NOT_FOUND' };
+    }
+    if (message.includes('ALREADY_TRANSFER')) {
+      return { success: false, error: 'ALREADY_TRANSFER' };
+    }
+    if (message.includes('SAME_ACCOUNT')) {
+      return { success: false, error: 'SAME_ACCOUNT' };
+    }
+    if (message.includes('CROSS_CURRENCY_NOT_SUPPORTED')) {
+      return { success: false, error: 'CROSS_CURRENCY_NOT_SUPPORTED' };
+    }
+    if (message.includes('FORBIDDEN')) {
+      return { success: false, error: 'FORBIDDEN' };
+    }
+    logSafe('convert_transaction_to_transfer_rpc_error', {
+      userId: user.id,
+      error: error.message,
+    });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  const result = data as unknown as ConvertRpcResult;
+  // The two new transfer rows are on the original + counterparty account, so
+  // both account views need to refresh.
+  revalidateTransactionViews([parsed.data.counterparty_account_id]);
+  revalidatePath(`/transakcije/${parsed.data.transaction_id}`);
+  revalidatePath(`/transakcije/${result.from_id}`);
+  revalidatePath(`/transakcije/${result.to_id}`);
+
+  return {
+    success: true,
+    data: { fromId: result.from_id, toId: result.to_id },
+  };
 }
