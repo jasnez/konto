@@ -58,6 +58,17 @@ export function AccountCard({
   const isDebtBalanceNegative = isDebtAccount && bal < 0;
   const selectionEnabled = typeof onToggleSelection === 'function';
 
+  // Audit R5: type-aware badge that labels Pasiva accounts at a glance.
+  // The grouping in PR #74 separated debt to its own section, but cards
+  // inside still looked identical to current/savings — easy to miss when
+  // a single account scrolls past a section header. The label here is the
+  // primary visual signal; icon tint + balance color are reinforcement.
+  const debtBadgeLabel: string | null = isDebtAccount
+    ? account.type === 'credit_card'
+      ? 'Kartica'
+      : 'Kredit'
+    : null;
+
   return (
     <Card
       className={cn(
@@ -105,13 +116,23 @@ export function AccountCard({
         <CardContent className="p-0 pb-4">
           <div className="flex items-start gap-3">
             <span
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-muted text-2xl"
+              className={cn(
+                'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl',
+                isDebtAccount ? 'bg-destructive/10' : 'bg-muted',
+              )}
               aria-hidden
             >
               {account.icon ?? '🏦'}
             </span>
             <div className="min-w-0 flex-1 space-y-1">
-              <p className="truncate text-base font-semibold leading-tight">{account.name}</p>
+              <div className="flex min-w-0 items-center gap-2">
+                <p className="truncate text-base font-semibold leading-tight">{account.name}</p>
+                {debtBadgeLabel ? (
+                  <span className="shrink-0 rounded-full border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
+                    {debtBadgeLabel}
+                  </span>
+                ) : null}
+              </div>
               {account.institution ? (
                 <p className="truncate text-sm text-muted-foreground">{account.institution}</p>
               ) : null}
@@ -132,7 +153,12 @@ export function AccountCard({
                   {formatRelativeTransactionDate(lastTransaction.transactionDate)}
                 </p>
               ) : null}
-              {!account.include_in_net_worth ? (
+              {/* "Nije u zbrojku" warning is for Aktiva accounts the user
+               * has explicitly flagged off — debt accounts already carry
+               * the Kredit/Kartica badge and feed the Pasiva total on the
+               * dashboard, so the warning is redundant (and misleading)
+               * for them. */}
+              {!account.include_in_net_worth && !isDebtAccount ? (
                 <p className="text-xs text-muted-foreground">Nije u zbrojku na početnoj</p>
               ) : null}
             </div>
