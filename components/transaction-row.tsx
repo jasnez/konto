@@ -84,10 +84,12 @@ export function TransactionRow({
     <li className="relative list-none overflow-hidden rounded-xl bg-card">
       <div
         className={cn(
-          'absolute inset-y-0 right-0 z-20 flex items-center justify-end gap-1 pr-2 md:hidden',
+          'absolute inset-y-0 right-0 z-20 flex items-center justify-end gap-1 pr-2 transition-opacity duration-150 md:hidden',
           drawerWidthClass,
-          // Kad nije otkriveno swipom, gumbi su ispod retka; kad jeste, moraju primiti klik.
-          swipeOffset < -20 ? 'pointer-events-auto' : 'pointer-events-none',
+          // Kad swipe nije aktivan, action drawer mora biti i nevidljiv
+          // (`opacity-0`) i bez pointer eventa — inače gumbi prekrivaju
+          // iznos s desne strane retka i čine ga nečitljivim (audit B6).
+          swipeOffset < -20 ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
         )}
       >
         {categorizeHandler ? (
