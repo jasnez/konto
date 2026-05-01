@@ -8,9 +8,21 @@ import { bs } from 'date-fns/locale';
 import { ArrowLeft, GitBranchPlus, ImageIcon, Pencil, Repeat, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getSignedReceiptUrl } from '@/app/(app)/skeniraj/actions';
-import { deleteTransaction, updateTransaction } from '@/app/(app)/transakcije/actions';
+import {
+  convertTransactionToTransfer,
+  deleteTransaction,
+  updateTransaction,
+} from '@/app/(app)/transakcije/actions';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -25,6 +37,12 @@ interface CategoryOption {
   id: string;
   name: string;
   icon: string | null;
+}
+
+interface AccountOption {
+  id: string;
+  name: string;
+  currency: string;
 }
 
 interface TransactionDetailView {
@@ -52,6 +70,7 @@ interface TransactionDetailView {
 interface TransactionDetailClientProps {
   tx: TransactionDetailView;
   categories: CategoryOption[];
+  accounts: AccountOption[];
 }
 
 function formatDateLabel(isoDate: string): string {
@@ -82,13 +101,35 @@ function toSearchShortcut(value: string | null): string {
   return `/transakcije?search=${encodeURIComponent(value)}`;
 }
 
-export function TransactionDetailClient({ tx, categories }: TransactionDetailClientProps) {
+export function TransactionDetailClient({
+  tx,
+  categories,
+  accounts,
+}: TransactionDetailClientProps) {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [busyCategory, setBusyCategory] = React.useState(false);
   const [categoryId, setCategoryId] = React.useState<string | null>(tx.category?.id ?? null);
   const [receiptUrl, setReceiptUrl] = React.useState<string | null>(null);
   const [receiptLoading, setReceiptLoading] = React.useState(false);
+  const [convertOpen, setConvertOpen] = React.useState(false);
+  const [convertCounterpartyId, setConvertCounterpartyId] = React.useState<string | null>(null);
+  const [converting, setConverting] = React.useState(false);
+
+  // Counterparty candidates: every other account in the same currency. The
+  // RPC supports same-currency only in v1; the client-side filter keeps the
+  // dialog from offering options that would just produce a clear error.
+  const counterpartyCandidates = React.useMemo(() => {
+    return accounts.filter(
+      (a) =>
+        a.id !== tx.account?.id && a.currency.toUpperCase() === tx.original_currency.toUpperCase(),
+    );
+  }, [accounts, tx.account?.id, tx.original_currency]);
+
+  const isIncomeTx = tx.original_amount_cents > 0;
+  const convertDirectionPrompt = isIncomeTx
+    ? 'Iz kojeg računa je novac došao?'
+    : 'Na koji račun je novac otišao?';
 
   React.useEffect(() => {
     const state = { cancelled: false };
@@ -139,6 +180,49 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
     }
 
     toast.error('Brisanje nije uspjelo.', { description: 'Pokušaj ponovo.' });
+  }
+
+  async function handleConvertToTransfer() {
+    if (!convertCounterpartyId) return;
+    setConverting(true);
+    const result = await convertTransactionToTransfer({
+      transaction_id: tx.id,
+      counterparty_account_id: convertCounterpartyId,
+    });
+    setConverting(false);
+
+    if (result.success) {
+      setConvertOpen(false);
+      toast.success('Transakcija je pretvorena u transfer.');
+      // The original tx is soft-deleted; route the user to the FROM-leg of
+      // the new transfer pair so they can see the result rather than a 404.
+      router.push(`/transakcije/${result.data.fromId}`);
+      router.refresh();
+      return;
+    }
+
+    if (result.error === 'CROSS_CURRENCY_NOT_SUPPORTED') {
+      toast.error('Različite valute nisu podržane.', {
+        description:
+          'Pretvaranje radi samo između računa u istoj valuti. Ručno obriši ovu transakciju i napravi transfer iz Brzog unosa.',
+      });
+      return;
+    }
+    if (result.error === 'SAME_ACCOUNT') {
+      toast.error('Odaberi drugi račun.');
+      return;
+    }
+    if (result.error === 'ALREADY_TRANSFER') {
+      toast.error('Transakcija je već transfer.');
+      return;
+    }
+    if (result.error === 'NOT_FOUND') {
+      toast.error('Transakcija više ne postoji.');
+      return;
+    }
+    toast.error('Pretvaranje u transfer nije uspjelo.', {
+      description: 'Pokušaj ponovo.',
+    });
   }
 
   const originalAmount = formatMoney(
@@ -260,8 +344,17 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
             type="button"
             variant="outline"
             className="h-11"
+            disabled={tx.is_transfer || counterpartyCandidates.length === 0}
+            title={
+              tx.is_transfer
+                ? 'Već je transfer.'
+                : counterpartyCandidates.length === 0
+                  ? `Nemaš drugog računa u ${tx.original_currency} valuti.`
+                  : undefined
+            }
             onClick={() => {
-              toast.message('Ova akcija dolazi uskoro.');
+              setConvertCounterpartyId(counterpartyCandidates[0]?.id ?? null);
+              setConvertOpen(true);
             }}
           >
             <Repeat className="h-4 w-4" />
@@ -323,6 +416,64 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
         description="Ova akcija radi soft delete. Možeš je kasnije vratiti kroz restore."
         onConfirm={handleDelete}
       />
+
+      <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Označi kao transfer</DialogTitle>
+            <DialogDescription>
+              {convertDirectionPrompt} Pretvorit će ovu transakciju u par između tvojih računa.
+              Izvorna stavka biće obrisana (ali povratljiva).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <p className="text-sm font-medium">Drugi račun</p>
+            <Select
+              value={convertCounterpartyId ?? ''}
+              onValueChange={(value) => {
+                setConvertCounterpartyId(value);
+              }}
+              disabled={converting}
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Odaberi račun…" />
+              </SelectTrigger>
+              <SelectContent>
+                {counterpartyCandidates.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.name} ({account.currency})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Pokazani su samo računi u istoj valuti ({tx.original_currency}). Za različite valute
+              ručno obriši ovu transakciju i napravi transfer iz Brzog unosa.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setConvertOpen(false);
+              }}
+              disabled={converting}
+            >
+              Otkaži
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                void handleConvertToTransfer();
+              }}
+              disabled={!convertCounterpartyId || converting}
+            >
+              {converting ? 'Pretvaranje…' : 'Pretvori'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

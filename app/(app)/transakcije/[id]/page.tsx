@@ -17,27 +17,40 @@ export default async function TransactionDetailPage({ params }: PageProps) {
     redirect('/prijava');
   }
 
-  const [{ data: tx, error: txError }, { data: categories, error: categoriesError }] =
-    await Promise.all([
-      supabase
-        .from('transactions')
-        .select(
-          'id,transaction_date,original_amount_cents,original_currency,base_amount_cents,base_currency,fx_rate,fx_rate_date,merchant_raw,description,notes,source,is_transfer,tags,receipt_scan_id,created_at,updated_at,accounts(id,name,currency),categories(id,name,icon)',
-        )
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .is('deleted_at', null)
-        .maybeSingle(),
-      supabase
-        .from('categories')
-        .select('id,name,icon')
-        .eq('user_id', user.id)
-        .is('deleted_at', null)
-        .order('sort_order', { ascending: true })
-        .order('name', { ascending: true }),
-    ]);
+  const [
+    { data: tx, error: txError },
+    { data: categories, error: categoriesError },
+    { data: accounts, error: accountsError },
+  ] = await Promise.all([
+    supabase
+      .from('transactions')
+      .select(
+        'id,transaction_date,original_amount_cents,original_currency,base_amount_cents,base_currency,fx_rate,fx_rate_date,merchant_raw,description,notes,source,is_transfer,tags,receipt_scan_id,created_at,updated_at,accounts(id,name,currency),categories(id,name,icon)',
+      )
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .maybeSingle(),
+    supabase
+      .from('categories')
+      .select('id,name,icon')
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true }),
+    // Pulled for the "Označi kao transfer" dialog so the user can pick a
+    // counterparty account in-place. Filtered down to same-currency
+    // candidates client-side once we know the source tx's currency.
+    supabase
+      .from('accounts')
+      .select('id,name,currency')
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true }),
+  ]);
 
-  if (txError || !tx || categoriesError) {
+  if (txError || !tx || categoriesError || accountsError) {
     notFound();
   }
 
@@ -65,5 +78,5 @@ export default async function TransactionDetailPage({ params }: PageProps) {
       : null,
   };
 
-  return <TransactionDetailClient tx={txView} categories={categories} />;
+  return <TransactionDetailClient tx={txView} categories={categories} accounts={accounts} />;
 }
