@@ -38,6 +38,32 @@ export const ACCOUNT_TYPE_OPTIONS = [
   { value: 'other' as const, emoji: '📦', label: 'Drugo' },
 ];
 
+/**
+ * Display order for grouping on /racuni — assets first, debt last.
+ * Razlikuje se od ACCOUNT_TYPE_OPTIONS (form picker order); ovaj je za list view.
+ */
+export const ACCOUNT_TYPE_GROUP_ORDER = [
+  'checking',
+  'savings',
+  'cash',
+  'revolut',
+  'wise',
+  'investment',
+  'credit_card',
+  'loan',
+  'other',
+] as const;
+
+export type AccountType = (typeof ACCOUNT_TYPE_GROUP_ORDER)[number];
+
+const ACCOUNT_TYPE_LABELS: Record<string, { emoji: string; label: string }> = Object.fromEntries(
+  ACCOUNT_TYPE_OPTIONS.map((o) => [o.value, { emoji: o.emoji, label: o.label }]),
+);
+
+export function getAccountTypeLabel(type: string): { emoji: string; label: string } {
+  return ACCOUNT_TYPE_LABELS[type] ?? { emoji: '📦', label: 'Drugo' };
+}
+
 const currencyLabels: Record<CurrencyCode, string> = {
   BAM: 'KM (BAM)',
   EUR: '€ (EUR)',
