@@ -100,22 +100,25 @@
     --accent: 240 4% 12%;
     --accent-foreground: 0 0% 98%;
 
-    --income: 142 71% 45%;
+    /* Financial semantics — desaturated for dark mode so red/green/blue don't
+     * read as neon against the near-black background. The light-mode values
+     * stay punchy because they sit on white. */
+    --income: 142 55% 55%;
     --income-foreground: 0 0% 100%;
 
-    --expense: 0 72% 55%;
+    --expense: 0 65% 65%;
     --expense-foreground: 0 0% 100%;
 
-    --transfer: 217 91% 65%;
+    --transfer: 217 80% 70%;
     --transfer-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 55%;
+    --destructive: 0 65% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --warning: 38 92% 55%;
+    --warning: 38 85% 60%;
     --warning-foreground: 0 0% 100%;
 
-    --success: 142 71% 50%;
+    --success: 142 55% 55%;
     --success-foreground: 0 0% 100%;
   }
 }
@@ -171,6 +174,26 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* ---------------------------------------------------------------------------
+   * Motion tokens (F1.3)
+   *
+   * Semantic durations and easings so component transitions speak the same
+   * language. Each role maps to a single duration/easing combination that
+   * other styles can reach for instead of inventing ad-hoc 130ms/200ms etc.
+   *
+   * Using these via Tailwind: `duration-fast`, `duration-deliberate`,
+   * `ease-out-quart`, `ease-spring`. Built-in `ease-out` / `duration-200`
+   * keep working unchanged.
+   * --------------------------------------------------------------------------- */
+  --duration-instant: 100ms;
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-deliberate: 500ms;
+
+  --ease-out-quart: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @layer base {
@@ -189,4 +212,54 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Typography role tokens (F1.1)
+ *
+ * Semantic text roles to use across the app instead of mixing raw Tailwind
+ * font-size + weight + tracking utilities. Each role bundles font-size,
+ * line-height, tracking, and weight for a coherent type system.
+ *
+ * Sizes are intentionally close to current usage so adopting these classes
+ * is a 1-for-1 swap for existing patterns; only `text-display` introduces
+ * a new "hero number" tier reserved for primary financial figures.
+ * --------------------------------------------------------------------------- */
+
+@utility text-display {
+  font-size: 2.5rem; /* 40px */
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+@utility text-headline {
+  font-size: 1.5rem; /* 24px — matches current text-2xl page h1 */
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+
+@utility text-title {
+  font-size: 1.125rem; /* 18px — section h2 / card title */
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+
+@utility text-body {
+  font-size: 1rem; /* 16px — default body */
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+@utility text-caption {
+  font-size: 0.8125rem; /* 13px — metadata, helper text */
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+@utility text-mono-tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
