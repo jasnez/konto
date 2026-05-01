@@ -15,3 +15,11 @@ export interface AccountGroup {
   subtotalBaseCents: bigint;
   baseCurrency: string;
 }
+
+/** Compact preview of an account's most recent transaction, surfaced on
+ * the account card so users see "what's happening" without drilling into
+ * the detail page (audit R7). */
+export interface AccountLastTransaction {
+  merchantLabel: string;
+  transactionDate: string;
+}

@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { formatDistanceToNowStrict, parseISO } from 'date-fns';
+import { bs } from 'date-fns/locale';
 import { MoreHorizontal } from 'lucide-react';
 import type { Account } from '@/lib/supabase/types';
 import { formatMinorUnits } from '@/lib/format/amount';
@@ -15,14 +17,42 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { AccountCardDelete } from '@/components/accounts/account-card-delete';
 import { cn } from '@/lib/utils';
+import type { AccountLastTransaction } from '@/app/(app)/racuni/types';
 
 interface AccountCardProps {
   account: Account;
   selected?: boolean;
   onToggleSelection?: (accountId: string) => void;
+  /** Most recent transaction for this account, when present, surfaced as
+   * a "Zadnja: <merchant> · prije 2h" subtitle line below the balance. */
+  lastTransaction?: AccountLastTransaction;
 }
 
-export function AccountCard({ account, selected = false, onToggleSelection }: AccountCardProps) {
+/** Format an ISO transaction_date as a Bosnian relative-time string.
+ * `transaction_date` is a date (no time component); we treat midnight UTC
+ * of that day as the reference, which is precise enough for the "prije
+ * X dana" / "prije X mjeseci" granularity we surface here. Returns "danas"
+ * for today's date. */
+function formatRelativeTransactionDate(iso: string): string {
+  try {
+    const date = parseISO(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 24 * 60 * 60 * 1000 && diffMs > -24 * 60 * 60 * 1000) {
+      return 'danas';
+    }
+    return `prije ${formatDistanceToNowStrict(date, { locale: bs })}`;
+  } catch {
+    return '';
+  }
+}
+
+export function AccountCard({
+  account,
+  selected = false,
+  onToggleSelection,
+  lastTransaction,
+}: AccountCardProps) {
   const bal = account.current_balance_cents;
   const isDebtAccount = account.type === 'credit_card' || account.type === 'loan';
   const isDebtBalanceNegative = isDebtAccount && bal < 0;
@@ -90,6 +120,15 @@ export function AccountCard({ account, selected = false, onToggleSelection }: Ac
               >
                 {formatMinorUnits(bal, account.currency)}
               </p>
+              {lastTransaction ? (
+                <p
+                  className="truncate text-xs text-muted-foreground"
+                  data-testid="account-card-last-tx"
+                >
+                  Zadnja: {lastTransaction.merchantLabel} ·{' '}
+                  {formatRelativeTransactionDate(lastTransaction.transactionDate)}
+                </p>
+              ) : null}
               {!account.include_in_net_worth ? (
                 <p className="text-xs text-muted-foreground">Nije u zbrojku na početnoj</p>
               ) : null}

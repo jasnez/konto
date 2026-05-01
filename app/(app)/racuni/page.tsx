@@ -9,9 +9,49 @@ import {
   type AccountType,
   getAccountTypeLabel,
 } from '@/lib/accounts/constants';
+import { getTransactionPrimaryLabel } from '@/lib/format/transaction-primary-label';
 import { convertCentsToBase } from '@/lib/queries/summary';
 import type { Account } from '@/lib/supabase/types';
-import type { AccountGroup, AccountsFilters } from '@/app/(app)/racuni/types';
+import type {
+  AccountGroup,
+  AccountLastTransaction,
+  AccountsFilters,
+} from '@/app/(app)/racuni/types';
+
+interface LastTxRow {
+  account_id: string;
+  transaction_date: string;
+  original_amount_cents: number;
+  merchant_raw: string | null;
+  description: string | null;
+  is_transfer: boolean;
+  merchants: { display_name: string } | null;
+}
+
+/** Build a per-account map of the most recent transaction. Pulls one
+ * generous batch of recent transactions (50) and keeps the first hit
+ * per `account_id` — cheap and accurate for typical Konto users (~5-10
+ * accounts). Accounts with zero activity simply don't appear in the map. */
+function buildLastTransactionMap(rows: LastTxRow[]): Map<string, AccountLastTransaction> {
+  const seen = new Map<string, AccountLastTransaction>();
+  for (const row of rows) {
+    if (seen.has(row.account_id)) continue;
+    seen.set(row.account_id, {
+      merchantLabel: getTransactionPrimaryLabel({
+        merchant_display_name: row.merchants?.display_name,
+        merchant_raw: row.merchant_raw,
+        description: row.description,
+        is_transfer: row.is_transfer,
+        original_amount_cents: row.original_amount_cents,
+        // Account labels not needed for "Zadnja: <merchant>" preview.
+        account_name: null,
+        transfer_counterparty_account_name: null,
+      }),
+      transactionDate: row.transaction_date,
+    });
+  }
+  return seen;
+}
 
 /** Sum of in-scope (include_in_net_worth=true) account balances in base currency.
  * Mirrors the dashboard's "Aktiva" so the user sees the same number on both
@@ -162,6 +202,21 @@ export default async function RacuniListPage({ searchParams }: RacuniListPagePro
     baseCurrency,
   );
 
+  // Last-transaction preview per account (audit R7-light). Generous limit so
+  // every visible account has at least one row to slice from; accounts with
+  // no activity get undefined and the card simply hides the preview line.
+  const { data: recentTxRows } = await supabase
+    .from('transactions')
+    .select(
+      'account_id,transaction_date,original_amount_cents,merchant_raw,description,is_transfer,merchants(display_name)',
+    )
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .order('transaction_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(100);
+  const lastTransactionByAccount = buildLastTransactionMap(recentTxRows ?? []);
+
   const groups = groupAccountsByType(accounts, baseCurrency);
 
   return (
@@ -216,6 +271,7 @@ export default async function RacuniListPage({ searchParams }: RacuniListPagePro
           availableCurrencies={availableCurrencies}
           baseCurrency={baseCurrency}
           totalCount={totalCount}
+          lastTransactionByAccount={Object.fromEntries(lastTransactionByAccount)}
         />
       )}
     </div>

@@ -10,7 +10,11 @@ import { AccountGroupHeader } from '@/components/account-group-header';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { cn } from '@/lib/utils';
-import type { AccountGroup, AccountsFilters } from '@/app/(app)/racuni/types';
+import type {
+  AccountGroup,
+  AccountLastTransaction,
+  AccountsFilters,
+} from '@/app/(app)/racuni/types';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -20,6 +24,8 @@ interface AccountsClientProps {
   availableCurrencies: string[];
   baseCurrency: string;
   totalCount: number;
+  /** Keyed by account.id; entry is omitted when an account has no activity. */
+  lastTransactionByAccount: Record<string, AccountLastTransaction>;
 }
 
 function splitParamList(raw: string | null): string[] {
@@ -35,6 +41,7 @@ export function AccountsClient({
   filters,
   availableCurrencies,
   totalCount,
+  lastTransactionByAccount,
 }: AccountsClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -209,6 +216,7 @@ export function AccountsClient({
                       account={a}
                       selected={selectedIds.has(a.id)}
                       onToggleSelection={handleToggle}
+                      lastTransaction={lastTransactionByAccount[a.id]}
                     />
                   </li>
                 ))}
