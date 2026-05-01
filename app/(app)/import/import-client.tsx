@@ -124,7 +124,7 @@ export function ImportStatementClient({ accounts }: ImportStatementClientProps) 
       <CardHeader className="space-y-1">
         <h2 className="text-base font-semibold">PDF izvod</h2>
         <p className="text-sm text-muted-foreground">
-          Datoteka ostaje u oblaku privremeno; poslije uvođenja transakcija očekujte automatsko
+          Fajl ostaje u oblaku privremeno; poslije uvođenja transakcija očekujte automatsko
           brisanje.
         </p>
       </CardHeader>

@@ -85,8 +85,8 @@ export default async function AccountDetailPage({ params }: PageProps) {
             </span>
             <p className="text-base font-medium">Još nema transakcija</p>
             <p className="max-w-sm text-sm text-muted-foreground">
-              Kad bude Faza 1 transakcija, ovdje će se pojaviti zadnje 50. Za sada možeš ručno
-              unositi s ekrana Transakcije (uskoro) ili pripremi PDF.
+              Kad dodaš transakcije, ovdje će se pojaviti zadnje 50. Za sada ručno unesi s ekrana
+              Transakcije ili uvezi PDF izvod.
             </p>
           </div>
         ) : (

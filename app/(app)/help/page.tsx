@@ -100,7 +100,7 @@ export default function HelpPage() {
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Pomoć</h1>
         <p className="text-base text-muted-foreground">
-          Kratak odgovori na česta pitanja (Faza 2). Detaljne smjernice o podacima:{' '}
+          Kratki odgovori na česta pitanja. Detaljne smjernice o podacima:{' '}
           <Link href="/sigurnost" className="font-medium text-primary hover:underline">
             Sigurnost i privatnost
           </Link>
