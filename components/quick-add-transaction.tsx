@@ -646,14 +646,14 @@ export function QuickAddTransaction({
                         field.onChange(next);
                       }}
                       onEnterNext={focusCategoryField}
-                      onBlurValue={(candidate) => {
-                        if (candidate.trim().length > 0) {
-                          void ensureMerchantExists(
-                            candidate,
-                            form.getValues('category_id') ?? null,
-                          );
-                        }
-                      }}
+                      // Previously we eagerly created a merchant row on blur
+                      // ("warm the cache"). The side-effect was a leaked stub
+                      // merchant whenever the user typed a few letters and
+                      // moved focus away without submitting (e.g., "Kon" left
+                      // behind after starting to type "Konzum") — audit N4.
+                      // The onSubmit handler still calls ensureMerchantExists
+                      // for the final value, so persistence is tied to the
+                      // user's intent, not their typing pattern.
                     />
                   </FormControl>
                   <FormMessage />
