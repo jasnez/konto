@@ -202,26 +202,53 @@ export function TransactionFilters({
                 ) : null}
 
                 {categories.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <Label>Kategorije</Label>
-                    <div role="group" aria-label="Kategorije" className="flex flex-wrap gap-2">
-                      {categories.map((category) => {
-                        const active = filters.categoryIds.includes(category.id);
-                        return (
-                          <Chip
-                            key={category.id}
-                            active={active}
-                            aria-pressed={active}
-                            onClick={() => {
-                              onToggleMulti('category', category.id, !active);
-                            }}
+                    {/* Grouped by kind so the long category list isn't a wall
+                     * of mixed pills (audit N14). Section headers mirror the
+                     * /kategorije tab labels (Troškovi / Prihodi / Transferi).
+                     * `saving` and `investment` kinds aren't surfaced as their
+                     * own group — they're rare and fold into the same default
+                     * sort order; if/when they grow we can add sections. */}
+                    {(
+                      [
+                        { heading: 'Troškovi', kind: 'expense' },
+                        { heading: 'Prihodi', kind: 'income' },
+                        { heading: 'Transferi', kind: 'transfer' },
+                      ] as const
+                    ).map(({ heading, kind }) => {
+                      const groupCategories = categories.filter((c) => c.kind === kind);
+                      if (groupCategories.length === 0) return null;
+                      return (
+                        <div key={kind} className="space-y-1.5">
+                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {heading}
+                          </p>
+                          <div
+                            role="group"
+                            aria-label={`Kategorije: ${heading}`}
+                            className="flex flex-wrap gap-2"
                           >
-                            {category.icon ? <span aria-hidden>{category.icon}</span> : null}
-                            <span>{category.name}</span>
-                          </Chip>
-                        );
-                      })}
-                    </div>
+                            {groupCategories.map((category) => {
+                              const active = filters.categoryIds.includes(category.id);
+                              return (
+                                <Chip
+                                  key={category.id}
+                                  active={active}
+                                  aria-pressed={active}
+                                  onClick={() => {
+                                    onToggleMulti('category', category.id, !active);
+                                  }}
+                                >
+                                  {category.icon ? <span aria-hidden>{category.icon}</span> : null}
+                                  <span>{category.name}</span>
+                                </Chip>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : null}
               </div>
