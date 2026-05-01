@@ -25,8 +25,19 @@ function isCategoryKind(value: string): value is CategoryOption['kind'] {
  * paths, but we still `getUser()` here so a misconfigured matcher cannot
  * leak a server-rendered shell to anon users (defense-in-depth per
  * .cursor/rules/security.mdc).
+ *
+ * The `modal` parallel slot (at `@modal/`) renders intercepted routes —
+ * currently used to show the transaction edit form in a sheet over the
+ * detail page on soft navigation, while preserving full-page rendering
+ * on direct URL / refresh (audit N17).
  */
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({
+  children,
+  modal,
+}: {
+  children: React.ReactNode;
+  modal: React.ReactNode;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -98,6 +109,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </div>
       <BottomNav />
+      {modal}
     </QuickAddProvider>
   );
 }

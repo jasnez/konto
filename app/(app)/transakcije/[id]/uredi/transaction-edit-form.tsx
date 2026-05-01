@@ -40,6 +40,14 @@ interface TransactionEditFormProps {
   initialKind: TransactionKind;
   accounts: AccountOption[];
   categories: CategoryOption[];
+  /**
+   * When the form renders inside a modal/sheet (intercepted route at the
+   * (app)/@modal slot, audit N17), the host already provides a title and
+   * close button — drop the form's own back link, h1, and outer page
+   * padding so they don't double up. The full-page route omits the prop
+   * (chromeless=false) and keeps the standalone framing.
+   */
+  chromeless?: boolean;
 }
 
 function normalizeAmountForKind(amountCents: bigint, kind: TransactionKind): bigint {
@@ -53,6 +61,7 @@ export function TransactionEditForm({
   initialKind,
   accounts,
   categories,
+  chromeless = false,
 }: TransactionEditFormProps) {
   const router = useRouter();
   const [kind, setKind] = useState<TransactionKind>(initialKind);
@@ -110,15 +119,19 @@ export function TransactionEditForm({
   const selectedAccount = accounts.find((account) => account.id === form.watch('account_id'));
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-4 sm:px-6 sm:py-6">
-      <Button asChild variant="ghost" className="-ml-2 mb-3 h-11 px-2 text-muted-foreground">
-        <Link href={`/transakcije/${transactionId}`} className="inline-flex items-center gap-1">
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Nazad na detalj
-        </Link>
-      </Button>
+    <div className={chromeless ? 'w-full' : 'mx-auto w-full max-w-3xl px-4 py-4 sm:px-6 sm:py-6'}>
+      {chromeless ? null : (
+        <>
+          <Button asChild variant="ghost" className="-ml-2 mb-3 h-11 px-2 text-muted-foreground">
+            <Link href={`/transakcije/${transactionId}`} className="inline-flex items-center gap-1">
+              <ArrowLeft className="h-4 w-4" aria-hidden />
+              Nazad na detalj
+            </Link>
+          </Button>
 
-      <h1 className="mb-4 text-2xl font-semibold tracking-tight">Uredi transakciju</h1>
+          <h1 className="mb-4 text-2xl font-semibold tracking-tight">Uredi transakciju</h1>
+        </>
+      )}
 
       <Form {...form}>
         <form
