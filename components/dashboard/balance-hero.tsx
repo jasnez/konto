@@ -17,28 +17,40 @@ function formatPercent(value: number): string {
   return `${sign}${Math.abs(value).toFixed(1)}%`;
 }
 
+/**
+ * Dashboard hero card. Shows the user's true net position (Aktiva − Pasiva)
+ * as the primary number, with the assets and liabilities breakdown as
+ * supporting detail rows.
+ *
+ * Why net worth and not the assets balance? With a loan account, assets
+ * alone (314 KM) understates the picture — the user is actually in the
+ * red across their household. Showing the honest net is the premium
+ * default; users who want the "spendable today" view can hit Računi.
+ */
 export function BalanceHero({
   totalBalanceCents,
   totalLiabilitiesCents,
   baseCurrency,
   netChangePercent,
 }: BalanceHeroProps) {
+  const hasLiabilities = totalLiabilitiesCents > 0n;
+  const netWorthCents = totalBalanceCents - totalLiabilitiesCents;
+  const netToneClass =
+    netWorthCents > 0n ? 'text-income' : netWorthCents < 0n ? 'text-expense' : 'text-foreground';
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 p-4 sm:p-6">
         <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">Stanje</p>
-          <CardTitle className="text-2xl font-medium tracking-tight sm:text-3xl">
-            <Money cents={totalBalanceCents} currency={baseCurrency} tone="default" />
+          <p className="text-caption text-muted-foreground">
+            {hasLiabilities ? 'Neto stanje' : 'Stanje'}
+          </p>
+          <CardTitle
+            className={cn('text-display tabular-nums', netToneClass)}
+            data-testid="balance-hero-net-amount"
+          >
+            <Money cents={netWorthCents} currency={baseCurrency} tone="default" />
           </CardTitle>
-          {totalLiabilitiesCents > 0n ? (
-            <div className="pt-2">
-              <p className="text-xs text-muted-foreground">Zaduženja</p>
-              <p className="text-base font-medium tabular-nums tracking-tight sm:text-lg">
-                <Money cents={totalLiabilitiesCents} currency={baseCurrency} tone="expense" />
-              </p>
-            </div>
-          ) : null}
         </div>
         <Link
           href="/racuni"
@@ -48,7 +60,33 @@ export function BalanceHero({
           <ArrowRight className="h-4 w-4" aria-hidden />
         </Link>
       </CardHeader>
-      <CardContent className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
+
+      {hasLiabilities ? (
+        <CardContent className="space-y-1.5 px-4 pb-3 pt-0 sm:px-6">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Aktiva</span>
+            <Money
+              cents={totalBalanceCents}
+              currency={baseCurrency}
+              tone="default"
+              className="font-medium tabular-nums"
+            />
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Pasiva</span>
+            <Money
+              cents={-totalLiabilitiesCents}
+              currency={baseCurrency}
+              tone="expense"
+              className="font-medium tabular-nums"
+            />
+          </div>
+        </CardContent>
+      ) : null}
+
+      <CardContent
+        className={cn('px-4 pb-4 pt-2 sm:px-6 sm:pb-6', hasLiabilities ? 'border-t' : 'pt-0')}
+      >
         <div className="flex items-center gap-2">
           <Badge
             variant="secondary"
@@ -60,7 +98,9 @@ export function BalanceHero({
           >
             {formatPercent(netChangePercent)}
           </Badge>
-          <span className="text-sm text-muted-foreground">vs prošli mjesec</span>
+          <span className="text-sm text-muted-foreground">
+            {hasLiabilities ? 'Neto' : 'Stanje'}: vs prošli mjesec
+          </span>
         </div>
       </CardContent>
     </Card>
