@@ -21,16 +21,17 @@ interface OwnedError {
 
 /**
  * Verify the caller owns the given account and that it is not soft-deleted.
- * Returns the account's `currency` on success.
+ * Returns the account's `currency` and `type` on success — `type` is needed
+ * by the createTransaction action to enforce Pasiva-account rules (Phase C).
  */
 export async function ensureOwnedAccount(
   supabase: SupabaseClient,
   userId: string,
   accountId: string,
-): Promise<{ ok: true; currency: string } | OwnedError> {
+): Promise<{ ok: true; currency: string; type: string } | OwnedError> {
   const { data: account, error } = await supabase
     .from('accounts')
-    .select('id,currency')
+    .select('id,currency,type')
     .eq('id', accountId)
     .eq('user_id', userId)
     .is('deleted_at', null)
@@ -39,7 +40,7 @@ export async function ensureOwnedAccount(
   if (error) return { ok: false, error: 'DATABASE_ERROR' };
   if (!account) return { ok: false, error: 'FORBIDDEN' };
 
-  return { ok: true, currency: account.currency };
+  return { ok: true, currency: account.currency, type: account.type };
 }
 
 /**

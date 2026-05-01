@@ -54,6 +54,7 @@ interface ExistingTransactionRow {
   category_id: string | null;
   notes: string | null;
   deleted_at: string | null;
+  is_transfer: boolean;
 }
 
 interface ValidationDetails {
@@ -102,7 +103,10 @@ export type CreateTransactionResult =
   | { success: false; error: 'FORBIDDEN' }
   | { success: false; error: 'DUPLICATE'; duplicateId: string }
   | { success: false; error: 'DATABASE_ERROR' }
-  | { success: false; error: 'EXTERNAL_SERVICE_ERROR' };
+  | { success: false; error: 'EXTERNAL_SERVICE_ERROR' }
+  // Phase C P3: Pasiva (loan / credit_card) accounts cannot receive Income
+  // — the only legitimate inflow is debt repayment, which is a Transfer.
+  | { success: false; error: 'INCOME_NOT_ALLOWED_ON_PASIVA' };
 
 export type UpdateTransactionResult =
   | { success: true }
@@ -112,7 +116,9 @@ export type UpdateTransactionResult =
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'DUPLICATE'; duplicateId: string }
   | { success: false; error: 'DATABASE_ERROR' }
-  | { success: false; error: 'EXTERNAL_SERVICE_ERROR' };
+  | { success: false; error: 'EXTERNAL_SERVICE_ERROR' }
+  // Phase C P3: edits cannot move a non-transfer income onto a Pasiva account.
+  | { success: false; error: 'INCOME_NOT_ALLOWED_ON_PASIVA' };
 
 export type DeleteTransactionResult =
   | { success: true }
@@ -250,6 +256,15 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
   const ownedAccount = await ensureOwnedAccount(supabase, user.id, parsedData.account_id);
   if (!ownedAccount.ok) {
     return { success: false, error: ownedAccount.error };
+  }
+
+  // Phase C P3: Pasiva (loan / credit_card) accounts cannot legitimately
+  // receive Income — money flowing INTO a debt account is repayment, which
+  // belongs in the transfer branch above. The Brzi unos UI already disables
+  // the Prihod chip on Pasiva accounts; this is the server-side backstop.
+  const isPasivaAccount = ownedAccount.type === 'loan' || ownedAccount.type === 'credit_card';
+  if (isPasivaAccount && parsedData.amount_cents > 0n) {
+    return { success: false, error: 'INCOME_NOT_ALLOWED_ON_PASIVA' };
   }
 
   const ownedCategory = await ensureOwnedCategory(supabase, user.id, parsedData.category_id);
@@ -464,7 +479,7 @@ export async function updateTransaction(
   const { data: existing, error: existingError } = await supabase
     .from('transactions')
     .select(
-      'id,account_id,original_amount_cents,original_currency,transaction_date,merchant_raw,category_id,notes,deleted_at',
+      'id,account_id,original_amount_cents,original_currency,transaction_date,merchant_raw,category_id,notes,deleted_at,is_transfer',
     )
     .eq('id', idParsed.data)
     .eq('user_id', user.id)
@@ -498,6 +513,14 @@ export async function updateTransaction(
   const ownedAccount = await ensureOwnedAccount(supabase, user.id, finalInput.account_id);
   if (!ownedAccount.ok) {
     return { success: false, error: ownedAccount.error };
+  }
+
+  // Phase C P3: editing cannot land a positive (income-shaped) amount on a
+  // Pasiva account. Transfer rows live on a different code path (this branch
+  // is the regular edit) so this guard targets only direct expense/income.
+  const isPasivaAccount = ownedAccount.type === 'loan' || ownedAccount.type === 'credit_card';
+  if (isPasivaAccount && !existingRow.is_transfer && finalInput.amount_cents > 0n) {
+    return { success: false, error: 'INCOME_NOT_ALLOWED_ON_PASIVA' };
   }
 
   const ownedCategory = await ensureOwnedCategory(supabase, user.id, finalInput.category_id);
