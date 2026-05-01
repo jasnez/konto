@@ -133,6 +133,13 @@ export function QuickAddTransaction({
   const toAccounts = effectiveAccounts.filter((account) => account.id !== selectedAccountId);
   const isTransfer = kind === 'transfer';
   const isCreditCard = selectedAccount?.type === 'credit_card';
+  const isLoanAccount = selectedAccount?.type === 'loan';
+  // Pasiva (debt) accounts cannot legitimately receive income — money flowing
+  // INTO a loan/credit card account is debt repayment, which is a Transfer
+  // from an Aktiva account, not a personal income event. Phase A migration
+  // 00047 already filters these flows out of the dashboard KPIs as a
+  // defense-in-depth backstop; this guard surfaces the rule at entry time.
+  const isPasivaAccount = isLoanAccount || isCreditCard;
   const showInstallmentToggle = kind === 'expense' && isCreditCard && !isTransfer;
   const selectedCurrency = selectedAccount?.currency ?? 'BAM';
   const absAmount = watchedAmount < 0n ? -watchedAmount : watchedAmount;
@@ -187,6 +194,23 @@ export function QuickAddTransaction({
       window.clearTimeout(timeout);
     };
   }, [accounts, categories, form, open, retryDraft]);
+
+  // Auto-correct kind when user selects a Pasiva account while Prihod is
+  // active. We don't auto-switch *to* Transfer for everything — credit-card
+  // users still legitimately use Trošak (purchases on the card) — but Prihod
+  // never makes sense on a debt account. Switching to Transfer is the most
+  // common intent (paying down the loan).
+  useEffect(() => {
+    if (!isPasivaAccount) return;
+    if (kind !== 'income') return;
+    setKind('transfer');
+    const currentAmount = form.getValues('amount_cents');
+    form.setValue('amount_cents', normalizeAmountForKind(currentAmount, 'transfer'), {
+      shouldDirty: true,
+    });
+    form.setValue('category_id', null, { shouldDirty: true });
+    form.setValue('to_account_id', undefined, { shouldDirty: true });
+  }, [isPasivaAccount, kind, form]);
 
   function ensureMerchantExists(
     candidate: string,
@@ -371,6 +395,25 @@ export function QuickAddTransaction({
     }
 
     setRetryDraft(snapshot);
+
+    // Phase C P3: Pasiva-account guard returns a dedicated error so we can
+    // explain the rule and reopen the modal pre-filled. The form has the
+    // user's data; we just nudge them toward Transfer.
+    if (result.error === 'INCOME_NOT_ALLOWED_ON_PASIVA') {
+      toast.error('Prihod nije podržan na kreditnom računu.', {
+        description:
+          'Plaćanje rate je Transfer iz tekućeg računa u kredit, a ne prihod. Otvori formu ponovo i odaberi „Transfer”.',
+        action: {
+          label: 'Pokušaj ponovo',
+          onClick: () => {
+            onOpenChange(true);
+          },
+        },
+        duration: 10000,
+      });
+      return;
+    }
+
     toast.error('Nešto nije u redu. Pokušaj opet za par sekundi.', {
       description:
         result.error === 'DUPLICATE'
@@ -513,15 +556,52 @@ export function QuickAddTransaction({
                   Podizanje s bankomata
                 </Button>
               ) : null}
+              {isPasivaAccount ? (
+                <div
+                  className="space-y-1 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm"
+                  role="region"
+                  aria-label={
+                    isLoanAccount ? 'Napomena za kreditni račun' : 'Napomena za kreditnu karticu'
+                  }
+                >
+                  {isLoanAccount ? (
+                    <>
+                      <p className="font-medium text-foreground">Plaćanje kredita</p>
+                      <p className="text-muted-foreground">
+                        Rata kredita je <strong>Transfer</strong> iz tekućeg računa u kredit
+                        (smanjuje glavnicu). Kamatu posebno upiši kao <strong>Trošak</strong>{' '}
+                        (kategorija „Kamata na kredit”).
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-medium text-foreground">Kreditna kartica</p>
+                      <p className="text-muted-foreground">
+                        Kupovina karticom je <strong>Trošak</strong>. Plaćanje računa kartice
+                        (smanjivanje duga) je <strong>Transfer</strong> iz tekućeg računa.
+                      </p>
+                    </>
+                  )}
+                </div>
+              ) : null}
               <Label>Tip</Label>
               <div role="group" aria-label="Tip transakcije" className="grid grid-cols-3 gap-2">
                 {KIND_OPTIONS.map(({ value, label }) => {
                   const active = kind === value;
+                  // Disable Prihod on Pasiva accounts: money flowing into a
+                  // loan/credit-card is debt repayment (Transfer), not income.
+                  const disabled = value === 'income' && isPasivaAccount;
                   return (
                     <Chip
                       key={value}
                       active={active}
                       aria-pressed={active}
+                      disabled={disabled}
+                      title={
+                        disabled
+                          ? 'Prihod nije podržan na kreditnom računu — koristi Transfer iz tekućeg računa.'
+                          : undefined
+                      }
                       onClick={() => {
                         setKind(value);
                         const currentAmount = form.getValues('amount_cents');
