@@ -83,6 +83,14 @@ export function TransactionEditForm({
       return;
     }
 
+    if (result.error === 'INCOME_NOT_ALLOWED_ON_PASIVA') {
+      toast.error('Prihod nije podržan na kreditnom računu.', {
+        description:
+          'Plaćanje rate je Transfer iz tekućeg računa u kredit, a ne prihod. Promijeni račun ili pretvori transakciju u transfer.',
+      });
+      return;
+    }
+
     if (result.error === 'VALIDATION_ERROR') {
       const d = result.details;
       if (d.amount_cents?.[0]) form.setError('amount_cents', { message: d.amount_cents[0] });
