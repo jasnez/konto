@@ -121,7 +121,7 @@ export default async function ImportPage() {
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-4 sm:space-y-8 sm:px-6 sm:py-6">
       <div className="space-y-3">
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">Uvezi izvod</h1>
+          <h1 className="text-headline">Uvezi izvod</h1>
           <p className="text-base text-muted-foreground">
             Odaberi račun, zatim prevuci bankarski PDF ili ga izaberi s uređaja.
           </p>
