@@ -1,26 +1,98 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { bulkDeleteAccounts } from '@/app/(app)/racuni/actions';
 import { AccountCard } from '@/components/account-card';
+import { AccountFilters } from '@/components/account-filters';
+import { AccountGroupHeader } from '@/components/account-group-header';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { cn } from '@/lib/utils';
-import type { Account } from '@/lib/supabase/types';
+import type { AccountGroup, AccountsFilters } from '@/app/(app)/racuni/types';
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 interface AccountsClientProps {
-  accounts: Account[];
+  groups: AccountGroup[];
+  filters: AccountsFilters;
+  availableCurrencies: string[];
+  baseCurrency: string;
+  totalCount: number;
 }
 
-export function AccountsClient({ accounts }: AccountsClientProps) {
+function splitParamList(raw: string | null): string[] {
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
+export function AccountsClient({
+  groups,
+  filters,
+  availableCurrencies,
+  totalCount,
+}: AccountsClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [searchDraft, setSearchDraft] = useState(filters.search);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
+  const allFilteredIds = groups.flatMap((g) => g.accounts.map((a) => a.id));
+  const filteredCount = allFilteredIds.length;
   const selectionMode = selectedIds.size > 0;
-  const allSelected = accounts.length > 0 && selectedIds.size === accounts.length;
+  const allSelected = filteredCount > 0 && selectedIds.size === filteredCount;
+  const hasActiveFilters =
+    filters.type.length > 0 || filters.currency.length > 0 || filters.search.length > 0;
+
+  useEffect(() => {
+    setSearchDraft(filters.search);
+  }, [filters.search]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      if (searchDraft === filters.search) return;
+      updateUrl({ search: searchDraft });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [filters.search, searchDraft]);
+
+  function updateUrl(updates: Record<string, string | null>) {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (!value || value.length === 0) {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    }
+    const qs = params.toString();
+    router.replace(qs.length > 0 ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
+
+  function toggleMultiParam(paramName: 'type' | 'currency', value: string, checked: boolean) {
+    const values = new Set(splitParamList(searchParams.get(paramName)));
+    if (checked) {
+      values.add(value);
+    } else {
+      values.delete(value);
+    }
+    updateUrl({
+      [paramName]: values.size > 0 ? Array.from(values).join(',') : null,
+    });
+  }
+
+  function clearAllFilters() {
+    setSearchDraft('');
+    router.replace(pathname);
+  }
 
   function handleToggle(accountId: string) {
     setSelectedIds((current) => {
@@ -51,6 +123,15 @@ export function AccountsClient({ accounts }: AccountsClientProps) {
 
   return (
     <>
+      <AccountFilters
+        filters={filters}
+        availableCurrencies={availableCurrencies}
+        searchDraft={searchDraft}
+        onSearchDraftChange={setSearchDraft}
+        onToggleMulti={toggleMultiParam}
+        onClearAll={clearAllFilters}
+      />
+
       {selectionMode ? (
         <div
           className={cn(
@@ -67,7 +148,7 @@ export function AccountsClient({ accounts }: AccountsClientProps) {
               variant="ghost"
               size="compact"
               onClick={() => {
-                setSelectedIds(allSelected ? new Set() : new Set(accounts.map((a) => a.id)));
+                setSelectedIds(allSelected ? new Set() : new Set(allFilteredIds));
               }}
             >
               {allSelected ? 'Odznači sve' : 'Označi sve'}
@@ -96,17 +177,52 @@ export function AccountsClient({ accounts }: AccountsClientProps) {
         </div>
       ) : null}
 
-      <ul className="grid list-none grid-cols-1 gap-4 sm:grid-cols-2" aria-label="Lista računa">
-        {accounts.map((a) => (
-          <li key={a.id}>
-            <AccountCard
-              account={a}
-              selected={selectedIds.has(a.id)}
-              onToggleSelection={handleToggle}
-            />
-          </li>
-        ))}
-      </ul>
+      {filteredCount === 0 ? (
+        <div className="flex min-h-[35vh] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed p-8 text-center">
+          <span className="text-4xl" aria-hidden>
+            🔍
+          </span>
+          <p className="max-w-sm text-base font-medium">Nema računa za ove filtere.</p>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            Pokušaj smanjiti filtere ili ih očistiti.
+          </p>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full max-w-xs"
+              onClick={clearAllFilters}
+            >
+              Očisti sve
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <ul className="list-none space-y-6" aria-label="Lista računa">
+          {groups.map((group) => (
+            <li key={group.type} className="space-y-3">
+              <AccountGroupHeader group={group} />
+              <ul className="grid list-none grid-cols-1 gap-4 sm:grid-cols-2">
+                {group.accounts.map((a) => (
+                  <li key={a.id}>
+                    <AccountCard
+                      account={a}
+                      selected={selectedIds.has(a.id)}
+                      onToggleSelection={handleToggle}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {totalCount > 0 && filteredCount > 0 && hasActiveFilters ? (
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          Prikazano {filteredCount} od {totalCount} računa
+        </p>
+      ) : null}
 
       <ConfirmDeleteDialog
         open={bulkDeleteOpen}

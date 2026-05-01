@@ -99,7 +99,7 @@ function parseRpcPayload(data: unknown): Partial<MonthlySummaryRpcResult> | null
  * Podržava BAM↔EUR via fiksni currency-board kurs; ostale parove ostavlja 1:1
  * uz upozorenje (ograničen fallback — isti kao u get_monthly_summary RPC).
  */
-function convertCentsToBase(cents: bigint, from: string, base: string): bigint {
+export function convertCentsToBase(cents: bigint, from: string, base: string): bigint {
   if (from === base) return cents;
   if (from === 'BAM' && base === 'EUR') return toCents(cents, EUR_BAM_RATE);
   if (from === 'EUR' && base === 'BAM') return toCents(cents, BAM_EUR_RATE);
