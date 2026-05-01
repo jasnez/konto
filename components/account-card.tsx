@@ -61,7 +61,10 @@ export function AccountCard({
   return (
     <Card
       className={cn(
-        'relative overflow-hidden border transition-colors hover:bg-accent/30',
+        'relative overflow-hidden border transition-all duration-fast ease-out',
+        // Subtle hover lift on desktop only — mobile cards are usually
+        // tapped, not hovered, and the lift competes with swipe affordance.
+        'hover:bg-accent/30 md:hover:-translate-y-0.5 md:hover:shadow-md',
         selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
       )}
     >
