@@ -14,13 +14,14 @@ export default function UvidiPage() {
           <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
             <PieChart className="h-6 w-6 text-muted-foreground" aria-hidden />
           </div>
-          <CardTitle>Uvidi dolaze u Fazi 3</CardTitle>
+          <CardTitle>Uvidi stižu uskoro</CardTitle>
           <CardDescription>
-            Trendovi, kategorizacija potrošnje, pretplate i forecasting — sve iz tvojih transakcija.
+            Trendovi, kategorizacija potrošnje, pretplate i prognoze — sve iz tvojih transakcija.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center text-sm text-muted-foreground">
-          Čim imaš prve transakcije u sistemu, tu ćeš vidjeti obrasce.
+          Nastavi unositi transakcije; čim ih bude dovoljno, tu ćeš vidjeti obrasce — gdje novac
+          odlazi, kad rastu pretplate, šta bi mogao uštedjeti.
         </CardContent>
       </Card>
     </div>
