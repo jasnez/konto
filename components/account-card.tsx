@@ -38,26 +38,17 @@ export function AccountCard({ account, selected = false, onToggleSelection }: Ac
       style={account.color ? { borderColor: account.color } : undefined}
     >
       {selectionEnabled ? (
-        <button
-          type="button"
-          aria-label={selected ? `Odznači ${account.name}` : `Odaberi ${account.name}`}
-          aria-pressed={selected}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        <Checkbox
+          checked={selected}
+          onCheckedChange={() => {
             onToggleSelection(account.id);
           }}
-          className="absolute left-1 top-1 z-20 flex h-9 w-9 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Checkbox
-            checked={selected}
-            tabIndex={-1}
-            aria-hidden
-            onClick={(e) => {
-              e.preventDefault();
-            }}
-          />
-        </button>
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+          aria-label={selected ? `Odznači ${account.name}` : `Odaberi ${account.name}`}
+          className="absolute left-3 top-3 z-20 h-5 w-5"
+        />
       ) : null}
 
       <Link
