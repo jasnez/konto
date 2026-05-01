@@ -163,15 +163,34 @@ export function TransactionDetailClient({ tx, categories }: TransactionDetailCli
       </Button>
 
       <section className="rounded-2xl border bg-card p-5">
-        <p className="text-sm text-muted-foreground">{formatDateLabel(tx.transaction_date)}</p>
-        <h1 className="mt-2 text-4xl font-semibold tracking-tight">
-          <Money
-            cents={BigInt(tx.original_amount_cents)}
-            currency={tx.original_currency}
-            tone="default"
-          />
-        </h1>
-        <p className="mt-2 text-base text-muted-foreground">{merchantName}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-muted-foreground">{formatDateLabel(tx.transaction_date)}</p>
+            <h1 className="mt-2 text-4xl font-semibold tracking-tight">
+              <Money
+                cents={BigInt(tx.original_amount_cents)}
+                currency={tx.original_currency}
+                tone="default"
+              />
+            </h1>
+            <p className="mt-2 text-base text-muted-foreground">{merchantName}</p>
+          </div>
+          {/* Primary action surfaced in the hero so it's reachable without
+           * scrolling. Closes audit N12 — previously Uredi lived halfway down
+           * the page in the Akcije card. The same Uredi button still renders
+           * inside the Akcije section below so the muscle memory of the
+           * action card remains intact. */}
+          <Button asChild className="h-11 shrink-0">
+            <Link
+              href={`/transakcije/${tx.id}/uredi`}
+              className="inline-flex items-center gap-2"
+              aria-label="Uredi transakciju"
+            >
+              <Pencil className="h-4 w-4" aria-hidden />
+              Uredi
+            </Link>
+          </Button>
+        </div>
       </section>
 
       <section className="space-y-4 rounded-2xl border bg-card p-5">
