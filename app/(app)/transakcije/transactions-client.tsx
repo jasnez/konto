@@ -110,6 +110,7 @@ export function TransactionsClient({
 
   const grouped = useMemo(() => groupTransactions(transactions), [transactions]);
   const selectionMode = selectedIds.size > 0;
+  const allVisibleSelected = transactions.length > 0 && selectedIds.size === transactions.length;
 
   const hasActiveFilters =
     filters.accountIds.length > 0 ||
@@ -299,6 +300,18 @@ export function TransactionsClient({
         >
           <p className="text-xs font-medium">{selectedIds.size} odabrano</p>
           <div className="flex gap-1.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="compact"
+              onClick={() => {
+                setSelectedIds(
+                  allVisibleSelected ? new Set() : new Set(transactions.map((tx) => tx.id)),
+                );
+              }}
+            >
+              {allVisibleSelected ? 'Odznači sve' : 'Označi sve'}
+            </Button>
             <Button
               type="button"
               variant="ghost"

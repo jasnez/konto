@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
-import { AccountCard } from '@/components/account-card';
+import { AccountsClient } from '@/app/(app)/racuni/accounts-client';
 
 /**
  * List template (DS §4.3): header + list grid; prazan state sa CTA.
@@ -61,13 +61,7 @@ export default async function RacuniListPage() {
           </Button>
         </div>
       ) : (
-        <ul className="grid list-none grid-cols-1 gap-4 sm:grid-cols-2" aria-label="Lista računa">
-          {accounts.map((a) => (
-            <li key={a.id}>
-              <AccountCard account={a} />
-            </li>
-          ))}
-        </ul>
+        <AccountsClient accounts={accounts} />
       )}
     </div>
   );
