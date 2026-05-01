@@ -462,7 +462,9 @@ function AccountFormFields(props: FieldsProps) {
 
         <div
           className={cn(
-            'fixed bottom-0 left-0 right-0 z-10 border-t bg-background/95 p-4 backdrop-blur supports-[padding:max(0px)]:pb-[max(1rem,env(safe-area-inset-bottom))] md:static md:z-0 md:border-0 md:bg-transparent md:p-0',
+            // z-40 sits above the bottom nav (z-30) so the action bar isn't
+            // hidden on mobile — fixes B1.
+            'fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 p-4 backdrop-blur supports-[padding:max(0px)]:pb-[max(1rem,env(safe-area-inset-bottom))] md:static md:z-0 md:border-0 md:bg-transparent md:p-0',
           )}
         >
           <div className="mx-auto flex max-w-lg flex-col gap-2 sm:flex-row sm:justify-end">

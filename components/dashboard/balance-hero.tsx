@@ -54,8 +54,8 @@ export function BalanceHero({
             variant="secondary"
             className={cn(
               'font-medium',
-              netChangePercent > 0 && 'text-green-700 dark:text-green-300',
-              netChangePercent < 0 && 'text-red-700 dark:text-red-300',
+              netChangePercent > 0 && 'text-income',
+              netChangePercent < 0 && 'text-expense',
             )}
           >
             {formatPercent(netChangePercent)}

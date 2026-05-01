@@ -98,7 +98,7 @@ export default function HelpPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-4 sm:space-y-8 sm:px-6 sm:py-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">Pomoć</h1>
+        <h1 className="text-headline">Pomoć</h1>
         <p className="text-base text-muted-foreground">
           Kratki odgovori na česta pitanja. Detaljne smjernice o podacima:{' '}
           <Link href="/sigurnost" className="font-medium text-primary hover:underline">

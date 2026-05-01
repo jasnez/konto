@@ -12,7 +12,7 @@ export default function SigurnostPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-8 px-4 py-4 sm:space-y-10 sm:px-6 sm:py-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">Sigurnost i privatnost</h1>
+        <h1 className="text-headline">Sigurnost i privatnost</h1>
         <p className="text-base text-muted-foreground">
           Sažetak onoga što trebaš znati o tome kako Konto čuva i obrađuje tvoje podatke.
         </p>

@@ -4,6 +4,7 @@ import nextPlugin from '@next/eslint-plugin-next';
 import eslintConfigPrettier from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
 import noUnguardedMutation from './eslint-rules/no-unguarded-mutation.js';
+import noUntranslatedJsxStrings from './eslint-rules/no-untranslated-jsx-strings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -73,6 +74,18 @@ export default tseslint.config(
       'no-console': 'off',
     },
   },
+  // Register local custom rules (DL-8 + N20). Plugin must be defined ONCE in
+  // the flat config; per-file rule activation happens in subsequent blocks.
+  {
+    plugins: {
+      local: {
+        rules: {
+          'no-unguarded-mutation': noUnguardedMutation,
+          'no-untranslated-jsx-strings': noUntranslatedJsxStrings,
+        },
+      },
+    },
+  },
   // DL-8: Enforce .eq('user_id', ...) on every Supabase mutation against user-owned tables.
   // Applies to server-side code only (actions, API routes, server utilities, Edge functions).
   // To suppress for a legitimate cross-table ownership case:
@@ -85,9 +98,6 @@ export default tseslint.config(
       'lib/**/*.ts',
       'supabase/functions/**/*.ts',
     ],
-    plugins: {
-      local: { rules: { 'no-unguarded-mutation': noUnguardedMutation } },
-    },
     rules: {
       'local/no-unguarded-mutation': 'error',
     },
@@ -97,6 +107,15 @@ export default tseslint.config(
   {
     files: ['supabase/functions/**/*.ts'],
     ...tseslint.configs.disableTypeChecked,
+  },
+  // N20: Flag known anglicisms / untranslated English in user-facing JSX text.
+  // Konto UI is in Bosnian; English leftovers (Source, Mark as transfer, …)
+  // and hybrids (uploaduj) should be caught at lint time, not in QA.
+  {
+    files: ['app/**/*.tsx', 'components/**/*.tsx'],
+    rules: {
+      'local/no-untranslated-jsx-strings': 'error',
+    },
   },
   eslintConfigPrettier,
 );
