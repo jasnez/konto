@@ -511,6 +511,50 @@ export type Database = {
           },
         ];
       };
+      llm_categorization_cache: {
+        Row: {
+          amount_bucket: number;
+          category_id: string | null;
+          confidence: number;
+          created_at: string;
+          currency: string;
+          description_normalized: string;
+          expires_at: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          amount_bucket: number;
+          category_id?: string | null;
+          confidence: number;
+          created_at?: string;
+          currency: string;
+          description_normalized: string;
+          expires_at: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          amount_bucket?: number;
+          category_id?: string | null;
+          confidence?: number;
+          created_at?: string;
+          currency?: string;
+          description_normalized?: string;
+          expires_at?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'llm_categorization_cache_category_id_fkey';
+            columns: ['category_id'];
+            isOneToOne: false;
+            referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       merchant_aliases: {
         Row: {
           created_at: string;
@@ -1066,6 +1110,10 @@ export type Database = {
         };
         Returns: boolean;
       };
+      convert_transaction_to_transfer: {
+        Args: { p_counterparty_account_id: string; p_transaction_id: string };
+        Returns: Json;
+      };
       count_receipt_scans_today: { Args: never; Returns: number };
       create_transfer_pair: {
         Args: {
@@ -1092,6 +1140,14 @@ export type Database = {
       finalize_import_batch: {
         Args: { p_batch_id: string; p_dedup_skipped?: number; p_rows: Json };
         Returns: Json;
+      };
+      get_account_balance_history: {
+        Args: { p_days?: number };
+        Returns: {
+          account_id: string;
+          balance_cents: number;
+          day: string;
+        }[];
       };
       get_monthly_summary:
         | {
