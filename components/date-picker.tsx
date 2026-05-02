@@ -9,9 +9,21 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 
 interface DatePickerProps {
+  /**
+   * ISO date `YYYY-MM-DD`, or the empty string when no date is selected.
+   * The empty-string branch exists for filter use-cases (`/transakcije`)
+   * where "no `from`/`to` set" is a valid state — falling through to
+   * `format()` with an Invalid Date would throw.
+   */
   value: string;
   onChange: (isoDate: string) => void;
   disabled?: boolean;
+  /**
+   * Trigger label shown when `value` is empty. Defaults to "Odaberi datum".
+   * Pass context-specific copy (e.g. "Od datuma", "Do datuma") so users
+   * know which side of a range each picker controls.
+   */
+  placeholder?: string;
 }
 
 function toDate(value: string): Date {
@@ -39,8 +51,17 @@ export function formatWeekdayInitial(date: Date): string {
   return narrow.charAt(0).toUpperCase();
 }
 
-export function DatePicker({ value, onChange, disabled = false }: DatePickerProps) {
-  const date = toDate(value);
+export function DatePicker({
+  value,
+  onChange,
+  disabled = false,
+  placeholder = 'Odaberi datum',
+}: DatePickerProps) {
+  // Two-step narrowing so TypeScript can carry the non-null + valid-Date
+  // refinement through both the trigger label and the Calendar's `selected`.
+  // `toDate('')` builds an Invalid Date that would throw inside `format()`.
+  const candidate = value.length > 0 ? toDate(value) : null;
+  const validDate = candidate !== null && !Number.isNaN(candidate.getTime()) ? candidate : null;
 
   return (
     <Popover>
@@ -49,16 +70,19 @@ export function DatePicker({ value, onChange, disabled = false }: DatePickerProp
           type="button"
           variant="outline"
           disabled={disabled}
-          className={cn('h-11 w-full justify-start text-left font-normal')}
+          className={cn(
+            'h-11 w-full justify-start text-left font-normal',
+            validDate === null && 'text-muted-foreground',
+          )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" aria-hidden />
-          {format(date, 'd. MMM yyyy.', { locale: bs })}
+          {validDate !== null ? format(validDate, 'd. MMM yyyy.', { locale: bs }) : placeholder}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-0">
         <Calendar
           mode="single"
-          selected={date}
+          selected={validDate ?? undefined}
           onSelect={(nextDate) => {
             if (!nextDate) return;
             onChange(toIsoDate(nextDate));
