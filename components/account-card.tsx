@@ -108,8 +108,12 @@ export function AccountCard({
 
       <Link
         href={`/racuni/${account.id}`}
+        // `ring-inset` because the parent <Card> has `overflow-hidden` for
+        // the R3 color stripe (clips it to the rounded card shape), which
+        // would otherwise clip an outset focus ring (audit B2). Inset rings
+        // paint inside the link's pr-14/pl-X padding, away from content.
         className={cn(
-          'block min-h-[44px] touch-manipulation pr-14 pt-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'block min-h-[44px] touch-manipulation pr-14 pt-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
           selectionEnabled ? 'pl-12' : 'pl-4',
         )}
       >

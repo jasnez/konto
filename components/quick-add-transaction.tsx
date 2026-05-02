@@ -437,7 +437,16 @@ export function QuickAddTransaction({
         }}
         className="flex min-h-0 flex-1 flex-col gap-4"
       >
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto sm:space-y-3">
+        {/*
+         * `px-1` is the focus-ring breathing room for B2: every input/
+         * trigger inside this scroll region has `focus-visible:ring-2
+         * ring-offset-2`, a 4px halo that extends outside the element.
+         * `overflow-y-auto` per CSS spec promotes overflow-x to auto too,
+         * so flush-left inputs would have their left ring pixel clipped
+         * by the scroll container's content-box edge. 4px padding lines
+         * up exactly with the halo.
+         */}
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 sm:space-y-3">
           <Button asChild type="button" variant="outline" className="h-11 w-full">
             <Link
               href="/skeniraj"
