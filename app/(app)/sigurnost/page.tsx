@@ -108,6 +108,46 @@ export default function SigurnostPage() {
 
       <Separator />
 
+      <section id="prijava-ranjivosti" className="scroll-mt-20 space-y-4">
+        <h2 className="text-lg font-medium tracking-tight">Prijava sigurnosnih ranjivosti</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Otkrio si problem?</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              Ako si pronašao ranjivost koja može uticati na povjerljivost, integritet ili
+              dostupnost korisničkih podataka, javi nam direktno na{' '}
+              <a
+                href="mailto:security@konto.app"
+                className="font-medium text-primary hover:underline"
+              >
+                security@konto.app
+              </a>
+              . Odgovaramo unutar 72 sata.
+            </p>
+            <p>
+              Za prvi kontakt dovoljan je opis problema i koraci za reprodukciju — eksploit detalje
+              ne moraš slati u istom mailu. Molimo te da ne pokrećeš testove koji opterećuju servis
+              (DDoS, masovno scraping) niti da pristupaš tuđim nalozima; ozbiljnost prijave
+              cijenimo, ali ne na štetu drugih korisnika.
+            </p>
+            <p>
+              Strojno čitljiva verzija je na{' '}
+              <a
+                href="/.well-known/security.txt"
+                className="font-medium text-primary hover:underline"
+              >
+                /.well-known/security.txt
+              </a>{' '}
+              (RFC 9116).
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      <Separator />
+
       <p className="text-sm text-muted-foreground">
         Korisnički vodič (FAQ):{' '}
         <Link href="/help" className="font-medium text-primary hover:underline">
