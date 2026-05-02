@@ -143,12 +143,14 @@ export function TransactionFilters({
                   <div className="grid grid-cols-2 gap-2">
                     <DatePicker
                       value={filters.from}
+                      placeholder="Od datuma"
                       onChange={(value) => {
                         onUpdate({ from: value, page: '1' });
                       }}
                     />
                     <DatePicker
                       value={filters.to}
+                      placeholder="Do datuma"
                       onChange={(value) => {
                         onUpdate({ to: value, page: '1' });
                       }}

@@ -65,10 +65,6 @@ function parseIdList(value: string | string[] | undefined): string[] {
 }
 
 function parseFilters(params: Record<string, string | string[] | undefined>): TransactionsFilters {
-  const now = new Date();
-  const defaultFrom = format(startOfMonth(now), 'yyyy-MM-dd');
-  const defaultTo = format(endOfMonth(now), 'yyyy-MM-dd');
-
   const fromCandidate = Array.isArray(params.from) ? params.from[0] : params.from;
   const toCandidate = Array.isArray(params.to) ? params.to[0] : params.to;
   const searchCandidate = Array.isArray(params.search) ? params.search[0] : params.search;
@@ -77,11 +73,15 @@ function parseFilters(params: Record<string, string | string[] | undefined>): Tr
 
   const pageNumber = Number(pageCandidate);
 
+  // Audit N13 fix: `from`/`to` are now empty strings when no URL param is
+  // present, so the active-filter chip only renders when the user actually
+  // overrode the date range. The default current-month fallback used by
+  // the SQL query is computed in `fetchTransactionsUncached` instead.
   return {
     accountIds: parseIdList(params.account),
     categoryIds: parseIdList(params.category),
-    from: fromCandidate && fromCandidate.length > 0 ? fromCandidate : defaultFrom,
-    to: toCandidate && toCandidate.length > 0 ? toCandidate : defaultTo,
+    from: fromCandidate && fromCandidate.length > 0 ? fromCandidate : '',
+    to: toCandidate && toCandidate.length > 0 ? toCandidate : '',
     search: searchCandidate?.trim() ?? '',
     page: Number.isFinite(pageNumber) && pageNumber > 0 ? Math.floor(pageNumber) : 1,
     type:
@@ -103,13 +103,23 @@ async function fetchTransactionsUncached(
   const fromIndex = (filters.page - 1) * PAGE_SIZE;
   const toIndex = fromIndex + PAGE_SIZE - 1;
 
+  // Default range = current month. We apply it here (not in `parseFilters`)
+  // so that when `filters.from`/`to` are empty the UI knows the user has not
+  // set a date filter (no chip renders, "Očisti sve" actually clears) while
+  // the SQL still gets a sensible bounded window instead of a full-table
+  // scan.
+  const now = new Date();
+  const effectiveFrom =
+    filters.from.length > 0 ? filters.from : format(startOfMonth(now), 'yyyy-MM-dd');
+  const effectiveTo = filters.to.length > 0 ? filters.to : format(endOfMonth(now), 'yyyy-MM-dd');
+
   let countQuery = supabase
     .from('transactions')
     .select('id', { count: 'estimated', head: true })
     .eq('user_id', userId)
     .is('deleted_at', null)
-    .gte('transaction_date', filters.from)
-    .lte('transaction_date', filters.to);
+    .gte('transaction_date', effectiveFrom)
+    .lte('transaction_date', effectiveTo);
 
   let dataQuery = supabase
     .from('transactions')
@@ -118,8 +128,8 @@ async function fetchTransactionsUncached(
     )
     .eq('user_id', userId)
     .is('deleted_at', null)
-    .gte('transaction_date', filters.from)
-    .lte('transaction_date', filters.to)
+    .gte('transaction_date', effectiveFrom)
+    .lte('transaction_date', effectiveTo)
     .order('transaction_date', { ascending: false })
     .order('created_at', { ascending: false })
     .range(fromIndex, toIndex);
