@@ -8,6 +8,8 @@ import { logSafe, logWarn } from '@/lib/logger';
 interface MonthlySummaryRpcResult {
   total_balance: number | string | null;
   total_liabilities: number | string | null;
+  out_of_scope_liabilities: number | string | null;
+  out_of_scope_liability_count: number | string | null;
   month_income: number | string | null;
   month_expense: number | string | null;
   month_net: number | string | null;
@@ -18,8 +20,20 @@ interface MonthlySummaryRpcResult {
 
 export interface MonthlySummary {
   totalBalance: bigint;
-  /** U baznoj valuti: zbroj duga s kredita (loan, credit_card) gdje je saldo < 0, kao pozitivna cifra. */
+  /** U baznoj valuti: zbroj duga s **in-scope** kredita (loan, credit_card sa
+   * `include_in_net_worth = true`) gdje je saldo < 0, kao pozitivna cifra.
+   * Tipično: kreditne kartice (default flag=true). Long-term krediti su
+   * default-isključeni iz ovog zbira (vidi `outOfScopeLiabilities`). */
   totalLiabilities: bigint;
+  /** U baznoj valuti: zbroj duga s **out-of-scope** kredita
+   * (`include_in_net_worth = false`), kao pozitivna cifra. Default-uje
+   * stambene/automoto kredite. UI ovo prikazuje kao zaseban informativan
+   * red ispod Aktiva/Pasiva tako da Neto stanje ne potone od dugoročnog
+   * duga. */
+  outOfScopeLiabilities: bigint;
+  /** Broj out-of-scope kredita — koristi se za pluralizaciju copy-a
+   * ("1 kredit" / "X kredita"). */
+  outOfScopeLiabilityCount: number;
   monthIncome: bigint;
   monthExpense: bigint;
   monthNet: bigint;
@@ -70,6 +84,8 @@ function isRpcJsonObject(d: unknown): d is Record<string, unknown> {
 const EMPTY_MONTHLY_SUMMARY: MonthlySummary = {
   totalBalance: 0n,
   totalLiabilities: 0n,
+  outOfScopeLiabilities: 0n,
+  outOfScopeLiabilityCount: 0,
   monthIncome: 0n,
   monthExpense: 0n,
   monthNet: 0n,
@@ -112,7 +128,12 @@ export function convertCentsToBase(cents: bigint, from: string, base: string): b
   return cents;
 }
 
-/** Zbroj stanja s računa, pretvoreno u baznu valutu (kao u RPC, uklj. u net worth) */
+/** Zbroj stanja s **Aktiva** računa (ne-debt tipovi sa flag=true),
+ * pretvoreno u baznu valutu. Mirror-uje `account_balances` CTE u RPC-u
+ * (migracija 00051). Debt račune (loan, credit_card) namjerno NE
+ * uključujemo ovdje jer se njihov balans posebno hvata kao
+ * `total_liabilities`; uključivanje bi vodilo u double-count koji
+ * Phase D Net Worth display surface-uje. */
 async function sumNetWorthFromAccounts(
   supabase: Pick<SupabaseClient<Database>, 'from'>,
   userId: string,
@@ -120,7 +141,7 @@ async function sumNetWorthFromAccounts(
 ): Promise<bigint> {
   const { data, error } = await supabase
     .from('accounts')
-    .select('current_balance_cents, currency, include_in_net_worth')
+    .select('current_balance_cents, currency, include_in_net_worth, type')
     .eq('user_id', userId)
     .is('deleted_at', null);
 
@@ -135,6 +156,9 @@ async function sumNetWorthFromAccounts(
     if (!row.include_in_net_worth) {
       continue;
     }
+    if (row.type === 'loan' || row.type === 'credit_card') {
+      continue;
+    }
     const cur = row.currency.toUpperCase();
     const cents = BigInt(Math.trunc(row.current_balance_cents));
     total += convertCentsToBase(cents, cur, base);
@@ -142,7 +166,10 @@ async function sumNetWorthFromAccounts(
   return total;
 }
 
-/** Zbroj apsolutnog duga (loan, credit_card, negativan saldo), u baznoj valuti. */
+/** Zbroj apsolutnog duga **in-scope** kredita (`include_in_net_worth = true`),
+ * u baznoj valuti. Ovo mirror-uje `liability_account_balances` CTE u RPC-u
+ * (migracija 00051) — flag mora biti uvjet i ovdje da SSR fallback ne
+ * proizvede drugačiji broj od onog što server vraća. */
 async function sumLiabilitiesFromAccounts(
   supabase: Pick<SupabaseClient<Database>, 'from'>,
   userId: string,
@@ -150,7 +177,7 @@ async function sumLiabilitiesFromAccounts(
 ): Promise<bigint> {
   const { data, error } = await supabase
     .from('accounts')
-    .select('current_balance_cents, currency, type')
+    .select('current_balance_cents, currency, type, include_in_net_worth')
     .eq('user_id', userId)
     .is('deleted_at', null);
 
@@ -163,6 +190,9 @@ async function sumLiabilitiesFromAccounts(
   let total = 0n;
   for (const row of data) {
     if (row.type !== 'loan' && row.type !== 'credit_card') {
+      continue;
+    }
+    if (!row.include_in_net_worth) {
       continue;
     }
     const cents = BigInt(Math.trunc(row.current_balance_cents));
@@ -178,10 +208,57 @@ async function sumLiabilitiesFromAccounts(
   return total;
 }
 
+/** Zbroj apsolutnog duga **out-of-scope** kredita (`include_in_net_worth =
+ * false`) plus brojač računa, u baznoj valuti. Mirror-uje
+ * `out_of_scope_liability_aggregate` CTE u RPC-u (migracija 00051). */
+async function sumOutOfScopeLiabilitiesFromAccounts(
+  supabase: Pick<SupabaseClient<Database>, 'from'>,
+  userId: string,
+  baseCurrency: string,
+): Promise<{ total: bigint; count: number }> {
+  const { data, error } = await supabase
+    .from('accounts')
+    .select('current_balance_cents, currency, type, include_in_net_worth')
+    .eq('user_id', userId)
+    .is('deleted_at', null);
+
+  if (error) {
+    logSafe('[getMonthlySummary] sumOutOfScopeLiabilitiesFromAccounts', {
+      error: error.message,
+    });
+    return { total: 0n, count: 0 };
+  }
+
+  const base = baseCurrency.trim().toUpperCase();
+  let total = 0n;
+  let count = 0;
+  for (const row of data) {
+    if (row.type !== 'loan' && row.type !== 'credit_card') {
+      continue;
+    }
+    if (row.include_in_net_worth) {
+      continue;
+    }
+    const cents = BigInt(Math.trunc(row.current_balance_cents));
+    if (cents >= 0n) {
+      continue;
+    }
+    const cur = row.currency.toUpperCase();
+    const converted = convertCentsToBase(cents, cur, base);
+    if (converted < 0n) {
+      total += -converted;
+      count += 1;
+    }
+  }
+  return { total, count };
+}
+
 function fromRpcRow(payload: Partial<MonthlySummaryRpcResult>): MonthlySummary {
   return {
     totalBalance: toBigInt(payload.total_balance),
     totalLiabilities: toBigInt(payload.total_liabilities),
+    outOfScopeLiabilities: toBigInt(payload.out_of_scope_liabilities),
+    outOfScopeLiabilityCount: toNumber(payload.out_of_scope_liability_count),
     monthIncome: toBigInt(payload.month_income),
     monthExpense: toBigInt(payload.month_expense),
     monthNet: toBigInt(payload.month_net),
@@ -246,21 +323,35 @@ export async function getMonthlySummary(
 
   if (error) {
     logSafe('[getMonthlySummary] get_monthly_summary', { error: error.message });
-    const [total, liab] = await Promise.all([
+    const [total, liab, outOfScope] = await Promise.all([
       sumNetWorthFromAccounts(supabase, userId, baseCurrency),
       sumLiabilitiesFromAccounts(supabase, userId, baseCurrency),
+      sumOutOfScopeLiabilitiesFromAccounts(supabase, userId, baseCurrency),
     ]);
-    return { ...EMPTY_MONTHLY_SUMMARY, totalBalance: total, totalLiabilities: liab };
+    return {
+      ...EMPTY_MONTHLY_SUMMARY,
+      totalBalance: total,
+      totalLiabilities: liab,
+      outOfScopeLiabilities: outOfScope.total,
+      outOfScopeLiabilityCount: outOfScope.count,
+    };
   }
 
   const payload = parseRpcPayload(data);
   if (payload == null) {
     logSafe('[getMonthlySummary] nevažeći odgovor od RPC (data null ili JSON).');
-    const [total, liab] = await Promise.all([
+    const [total, liab, outOfScope] = await Promise.all([
       sumNetWorthFromAccounts(supabase, userId, baseCurrency),
       sumLiabilitiesFromAccounts(supabase, userId, baseCurrency),
+      sumOutOfScopeLiabilitiesFromAccounts(supabase, userId, baseCurrency),
     ]);
-    return { ...EMPTY_MONTHLY_SUMMARY, totalBalance: total, totalLiabilities: liab };
+    return {
+      ...EMPTY_MONTHLY_SUMMARY,
+      totalBalance: total,
+      totalLiabilities: liab,
+      outOfScopeLiabilities: outOfScope.total,
+      outOfScopeLiabilityCount: outOfScope.count,
+    };
   }
 
   let out = fromRpcRow(payload);

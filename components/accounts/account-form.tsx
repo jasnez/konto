@@ -405,7 +405,7 @@ function AccountFormFields(props: FieldsProps) {
                   <FormLabel className="text-base">Uključi u brojku na početnoj</FormLabel>
                   <FormDescription>
                     Zbroj uključenih računa na početnoj stranici. Za dugoročni kredit to možeš
-                    isključiti — dug i dalje vidiš u zasebnom redu „Zaduženja”.
+                    isključiti — dug i dalje vidiš u zasebnom redu „Krediti (informativno)”.
                   </FormDescription>
                 </div>
                 <FormControl>

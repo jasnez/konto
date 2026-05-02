@@ -51,6 +51,8 @@ describe('getMonthlySummary', () => {
       {
         total_balance: '362340',
         total_liabilities: '5000',
+        out_of_scope_liabilities: '20000000',
+        out_of_scope_liability_count: 1,
         month_income: '220000',
         month_expense: '145500',
         month_net: '74500',
@@ -67,6 +69,8 @@ describe('getMonthlySummary', () => {
     expect(summary).toEqual({
       totalBalance: 362340n,
       totalLiabilities: 5000n,
+      outOfScopeLiabilities: 20000000n,
+      outOfScopeLiabilityCount: 1,
       monthIncome: 220000n,
       monthExpense: 145500n,
       monthNet: 74500n,
@@ -186,7 +190,13 @@ describe('getMonthlySummary', () => {
     expect(summary.monthExpense).toBe(0n);
   });
 
-  it('on rpc error sums liabilities for loan and credit_card with negative balance', async () => {
+  it('on rpc error splits liabilities by include_in_net_worth flag', async () => {
+    // Mirror of migration 00051 contract: in-scope debt (flag=true) feeds
+    // `totalLiabilities`, out-of-scope debt (flag=false) feeds the
+    // informational `outOfScopeLiabilities`. The fallback path through
+    // `sumLiabilitiesFromAccounts` and `sumOutOfScopeLiabilitiesFromAccounts`
+    // must produce the same split as the RPC so the dashboard stays
+    // consistent when the RPC errors out.
     const { supabase } = createSupabaseRpcMock(null, { message: 'function not found' }, [
       {
         current_balance_cents: 10_000,
@@ -195,15 +205,17 @@ describe('getMonthlySummary', () => {
         type: 'checking',
       },
       {
+        // Long-term mortgage — opted out of net worth via flag
         current_balance_cents: -50_000,
         currency: 'BAM',
         include_in_net_worth: false,
         type: 'loan',
       },
       {
+        // Credit card — flag explicitly true, counts as in-scope debt
         current_balance_cents: -2_000,
         currency: 'BAM',
-        include_in_net_worth: false,
+        include_in_net_worth: true,
         type: 'credit_card',
       },
     ]);
@@ -211,7 +223,9 @@ describe('getMonthlySummary', () => {
     const summary = await getMonthlySummary(supabase, 'u1', 'BAM', { year: 2026, month: 4 });
 
     expect(summary.totalBalance).toBe(10_000n);
-    expect(summary.totalLiabilities).toBe(52_000n);
+    expect(summary.totalLiabilities).toBe(2_000n);
+    expect(summary.outOfScopeLiabilities).toBe(50_000n);
+    expect(summary.outOfScopeLiabilityCount).toBe(1);
   });
 
   it('when rpc returns 0 but accounts have balance, total comes from accounts', async () => {

@@ -86,13 +86,17 @@ function buildLastTransactionMap(rows: LastTxRow[]): Map<string, AccountLastTran
   return seen;
 }
 
-/** Sum of in-scope (include_in_net_worth=true) account balances in base currency.
- * Mirrors the dashboard's "Aktiva" so the user sees the same number on both
- * pages (audit R2). */
+/** Sum of in-scope (include_in_net_worth=true) NON-debt account balances in
+ * base currency. Mirrors the dashboard's "Aktiva" so the user sees the same
+ * number on both pages (audit R2). Debt account types (loan, credit_card)
+ * are intentionally skipped so credit cards with the default flag=true don't
+ * pull their negative balance into Aktiva and ALSO get subtracted as a
+ * liability on the dashboard (the migration 00051 double-count fix). */
 function computeAktivaInScopeCents(accounts: Account[], baseCurrency: string): bigint {
   let total = 0n;
   for (const account of accounts) {
     if (!account.include_in_net_worth) continue;
+    if (account.type === 'loan' || account.type === 'credit_card') continue;
     const cents = BigInt(Math.trunc(account.current_balance_cents));
     total += convertCentsToBase(cents, account.currency, baseCurrency);
   }
@@ -186,7 +190,7 @@ export default async function RacuniListPage({ searchParams }: RacuniListPagePro
   //     while the user searches/filters
   const { data: allUserAccounts } = await supabase
     .from('accounts')
-    .select('currency,current_balance_cents,include_in_net_worth')
+    .select('currency,current_balance_cents,include_in_net_worth,type')
     .eq('user_id', user.id)
     .is('deleted_at', null);
 

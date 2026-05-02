@@ -107,11 +107,15 @@ async function getRecentTransactions(
   }));
 }
 
-/** True when summary tells us the account is brand-new with no activity. */
+/** True when summary tells us the account is brand-new with no activity.
+ * Out-of-scope liabilities also count — a fresh user with just a stambeni
+ * kredit (loan with `include_in_net_worth=false`) is NOT empty: they need
+ * to see the loan, not the empty-state copy. */
 function isSummaryEmpty(summary: MonthlySummary): boolean {
   return (
     summary.totalBalance === 0n &&
     summary.totalLiabilities === 0n &&
+    summary.outOfScopeLiabilities === 0n &&
     summary.monthIncome === 0n &&
     summary.monthExpense === 0n
   );
@@ -151,6 +155,8 @@ async function HeroSection({
       <BalanceHero
         totalBalanceCents={summary.totalBalance}
         totalLiabilitiesCents={summary.totalLiabilities}
+        outOfScopeLiabilitiesCents={summary.outOfScopeLiabilities}
+        outOfScopeLiabilityCount={summary.outOfScopeLiabilityCount}
         baseCurrency={baseCurrency}
         netChangePercent={summary.netChangePercent}
       />
