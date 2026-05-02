@@ -137,7 +137,11 @@ export function TransactionRow({
         tabIndex={0}
         aria-label={`Otvori transakciju: ${merchantLabel}`}
         className={cn(
-          'group relative z-10 flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-muted/40',
+          // `ring-inset` because the parent <li> has `overflow-hidden` for
+          // the swipe-drawer pattern, which would clip an outset focus ring
+          // 2px outside the row (audit B2). Inset rings paint inside the
+          // row's px-3 padding zone, well clear of icon/text content.
+          'group relative z-10 flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring md:hover:bg-muted/40',
           selected && 'bg-accent',
         )}
         style={{ transform: `translateX(${String(swipeOffset)}px)` }}
