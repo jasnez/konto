@@ -232,11 +232,6 @@ export default function PrivatnostPage() {
                 <td className="px-3 py-2">EU (kroz API podešavanja)</td>
               </tr>
               <tr>
-                <td className="px-3 py-2 font-medium text-foreground">Inngest</td>
-                <td className="px-3 py-2">Orkestracija pozadinskih job-ova (PDF parsiranje)</td>
-                <td className="px-3 py-2">SAD/EU (provjeravamo region)</td>
-              </tr>
-              <tr>
                 <td className="px-3 py-2 font-medium text-foreground">Resend</td>
                 <td className="px-3 py-2">Slanje email-ova (potvrde brisanja, magic link)</td>
                 <td className="px-3 py-2">EU</td>

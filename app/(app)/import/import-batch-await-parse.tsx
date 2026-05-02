@@ -19,9 +19,9 @@ interface ImportBatchAwaitParseProps {
  * `enqueued`/`parsing`, and surfaces a slow-parse hint after 90s
  * (per F2-E3-T3).
  *
- * `enqueued` is the AV-2 transitional state between the route accepting the
- * request and the Inngest worker picking it up. Treated identically to
- * `parsing` for polling/UX purposes.
+ * `enqueued` is a legacy transitional status retained in the type union for
+ * historical rows; new uploads go straight `uploaded → parsing`. Treated
+ * identically to `parsing` for polling/UX purposes.
  */
 export function ImportBatchAwaitParse({ batchId, status }: ImportBatchAwaitParseProps) {
   const router = useRouter();
