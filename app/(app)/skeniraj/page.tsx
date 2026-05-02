@@ -71,28 +71,11 @@ export default async function SkenirajPage() {
           prodavca pa samo potvrdi.
         </p>
       </div>
+      {/* First-use guidance (audit N18) lives inside ReceiptScanClient and
+       * renders only in the 'upload' phase — once the user picks a file,
+       * the tips collapse out of the way to keep the analyze/review flow
+       * uncluttered. The page-level shell stays minimal. */}
       <ReceiptScanClient accounts={accountOptions} categories={categoryOptions} />
-      {/* First-use guidance (audit N18). Static text rather than a sample
-       * image — short concrete tips give users the same orientation and
-       * cost no asset weight. */}
-      <details className="group rounded-2xl border bg-muted/30 p-4 text-sm">
-        <summary className="flex cursor-pointer list-none items-center justify-between font-medium">
-          <span>Savjeti za bolji rezultat</span>
-          <span
-            className="text-muted-foreground transition-transform group-open:rotate-90"
-            aria-hidden
-          >
-            ›
-          </span>
-        </summary>
-        <ul className="mt-3 list-disc space-y-1.5 pl-5 text-muted-foreground">
-          <li>Slikaj iznad računa, ravno — ne pod oštrim uglom.</li>
-          <li>Cijeli račun u kadru: vidljivi datum, iznos i naziv prodavca.</li>
-          <li>Dovoljno svjetla; izbjegavaj sjenu od ruke ili telefona.</li>
-          <li>Ako je račun zgužvan, izravnaj ga na ravnu površinu.</li>
-          <li>Više od jedne stranice? Skeniraj svaku posebno.</li>
-        </ul>
-      </details>
     </div>
   );
 }

@@ -56,6 +56,38 @@ function defaultAccountId(accounts: AccountOption[]): string {
   return accounts.at(0)?.id ?? '';
 }
 
+// Audit N18: first-use guidance. Visible only in the upload phase — see
+// the conditional render below. Tips were chosen for highest expected
+// impact on Gemini extraction quality (camera angle, framing, lighting),
+// with two long-tail cases (creased receipts, multi-page receipts) that
+// show up in support tickets.
+const SCAN_TIPS = [
+  'Slikaj iznad računa, ravno — ne pod oštrim uglom.',
+  'Cijeli račun u kadru: vidljivi datum, iznos i naziv prodavca.',
+  'Dovoljno svjetla; izbjegavaj sjenu od ruke ili telefona.',
+  'Ako je račun zgužvan, izravnaj ga na ravnu površinu.',
+  'Više od jedne stranice? Skeniraj svaku posebno.',
+];
+
+function ScanTips() {
+  return (
+    <aside
+      aria-label="Savjeti za skeniranje"
+      className="rounded-2xl border bg-muted/30 p-4 text-sm"
+    >
+      <p className="mb-2 font-medium text-foreground">Za najbolje prepoznavanje:</p>
+      <ul className="space-y-1.5 text-muted-foreground">
+        {SCAN_TIPS.map((tip) => (
+          <li key={tip} className="flex items-start gap-2">
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+            <span>{tip}</span>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  );
+}
+
 function translateError(code: string): string {
   switch (code) {
     case 'RATE_LIMIT_EXCEEDED':
@@ -282,81 +314,87 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
 
   if (phase.name === 'upload' || phase.name === 'uploading') {
     return (
-      <div
-        className={`rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
-          dragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'
-        }`}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => {
-          setDragging(false);
-        }}
-        onDrop={onDrop}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-          className="sr-only"
-          onChange={onInputChange}
-          disabled={phase.name === 'uploading'}
-        />
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="sr-only"
-          onChange={onInputChange}
-          disabled={phase.name === 'uploading'}
-        />
+      <div className="space-y-4">
+        {/* Tips show only in the idle 'upload' state — once the actual
+         * upload starts (`uploading`), the spinner has the user's full
+         * attention and the tips would just be noise. */}
+        {phase.name === 'upload' ? <ScanTips /> : null}
+        <div
+          className={`rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
+            dragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'
+          }`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => {
+            setDragging(false);
+          }}
+          onDrop={onDrop}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+            className="sr-only"
+            onChange={onInputChange}
+            disabled={phase.name === 'uploading'}
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="sr-only"
+            onChange={onInputChange}
+            disabled={phase.name === 'uploading'}
+          />
 
-        <div className="flex flex-col items-center gap-4 py-6">
-          {phase.name === 'uploading' ? (
-            <>
-              <Loader2 className="size-12 animate-spin text-primary" aria-hidden />
-              <p className="text-sm font-medium">Korak 1/2: Slanje slike…</p>
-              <p className="text-xs text-muted-foreground">
-                Slika se optimizuje i prosljeđuje na server.
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-11"
-                onClick={cancelScan}
-              >
-                <X className="mr-2 size-4" aria-hidden />
-                Otkaži
-              </Button>
-            </>
-          ) : (
-            <>
-              <FileImage className="size-12 text-muted-foreground" aria-hidden />
-              <div className="space-y-1">
-                <p className="font-medium">Povuci sliku ovdje ili odaberi</p>
-                <p className="text-xs text-muted-foreground">JPEG, PNG, WEBP, HEIC · max 10 MB</p>
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button type="button" size="lg" className="h-11" onClick={openCamera}>
-                  <Camera className="mr-2 size-4" aria-hidden />
-                  Uslikaj
-                </Button>
+          <div className="flex flex-col items-center gap-4 py-6">
+            {phase.name === 'uploading' ? (
+              <>
+                <Loader2 className="size-12 animate-spin text-primary" aria-hidden />
+                <p className="text-sm font-medium">Korak 1/2: Slanje slike…</p>
+                <p className="text-xs text-muted-foreground">
+                  Slika se optimizuje i prosljeđuje na server.
+                </p>
                 <Button
                   type="button"
-                  size="lg"
                   variant="outline"
+                  size="sm"
                   className="h-11"
-                  onClick={openFilePicker}
+                  onClick={cancelScan}
                 >
-                  <Upload className="mr-2 size-4" aria-hidden />
-                  Odaberi fajl
+                  <X className="mr-2 size-4" aria-hidden />
+                  Otkaži
                 </Button>
-              </div>
-            </>
-          )}
+              </>
+            ) : (
+              <>
+                <FileImage className="size-12 text-muted-foreground" aria-hidden />
+                <div className="space-y-1">
+                  <p className="font-medium">Povuci sliku ovdje ili odaberi</p>
+                  <p className="text-xs text-muted-foreground">JPEG, PNG, WEBP, HEIC · max 10 MB</p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button type="button" size="lg" className="h-11" onClick={openCamera}>
+                    <Camera className="mr-2 size-4" aria-hidden />
+                    Uslikaj
+                  </Button>
+                  <Button
+                    type="button"
+                    size="lg"
+                    variant="outline"
+                    className="h-11"
+                    onClick={openFilePicker}
+                  >
+                    <Upload className="mr-2 size-4" aria-hidden />
+                    Odaberi fajl
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
