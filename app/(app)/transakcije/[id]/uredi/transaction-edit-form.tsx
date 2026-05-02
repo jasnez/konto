@@ -30,6 +30,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 import { CreateTransactionSchema } from '@/lib/schemas/transaction';
 
 type EditFormValues = z.infer<typeof CreateTransactionSchema>;
@@ -281,7 +282,26 @@ export function TransactionEditForm({
             )}
           />
 
-          <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
+          {/*
+           * Mobile sticky save bar (audit N12). Without this, the user has
+           * to scroll past 7 form fields on a 392px viewport before the
+           * Sačuvaj button comes into view. Sticky pinning sits the row at
+           * the bottom of the viewport, with the offset chosen by render
+           * context: full-page must clear the bottom nav (~5rem +
+           * safe-area); the modal sheet has no nav, just safe area. The
+           * negative margins + matching padding neutralize the form card's
+           * padding so the bar reads as a footer flush with the card edges.
+           * Desktop reverts to the inline border-t + pt-4 layout.
+           */}
+          <div
+            className={cn(
+              'flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end',
+              'max-md:sticky max-md:z-20 max-md:-mx-5 max-md:-mb-5 max-md:rounded-b-2xl max-md:bg-card max-md:px-5 max-md:pb-5',
+              chromeless
+                ? 'max-md:bottom-[env(safe-area-inset-bottom)]'
+                : 'max-md:bottom-[calc(5rem+env(safe-area-inset-bottom))]',
+            )}
+          >
             <Button asChild type="button" variant="outline">
               <Link href={`/transakcije/${transactionId}`}>Otkaži</Link>
             </Button>
