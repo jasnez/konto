@@ -1,0 +1,12 @@
+# Politika otkrivanja sigurnosnih ranjivosti za Konto (RFC 9116).
+# Hvala što prijavljuješ — odgovaramo unutar 72 sata, na bosanskom ili engleskom.
+#
+# IMPORTANT: When `Expires` falls within ~3 months of today, refresh this file
+# (push the date forward by ~12 months). RFC 9116 recommends Expires be less
+# than one year out, so don't extend further than that in a single bump.
+
+Contact: mailto:security@konto.app
+Expires: 2027-04-30T00:00:00.000Z
+Preferred-Languages: bs, en
+Canonical: https://konto.app/.well-known/security.txt
+Policy: https://konto.app/sigurnost#prijava-ranjivosti
