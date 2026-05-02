@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { deleteMerchant } from './actions';
+import { bulkDeleteEmptyMerchants, deleteMerchant } from './actions';
 import { MerchantFormDialog } from './merchant-form-dialog';
 import type { MerchantListItem } from './types';
 
@@ -28,6 +28,10 @@ export function MerchantsClient({
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [editing, setEditing] = useState<MerchantListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MerchantListItem | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeletePending, setBulkDeletePending] = useState(false);
+
+  const emptyMerchantCount = merchants.filter((m) => m.transaction_count === 0).length;
 
   function openCreate() {
     setMode('create');
@@ -63,6 +67,22 @@ export function MerchantsClient({
       return;
     }
     toast.error('Brisanje nije uspjelo.');
+  }
+
+  async function confirmBulkDelete() {
+    setBulkDeletePending(true);
+    const result = await bulkDeleteEmptyMerchants();
+    setBulkDeletePending(false);
+    if (result.success) {
+      setBulkDeleteOpen(false);
+      const n = result.data.count;
+      toast.success(
+        n === 1 ? 'Obrisan 1 prazan prodavač.' : `Obrisano: ${String(n)} praznih prodavača.`,
+      );
+      router.refresh();
+      return;
+    }
+    toast.error('Bulk brisanje nije uspjelo.');
   }
 
   return (
@@ -154,6 +174,34 @@ export function MerchantsClient({
         </ul>
       )}
 
+      {/* Audit N4: bulk-delete empty merchants. Visible only when at
+       * least one row has `transaction_count === 0`. The on-type
+       * autocomplete-creates code path was already removed in
+       * `quick-add-transaction.tsx` (see MerchantCombobox comment), so
+       * this footer is mostly for cleaning up legacy stubs left over
+       * from before that fix; it disappears once they're gone. */}
+      {emptyMerchantCount > 0 ? (
+        <div className="text-muted-foreground mt-4 flex flex-col items-start justify-between gap-2 text-xs sm:flex-row sm:items-center">
+          <span>
+            {emptyMerchantCount === 1
+              ? '1 prodavač bez transakcija.'
+              : `${String(emptyMerchantCount)} prodavača bez transakcija.`}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9"
+            onClick={() => {
+              setBulkDeleteOpen(true);
+            }}
+          >
+            <Trash2 className="mr-2 h-3.5 w-3.5" aria-hidden />
+            Obriši prazne
+          </Button>
+        </div>
+      ) : null}
+
       <MerchantFormDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -174,6 +222,20 @@ export function MerchantsClient({
         }
         description="Možeš obrisati prodavača samo ako nema povezanih transakcija (broj transakcija = 0)."
         onConfirm={confirmDelete}
+      />
+
+      <ConfirmDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={(open) => {
+          if (!bulkDeletePending) setBulkDeleteOpen(open);
+        }}
+        title={
+          emptyMerchantCount === 1
+            ? 'Obrisati 1 praznog prodavača?'
+            : `Obrisati ${String(emptyMerchantCount)} praznih prodavača?`
+        }
+        description="Brišu se samo zapisi sa nula transakcija — postojeći prodavači s transakcijama ostaju netaknuti."
+        onConfirm={confirmBulkDelete}
       />
     </div>
   );

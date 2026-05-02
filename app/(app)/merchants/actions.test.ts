@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMerchant, deleteMerchant, searchMerchants, updateMerchant } from './actions';
+import {
+  bulkDeleteEmptyMerchants,
+  createMerchant,
+  deleteMerchant,
+  searchMerchants,
+  updateMerchant,
+} from './actions';
 import { createClient } from '@/lib/supabase/server';
 
 const getUser = vi.fn();
@@ -203,5 +209,81 @@ describe('merchant CRUD actions', () => {
 
     const result = await deleteMerchant('123e4567-e89b-12d3-a456-426614174000');
     expect(result).toEqual({ success: false, error: 'MERCHANT_HAS_TRANSACTIONS' });
+  });
+
+  it('bulkDeleteEmptyMerchants returns the count of soft-deleted rows', async () => {
+    // Audit N4: legacy stub merchants from the autocomplete-on-type era
+    // (e.g., a "Kon" record left behind when the user backspaced to type
+    // "Konzum"). The bulk action soft-deletes every merchant the user
+    // owns whose `transaction_count` is exactly 0; rows with transactions
+    // must NOT be touched, even via TOCTOU between page load and click.
+    from.mockImplementation((table: string) => {
+      if (table !== 'merchants') throw new Error('unexpected table');
+      return {
+        update: () => ({
+          eq: () => ({
+            eq: () => ({
+              is: () => ({
+                select: () =>
+                  Promise.resolve({
+                    data: [{ id: 'm-empty-1' }, { id: 'm-empty-2' }, { id: 'm-empty-3' }],
+                    error: null,
+                  }),
+              }),
+            }),
+          }),
+        }),
+      };
+    });
+
+    const result = await bulkDeleteEmptyMerchants();
+    expect(result).toEqual({ success: true, data: { count: 3 } });
+  });
+
+  it('bulkDeleteEmptyMerchants returns 0 when there is nothing to delete', async () => {
+    from.mockImplementation((table: string) => {
+      if (table !== 'merchants') throw new Error('unexpected table');
+      return {
+        update: () => ({
+          eq: () => ({
+            eq: () => ({
+              is: () => ({
+                select: () => Promise.resolve({ data: [], error: null }),
+              }),
+            }),
+          }),
+        }),
+      };
+    });
+
+    const result = await bulkDeleteEmptyMerchants();
+    expect(result).toEqual({ success: true, data: { count: 0 } });
+  });
+
+  it('bulkDeleteEmptyMerchants surfaces DATABASE_ERROR on update failure', async () => {
+    from.mockImplementation((table: string) => {
+      if (table !== 'merchants') throw new Error('unexpected table');
+      return {
+        update: () => ({
+          eq: () => ({
+            eq: () => ({
+              is: () => ({
+                select: () =>
+                  Promise.resolve({ data: null, error: { message: 'connection lost' } }),
+              }),
+            }),
+          }),
+        }),
+      };
+    });
+
+    const result = await bulkDeleteEmptyMerchants();
+    expect(result).toEqual({ success: false, error: 'DATABASE_ERROR' });
+  });
+
+  it('bulkDeleteEmptyMerchants returns UNAUTHORIZED when no session', async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    const result = await bulkDeleteEmptyMerchants();
+    expect(result).toEqual({ success: false, error: 'UNAUTHORIZED' });
   });
 });
