@@ -121,6 +121,53 @@ export type Database = {
         };
         Relationships: [];
       };
+      budgets: {
+        Row: {
+          active: boolean;
+          amount_cents: number;
+          category_id: string;
+          created_at: string;
+          currency: string;
+          id: string;
+          period: string;
+          rollover: boolean;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          active?: boolean;
+          amount_cents: number;
+          category_id: string;
+          created_at?: string;
+          currency?: string;
+          id?: string;
+          period: string;
+          rollover?: boolean;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          active?: boolean;
+          amount_cents?: number;
+          category_id?: string;
+          created_at?: string;
+          currency?: string;
+          id?: string;
+          period?: string;
+          rollover?: boolean;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'budgets_category_id_fkey';
+            columns: ['category_id'];
+            isOneToOne: false;
+            referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       categories: {
         Row: {
           color: string | null;
@@ -1196,6 +1243,10 @@ export type Database = {
       user_owns_account: { Args: { p_account_id: string }; Returns: boolean };
       user_owns_account_row: {
         Args: { p_account_id: string };
+        Returns: boolean;
+      };
+      user_owns_budgetable_category: {
+        Args: { p_category_id: string };
         Returns: boolean;
       };
       user_owns_category: { Args: { p_category_id: string }; Returns: boolean };
