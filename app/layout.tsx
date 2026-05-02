@@ -7,16 +7,48 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
+// Audit B7: with `next/font/google` defaults the browser falls back to
+// generic `serif`/`monospace` (Times New Roman, Courier New) before the
+// real font loads — and Courier in particular has very different metrics
+// than JetBrains Mono, so the amount input visibly shifts when the real
+// font swaps in. Spelling out a `fallback` chain of system UI fonts keeps
+// the pre-load layout close to the final rendering. `preload` and
+// `adjustFontFallback` are documented `true` defaults; we set them
+// explicitly so a future Next.js default flip can't silently regress
+// font behavior on tabular numbers.
 const inter = Inter({
   subsets: ['latin', 'latin-ext'],
   variable: '--font-sans',
   display: 'swap',
+  preload: true,
+  adjustFontFallback: true,
+  fallback: [
+    'system-ui',
+    '-apple-system',
+    'BlinkMacSystemFont',
+    'Segoe UI',
+    'Roboto',
+    'Helvetica Neue',
+    'Arial',
+    'sans-serif',
+  ],
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin', 'latin-ext'],
   variable: '--font-mono',
   display: 'swap',
+  preload: true,
+  adjustFontFallback: true,
+  fallback: [
+    'ui-monospace',
+    'SFMono-Regular',
+    'Menlo',
+    'Consolas',
+    'Liberation Mono',
+    'Courier New',
+    'monospace',
+  ],
 });
 
 export const metadata: Metadata = {
