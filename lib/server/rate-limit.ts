@@ -17,11 +17,15 @@ export const IMPORT_UPLOAD_WINDOW_SEC = 24 * 60 * 60;
 /**
  * F2-E5-T2: enforces a sliding window via `public.rate_limits` + server RPC
  * `check_rate_limit_and_record` (advisory lock + count + insert in one tx).
+ *
+ * `llm_categorize` was added in CLOSEOUT-F2-T2 to gate the per-user daily
+ * budget for the LLM categorization fallback (see lib/categorization/
+ * llm-categorize.ts).
  */
 export async function checkRateLimit(
   supabase: RateClient,
   userId: string,
-  action: 'parse' | 'upload',
+  action: 'parse' | 'upload' | 'llm_categorize',
   limit: number,
   windowSec: number,
 ): Promise<boolean> {

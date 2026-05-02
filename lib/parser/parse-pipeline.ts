@@ -1,11 +1,21 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { runCategorizationCascade } from '@/lib/categorization/cascade';
+import {
+  llmCategorizeBatch,
+  LLM_FALLBACK_MIN_AMOUNT_MINOR,
+  type LLMCategorizeItem,
+} from '@/lib/categorization/llm-categorize';
 import { extractPdfText } from '@/lib/parser/extract-text';
 import { ocrFallback } from '@/lib/parser/ocr-fallback';
 import { CircuitOpenError, parseStatementWithLLM } from '@/lib/parser/llm-parse';
 import { redactPII } from '@/lib/parser/redact-pii';
 import { logSafe } from '@/lib/logger';
 import type { Database } from '@/supabase/types';
+
+/** Min unmatched rows before we bother engaging the LLM batch fallback.
+ *  Below this, the cost of one Gemini call (and the rate-limit slot) is
+ *  not worth the ergonomics. Caller can override via opts. */
+const DEFAULT_LLM_FALLBACK_MIN_ROWS = 5;
 
 export type ParsePipelineErrorCode =
   | 'pdf_not_found'
@@ -110,6 +120,55 @@ export async function runParsePipeline(
         selected_for_import: true,
       });
     }
+
+    // ─── LLM categorization fallback (CLOSEOUT-F2-T2 / cascade step 5) ─────
+    //
+    // Anything still uncategorised after rule/alias/history AND worth at
+    // least 50 KM is a fallback candidate. Below DEFAULT_LLM_FALLBACK_MIN_ROWS
+    // unmatched rows we skip — one Gemini call for two stragglers is
+    // overkill (and burns the per-user daily budget faster). Failures /
+    // rate-limit hits are fatal to the LLM step alone, never to the parse
+    // (the rows simply stay source='none', ready for manual review).
+    const llmCandidateIndexes: number[] = rows.reduce<number[]>((acc, r, i) => {
+      if (
+        r.categorization_source === 'none' &&
+        Math.abs(r.amount_minor) >= LLM_FALLBACK_MIN_AMOUNT_MINOR
+      ) {
+        acc.push(i);
+      }
+      return acc;
+    }, []);
+
+    if (llmCandidateIndexes.length >= DEFAULT_LLM_FALLBACK_MIN_ROWS) {
+      const candidates: LLMCategorizeItem[] = llmCandidateIndexes.map((idx) => {
+        const r = rows[idx];
+        return {
+          description: r.raw_description,
+          amountMinor: r.amount_minor,
+          currency: r.currency,
+        };
+      });
+      try {
+        const llmResults = await llmCategorizeBatch(supabase, userId, candidates);
+        llmCandidateIndexes.forEach((idx, i) => {
+          const res = llmResults[i];
+          if (!res.categoryId) return;
+          const target = rows[idx];
+          target.category_id = res.categoryId;
+          target.categorization_source = 'llm';
+          target.categorization_confidence = res.confidence;
+        });
+      } catch (err) {
+        // Never fail the parse over LLM categorization issues — rows
+        // remain source='none' and the user categorises them in review.
+        logSafe('parse_pipeline_llm_categorize_error', {
+          userId,
+          batchId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
     const { error: insertErr } = await supabase.from('parsed_transactions').insert(rows);
     if (insertErr) {
       logSafe('parse_pipeline_insert_error', {
