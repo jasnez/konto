@@ -492,14 +492,14 @@ The "Retry" button is the highest-severity: it is the only English word a user s
 
 ### Downtime / Availability Risks
 
-| Risk ID  | Description                                                                                                 | Probability | Impact | Severity     |
-| -------- | ----------------------------------------------------------------------------------------------------------- | ----------- | ------ | ------------ |
-| AV-1     | Gemini no fallback/retry/circuit-breaker; one outage = import feature down                                  | High        | High   | **Critical** |
-| AV-2     | Parse route exceeds 60s for >200-row statements; batch stuck `parsing`                                      | High        | High   | **Critical** |
-| ~~AV-3~~ | ~~Export non-streaming; OOM/timeout at ~100k transactions~~ — **shipped 2026-04-28** (`a233b8b`, `e93e662`) | n/a         | n/a    | ✅ Resolved  |
-| ~~AV-4~~ | ~~FX loop sequential; multi-currency finalize ~30s~~ — **shipped 2026-04-28** (`5951319`, `0bc3a90`)        | n/a         | n/a    | ✅ Resolved  |
-| ~~AV-5~~ | ~~`count:exact` on every transactions page; >3s at ~100k rows~~ — **shipped 2026-04-29** (`124536f`)        | n/a         | n/a    | ✅ Resolved  |
-| ~~AV-6~~ | ~~FX failure leaves batch stuck `importing` permanently~~ — **shipped 2026-04-29** (`6160458`)              | n/a         | n/a    | ✅ Resolved  |
+| Risk ID  | Description                                                                                                                                                                                                                             | Probability | Impact | Severity     |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------ | ------------ |
+| AV-1     | Gemini no fallback/retry/circuit-breaker; one outage = import feature down                                                                                                                                                              | High        | High   | **Critical** |
+| ~~AV-2~~ | ~~Parse route exceeds 60s for >200-row statements; batch stuck `parsing`~~ — **descoped 2026-05-02**: async pipeline (Inngest) removed; sync path retained, `recoverStuckImports` handles stuck batches at user-load (10-min threshold) | n/a         | n/a    | ✅ Descoped  |
+| ~~AV-3~~ | ~~Export non-streaming; OOM/timeout at ~100k transactions~~ — **shipped 2026-04-28** (`a233b8b`, `e93e662`)                                                                                                                             | n/a         | n/a    | ✅ Resolved  |
+| ~~AV-4~~ | ~~FX loop sequential; multi-currency finalize ~30s~~ — **shipped 2026-04-28** (`5951319`, `0bc3a90`)                                                                                                                                    | n/a         | n/a    | ✅ Resolved  |
+| ~~AV-5~~ | ~~`count:exact` on every transactions page; >3s at ~100k rows~~ — **shipped 2026-04-29** (`124536f`)                                                                                                                                    | n/a         | n/a    | ✅ Resolved  |
+| ~~AV-6~~ | ~~FX failure leaves batch stuck `importing` permanently~~ — **shipped 2026-04-29** (`6160458`)                                                                                                                                          | n/a         | n/a    | ✅ Resolved  |
 
 ### UX-Breaking Bugs
 
@@ -673,13 +673,13 @@ SE-4 ships in `report-only` mode Day 3 so the agent can iterate headers without 
 
 ### 11.5 Release Gates
 
-| Item                            | Feature flag needed?      | Ship dark?                                 | Migration window required?                                                 |
-| ------------------------------- | ------------------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
-| SE-4 (security headers)         | No                        | Yes — CSP `report-only` 48h before enforce | No                                                                         |
-| ~~DL-1~~ (balance trigger)      | n/a                       | n/a                                        | ✅ Already shipped in 00013/00035/00036 with idempotent backfills          |
-| DL-5 (RPC type fix)             | No                        | Ship as additive `_v2` RPC, then cut over  | Short window for client switch                                             |
-| AV-2 (background parse queue)   | **Yes** (`imports.async`) | Shadow-enqueue + compare before flip       | No (app-layer only)                                                        |
-| MT-1 (imports.ts decomposition) | No                        | Pure refactor                              | No — gate: MT-4 green, coverage delta non-negative, import E2E green on PR |
+| Item                                                        | Feature flag needed? | Ship dark?                                 | Migration window required?                                                 |
+| ----------------------------------------------------------- | -------------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
+| SE-4 (security headers)                                     | No                   | Yes — CSP `report-only` 48h before enforce | No                                                                         |
+| ~~DL-1~~ (balance trigger)                                  | n/a                  | n/a                                        | ✅ Already shipped in 00013/00035/00036 with idempotent backfills          |
+| DL-5 (RPC type fix)                                         | No                   | Ship as additive `_v2` RPC, then cut over  | Short window for client switch                                             |
+| ~~AV-2 (background parse queue)~~ — **descoped 2026-05-02** | n/a                  | n/a                                        | n/a                                                                        |
+| MT-1 (imports.ts decomposition)                             | No                   | Pure refactor                              | No — gate: MT-4 green, coverage delta non-negative, import E2E green on PR |
 
 ---
 
@@ -758,13 +758,13 @@ Current: feature branch → PR → `main` merge → Vercel auto-deploy. Two gaps
 
 ## Audit Summary
 
-| Category        | Critical    | High         | Medium | Low   | Resolved                  |
-| --------------- | ----------- | ------------ | ------ | ----- | ------------------------- |
-| Data Loss       | 0           | 3 (DL-2,5,8) | 4      | 0     | DL-1, DL-8 ✅             |
-| Security        | 0           | 2 (SE-3,7)   | 2      | 2     | SE-1 ✅, SE-4 ⚠️, SE-6 ✅ |
-| Availability    | 1 (AV-2 ⚠️) | 4            | 0      | 0     | AV-1 ✅                   |
-| UX              | 0           | 2 (UX-1,3)   | 6      | 1     |                           |
-| Maintainability | 1 (MT-1)    | 3 (MT-2,3,4) | 2      | 0     |                           |
-| **Total**       | **2**       | **14**       | **14** | **3** | 5 ✅, 2 ⚠️                |
+| Category        | Critical | High         | Medium | Low   | Resolved                          |
+| --------------- | -------- | ------------ | ------ | ----- | --------------------------------- |
+| Data Loss       | 0        | 3 (DL-2,5,8) | 4      | 0     | DL-1, DL-8 ✅                     |
+| Security        | 0        | 2 (SE-3,7)   | 2      | 2     | SE-1 ✅, SE-4 ⚠️, SE-6 ✅         |
+| Availability    | 0        | 4            | 0      | 0     | AV-1 ✅, AV-2 descoped 2026-05-02 |
+| UX              | 0        | 2 (UX-1,3)   | 6      | 1     |                                   |
+| Maintainability | 1 (MT-1) | 3 (MT-2,3,4) | 2      | 0     |                                   |
+| **Total**       | **2**    | **14**       | **14** | **3** | 5 ✅, 2 ⚠️                        |
 
 **Verdict:** The app has a solid security and architecture foundation (RLS correct, Zod everywhere, bigint money, PKCE auth, no IDOR, no open redirects). The risks are concentrated in three areas: (1) missing structural guarantees that rely on developer discipline, (2) the parse pipeline being a single fragile 1000-LoC file with no failure recovery, and (3) PII/logging gaps that become GDPR incidents the moment real users import real bank statements. The Week-1 set of 10 items closes the most severe risks without requiring the large refactors. Do not onboard real users before completing items DL-8, SE-1, SE-4, SE-6, SE-7, and AV-6 at minimum.

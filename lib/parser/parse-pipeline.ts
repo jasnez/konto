@@ -42,8 +42,8 @@ export interface ParsePipelineResult {
  * Runs the full PDF → parsed_transactions pipeline for a single batch.
  *
  * Caller is responsible for: auth, rate limiting, marking the batch as
- * `parsing` before the call, and translating thrown errors into HTTP /
- * Inngest semantics. This function only owns the data path.
+ * `parsing` before the call, and translating thrown errors into HTTP
+ * responses. This function only owns the data path.
  *
  * Pass either a user-scoped client (RLS enforced) or an admin client
  * (RLS bypassed but every query still filters `user_id` defensively).

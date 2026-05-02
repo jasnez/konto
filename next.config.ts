@@ -48,7 +48,6 @@ const nextConfig: NextConfig = {
   // outputFileTracingIncludes forces it into every route that needs it.
   outputFileTracingIncludes: {
     '/api/imports/[batchId]/parse': ['./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs'],
-    '/api/inngest': ['./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs'],
   },
   turbopack: {
     root: __dirname,

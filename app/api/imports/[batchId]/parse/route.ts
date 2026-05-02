@@ -2,15 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { ParsePipelineError, runParsePipeline } from '@/lib/parser/parse-pipeline';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, IMPORT_PARSE_MAX, IMPORT_PARSE_WINDOW_SEC } from '@/lib/server/rate-limit';
-import { inngest } from '@/lib/inngest/client';
 import { logSafe } from '@/lib/logger';
 
 /**
- * POST /api/imports/[batchId]/parse
- *
- * When IMPORTS_ASYNC=true the route enqueues the parse to Inngest and returns
- * 202 immediately. Otherwise the full pipeline runs inside the request, capped
- * at the route's 60s maxDuration (AV-2).
+ * POST /api/imports/[batchId]/parse — runs the parse pipeline inline,
+ * capped at the route's 60s maxDuration.
  */
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -27,15 +23,10 @@ type ParseErrorCode =
   | 'pdf_not_found'
   | 'no_text_extracted'
   | 'service_unavailable'
-  | 'parse_failed'
-  | 'enqueue_failed';
+  | 'parse_failed';
 
 function jsonError(code: ParseErrorCode, status: number) {
   return NextResponse.json({ error: code }, { status });
-}
-
-function asyncEnabled(): boolean {
-  return process.env.IMPORTS_ASYNC === 'true';
 }
 
 export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
@@ -80,42 +71,6 @@ export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
   );
   if (!allowParse) {
     return jsonError('rate_limited', 429);
-  }
-
-  if (asyncEnabled()) {
-    const { error: markErr } = await supabase
-      .from('import_batches')
-      .update({ status: 'enqueued' })
-      .eq('id', batch.id)
-      .eq('user_id', user.id);
-    if (markErr) {
-      logSafe('parse_route_enqueue_mark_error', {
-        userId: user.id,
-        batchId: batch.id,
-        error: markErr.message,
-      });
-      return jsonError('enqueue_failed', 500);
-    }
-    try {
-      await inngest.send({
-        name: 'import/parse.requested',
-        data: { batchId: batch.id, userId: user.id },
-      });
-    } catch (err) {
-      // Roll back to `uploaded` so the user can retry without watchdog wait.
-      await supabase
-        .from('import_batches')
-        .update({ status: 'uploaded' })
-        .eq('id', batch.id)
-        .eq('user_id', user.id);
-      logSafe('parse_route_enqueue_send_error', {
-        userId: user.id,
-        batchId: batch.id,
-        error: err instanceof Error ? err.message : 'unknown',
-      });
-      return jsonError('enqueue_failed', 500);
-    }
-    return NextResponse.json({ enqueued: true }, { status: 202 });
   }
 
   await supabase
