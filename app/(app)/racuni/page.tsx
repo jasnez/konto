@@ -16,6 +16,7 @@ import type {
   AccountGroup,
   AccountLastTransaction,
   AccountsFilters,
+  BalanceHistoryPoint,
 } from '@/app/(app)/racuni/types';
 
 interface LastTxRow {
@@ -26,6 +27,38 @@ interface LastTxRow {
   description: string | null;
   is_transfer: boolean;
   merchants: { display_name: string } | null;
+}
+
+/** Raw row shape of `get_account_balance_history` RPC (migration 00050). */
+interface BalanceHistoryRow {
+  account_id: string;
+  day: string;
+  balance_cents: number;
+}
+
+/** Group RPC rows into a per-account series, sorted by day ascending.
+ * The RPC already orders by (account_id, day) — we trust that order so we
+ * skip a redundant sort, but tolerate out-of-order data defensively. */
+function buildBalanceHistoryMap(rows: BalanceHistoryRow[]): Map<string, BalanceHistoryPoint[]> {
+  const byAccount = new Map<string, BalanceHistoryPoint[]>();
+  for (const row of rows) {
+    const list = byAccount.get(row.account_id);
+    const point: BalanceHistoryPoint = {
+      day: row.day,
+      balanceCents: BigInt(row.balance_cents),
+    };
+    if (list) {
+      list.push(point);
+    } else {
+      byAccount.set(row.account_id, [point]);
+    }
+  }
+  // Defensive sort — RPC ORDER BY should already deliver this, but a future
+  // migration that joins or unions might break the guarantee silently.
+  for (const list of byAccount.values()) {
+    list.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
+  }
+  return byAccount;
 }
 
 /** Build a per-account map of the most recent transaction. Pulls one
@@ -202,20 +235,41 @@ export default async function RacuniListPage({ searchParams }: RacuniListPagePro
     baseCurrency,
   );
 
-  // Last-transaction preview per account (audit R7-light). Generous limit so
-  // every visible account has at least one row to slice from; accounts with
-  // no activity get undefined and the card simply hides the preview line.
-  const { data: recentTxRows } = await supabase
-    .from('transactions')
-    .select(
-      'account_id,transaction_date,original_amount_cents,merchant_raw,description,is_transfer,merchants(display_name)',
-    )
-    .eq('user_id', user.id)
-    .is('deleted_at', null)
-    .order('transaction_date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(100);
-  const lastTransactionByAccount = buildLastTransactionMap(recentTxRows ?? []);
+  // Two parallel reads, both keyed off the user but otherwise independent:
+  //   - recent transactions → "Zadnja: <merchant>" preview per card (R7-light)
+  //   - balance history RPC → 30-day sparkline per card (R7 full)
+  // We `Promise.all` rather than awaiting sequentially so the slower of
+  // the two doesn't gate the other; on a typical user this saves
+  // ~50-80ms of total /racuni latency.
+  //
+  // The RPC isn't in the generated `Database` types until Supabase types
+  // are regenerated post-migration push, so we cast at the call site
+  // (same pattern as `__tests__/rls/rate-limit-rpc.test.ts`). Inline cast
+  // — extracting `supabase.rpc` to a const detaches it from its receiver
+  // and trips `@typescript-eslint/unbound-method`.
+  const [recentTxResult, balanceHistoryResult] = await Promise.all([
+    supabase
+      .from('transactions')
+      .select(
+        'account_id,transaction_date,original_amount_cents,merchant_raw,description,is_transfer,merchants(display_name)',
+      )
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .order('transaction_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(100),
+    (
+      supabase.rpc as (fn: string, args: Record<string, unknown>) => ReturnType<typeof supabase.rpc>
+    )('get_account_balance_history', { p_days: 30 }),
+  ]);
+
+  const lastTransactionByAccount = buildLastTransactionMap(recentTxResult.data ?? []);
+  // Two-step cast (`as unknown as` instead of direct cast) because the RPC
+  // hasn't been added to the generated `Database` types yet — Supabase
+  // sees its return as the catch-all union of every RPC's return shape.
+  const balanceHistoryByAccount = buildBalanceHistoryMap(
+    (balanceHistoryResult.data ?? []) as unknown as BalanceHistoryRow[],
+  );
 
   const groups = groupAccountsByType(accounts, baseCurrency);
 
@@ -272,6 +326,7 @@ export default async function RacuniListPage({ searchParams }: RacuniListPagePro
           baseCurrency={baseCurrency}
           totalCount={totalCount}
           lastTransactionByAccount={Object.fromEntries(lastTransactionByAccount)}
+          balanceHistoryByAccount={Object.fromEntries(balanceHistoryByAccount)}
         />
       )}
     </div>

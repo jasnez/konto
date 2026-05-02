@@ -16,8 +16,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AccountCardDelete } from '@/components/accounts/account-card-delete';
+import { Sparkline, type SparklineTone } from '@/components/sparkline';
 import { cn } from '@/lib/utils';
-import type { AccountLastTransaction } from '@/app/(app)/racuni/types';
+import type { AccountLastTransaction, BalanceHistoryPoint } from '@/app/(app)/racuni/types';
 
 interface AccountCardProps {
   account: Account;
@@ -26,6 +27,38 @@ interface AccountCardProps {
   /** Most recent transaction for this account, when present, surfaced as
    * a "Zadnja: <merchant> · prije 2h" subtitle line below the balance. */
   lastTransaction?: AccountLastTransaction;
+  /** 30-day end-of-day balance series powering the sparkline (audit R7).
+   * Optional because brand-new accounts with no history skip the chart. */
+  balanceHistory?: BalanceHistoryPoint[];
+}
+
+/**
+ * Tone for the sparkline. Aktiva accounts (current/savings/cash etc.):
+ * up = green, down = red. Pasiva accounts (loan/credit_card): inverted
+ * because "balance going down" actually means "debt being paid off",
+ * which is positive (audit-decision Q3=A).
+ */
+function sparklineToneFor(points: BalanceHistoryPoint[], isDebt: boolean): SparklineTone {
+  if (points.length < 2) return 'neutral';
+  const first = points[0]?.balanceCents ?? 0n;
+  const last = points[points.length - 1]?.balanceCents ?? 0n;
+  if (last === first) return 'neutral';
+  const rising = last > first;
+  if (isDebt) return rising ? 'negative' : 'positive';
+  return rising ? 'positive' : 'negative';
+}
+
+/**
+ * Bosnian-language description of the trend, read by screen readers.
+ * Factual ("raste"/"pada") rather than evaluative — we leave the
+ * positive/negative framing to sighted users via colour.
+ */
+function describeTrend(points: BalanceHistoryPoint[]): string {
+  if (points.length < 2) return 'Trend stanja: nedovoljno podataka.';
+  const first = points[0]?.balanceCents ?? 0n;
+  const last = points[points.length - 1]?.balanceCents ?? 0n;
+  if (last === first) return 'Trend stanja: stagnira u zadnjih 30 dana.';
+  return `Trend stanja: ${last > first ? 'raste' : 'pada'} u zadnjih 30 dana.`;
 }
 
 /** Format an ISO transaction_date as a Bosnian relative-time string.
@@ -52,11 +85,18 @@ export function AccountCard({
   selected = false,
   onToggleSelection,
   lastTransaction,
+  balanceHistory,
 }: AccountCardProps) {
   const bal = account.current_balance_cents;
   const isDebtAccount = account.type === 'credit_card' || account.type === 'loan';
   const isDebtBalanceNegative = isDebtAccount && bal < 0;
   const selectionEnabled = typeof onToggleSelection === 'function';
+
+  // Sparkline render gates: empty array (brand-new account, no series yet)
+  // or a single-point series wouldn't draw anything meaningful, so we
+  // skip the slot entirely rather than render a degenerate flat dot.
+  const showSparkline = balanceHistory !== undefined && balanceHistory.length >= 2;
+  const sparklineTone = showSparkline ? sparklineToneFor(balanceHistory, isDebtAccount) : 'neutral';
 
   // Audit R5: type-aware badge that labels Pasiva accounts at a glance.
   // The grouping in PR #74 separated debt to its own section, but cards
@@ -148,6 +188,19 @@ export function AccountCard({
               >
                 {formatMinorUnits(bal, account.currency)}
               </p>
+              {/* Sparkline (audit R7) — placed between balance and the
+               * "Zadnja: …" preview so the user reads NUMBER → TREND →
+               * RECENT-ACTIVITY top-to-bottom. Tone is inverted on
+               * loan/credit_card accounts so paying down debt reads as
+               * positive (green) rather than alarming (red). */}
+              {showSparkline ? (
+                <Sparkline
+                  points={balanceHistory}
+                  tone={sparklineTone}
+                  className="mt-1"
+                  ariaLabel={describeTrend(balanceHistory)}
+                />
+              ) : null}
               {lastTransaction ? (
                 <p
                   className="truncate text-xs text-muted-foreground"

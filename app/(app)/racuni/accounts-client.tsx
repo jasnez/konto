@@ -14,6 +14,7 @@ import type {
   AccountGroup,
   AccountLastTransaction,
   AccountsFilters,
+  BalanceHistoryPoint,
 } from '@/app/(app)/racuni/types';
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -26,6 +27,10 @@ interface AccountsClientProps {
   totalCount: number;
   /** Keyed by account.id; entry is omitted when an account has no activity. */
   lastTransactionByAccount: Record<string, AccountLastTransaction>;
+  /** Keyed by account.id; per-account 30-day end-of-day balance series.
+   * Entry omitted when the account has no rows in the window (rare:
+   * brand-new account with zero opening balance and zero transactions). */
+  balanceHistoryByAccount: Record<string, BalanceHistoryPoint[]>;
 }
 
 function splitParamList(raw: string | null): string[] {
@@ -42,6 +47,7 @@ export function AccountsClient({
   availableCurrencies,
   totalCount,
   lastTransactionByAccount,
+  balanceHistoryByAccount,
 }: AccountsClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -217,6 +223,7 @@ export function AccountsClient({
                       selected={selectedIds.has(a.id)}
                       onToggleSelection={handleToggle}
                       lastTransaction={lastTransactionByAccount[a.id]}
+                      balanceHistory={balanceHistoryByAccount[a.id]}
                     />
                   </li>
                 ))}
