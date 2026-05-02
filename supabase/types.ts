@@ -1196,6 +1196,10 @@ export type Database = {
           day: string;
         }[];
       };
+      get_current_period_spent: {
+        Args: { p_budget_id: string };
+        Returns: number;
+      };
       get_monthly_summary:
         | {
             Args: { p_base_currency: string; p_month: number; p_year: number };
