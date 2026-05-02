@@ -81,6 +81,11 @@ export type DeleteMerchantResult =
   | { success: false; error: 'MERCHANT_HAS_TRANSACTIONS' }
   | { success: false; error: 'DATABASE_ERROR' };
 
+export type BulkDeleteEmptyMerchantsResult =
+  | { success: true; data: { count: number } }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
 export type SearchMerchantsResult =
   | { success: true; data: MerchantResult[] }
   | { success: false; error: 'VALIDATION_ERROR'; details: { _root: string[] } }
@@ -377,4 +382,46 @@ export async function deleteMerchant(id: unknown): Promise<DeleteMerchantResult>
 
   revalidatePath('/merchants');
   return { success: true };
+}
+
+/**
+ * Bulk soft-deletes every merchant of the current user that has zero
+ * linked transactions. Audit N4 — legacy stub merchants from the days
+ * when typing "Kon" in autocomplete persisted a separate row before
+ * the user had picked "Konzum"; the on-type-create code path is now
+ * gone (see `components/quick-add-transaction.tsx` MerchantCombobox
+ * comment) so this is mostly cleanup for accounts that predate the
+ * fix.
+ *
+ * Eligibility is decided by the `transaction_count` column on
+ * `merchants`, which is maintained by triggers as transactions are
+ * inserted/deleted/edited. Filtering server-side (`.eq` on
+ * transaction_count) instead of client-derived ids closes a TOCTOU
+ * window where a transaction could land on the merchant between the
+ * page render and the click.
+ */
+export async function bulkDeleteEmptyMerchants(): Promise<BulkDeleteEmptyMerchantsResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  const { data, error } = await supabase
+    .from('merchants')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('user_id', user.id)
+    .eq('transaction_count', 0)
+    .is('deleted_at', null)
+    .select('id');
+
+  if (error) {
+    logSafe('bulk_delete_empty_merchants_error', { userId: user.id, error: error.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidatePath('/merchants');
+  return { success: true, data: { count: data.length } };
 }
