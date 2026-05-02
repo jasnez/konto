@@ -8,7 +8,7 @@ import { buildExportStream } from '@/lib/export/stream-builder';
 import { logSafe } from '@/lib/logger';
 
 export const runtime = 'nodejs';
-// 60s = Vercel Hobby plan ceiling. On Pro upgrade bump to 300 (matches av2-async-cutover runbook).
+// 60s = Vercel Hobby plan ceiling. On Pro upgrade bump to 300.
 export const maxDuration = 60;
 
 export async function GET() {
