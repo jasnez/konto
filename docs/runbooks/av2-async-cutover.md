@@ -10,6 +10,19 @@
 
 Every box must be ✅ before any flag is flipped. If even one is unclear, **stop and resolve** before proceeding.
 
+### 0.0 Watchdog must be re-introduced
+
+**Watchdog je uklonjen 2026-05-02 zbog Inngest free-tier prekoračenja** — cron `* * * * *` trošio je ~86,400 executions/mes na praznom workload-u (sync-only put nema enqueued batch-eva). `watchdog-stuck-imports.ts` izbrisan je iz `lib/inngest/functions/`; `inngestFunctions` array sadrži samo `parseImportFn`.
+
+**Pre flipovanja `IMPORTS_ASYNC=true`** moraš jedno od dva:
+
+- **Vratiti watchdog**: `git show 24cabcc:lib/inngest/functions/watchdog-stuck-imports.ts > lib/inngest/functions/watchdog-stuck-imports.ts`, dodati nazad u `inngestFunctions` array, vratiti registration test (`toHaveLength(1)` → `toHaveLength(2)` plus watchdog test). **Razmotriti manje agresivan cron** (npr. `*/5 * * * *` ili `*/15 * * * *`) ili upgrade na Inngest Pro plan ($20/mes, 1M executions) — `* * * * *` na free-planu je strukturalno nemoguć.
+- **Ili zameniti recovery mehanizmom koji ne pravi cron-spam**: npr. self-scheduled Inngest event (`step.sleep('11min')` posle parse-import event-a) koji se trigeruje samo kad postoji workload.
+
+Sync-only put **ne zahteva watchdog** jer [recover-stuck-imports.ts](../../lib/server/actions/recover-stuck-imports.ts) radi user-load recovery (10-min threshold) pri svakoj poseti `/import` stranice.
+
+- [ ] Watchdog vraćen ili zamenjen pre nego što se ide na 0.1+
+
 ### 0.1 Code state
 
 - [ ] `main` includes commit `24cabcc` ("feat(AV-2): async parse pipeline via Inngest with watchdog") — verify: `git log --oneline origin/main | grep AV-2`
@@ -81,10 +94,10 @@ If they don't match, you're sending events to a different stream than where the 
    - [ ] **URL** is reachable. May be either:
      - Production alias: `https://konto-murex.vercel.app/api/inngest?x-vercel-protection-bypass=<token>` (preferred — stable across deploys)
      - Deployment-specific: `https://konto-<id>-jasnezs-projects.vercel.app/api/inngest?x-vercel-protection-bypass=<token>` (auto-syncs on each deploy; works but creates a re-sync on every deploy)
-3. **Functions tab** must list both:
+3. **Functions tab** must list:
    - [ ] **Parse import (async)** — listens to event `import/parse.requested`
-   - [ ] **Watchdog: stuck imports** — cron `* * * * *` (every minute)
-4. Watchdog should have at least one **Completed** run within the last 2 minutes. (No completed runs ⇒ Inngest can't reach the function URL ⇒ async path will silently fail too.)
+   - [ ] **Watchdog: stuck imports** — cron (only if you've completed 0.0 and re-introduced it; otherwise expect this to be absent)
+4. If watchdog re-introduced: it should have at least one **Completed** run within its cron interval. (No completed runs ⇒ Inngest can't reach the function URL ⇒ async path will silently fail too.) For sanity-checking reachability without watchdog, manually invoke `parse-import` via Inngest dashboard "Send event" → `import/parse.requested` with a real `batchId`/`userId` and confirm a Completed run appears.
 
 ### 0.6 Sync path is the rollback baseline
 
@@ -233,7 +246,7 @@ Whenever Phase 3 doesn't complete cleanly within 5 minutes, **roll back first, d
 
 ### 4.2 Stuck batches after rollback
 
-Any batch sitting in `enqueued` or `parsing` from the failed cutover gets cleaned up by the watchdog within 90s — flipped to `failed` with `error_message='parsing_timeout'`. Users see "Uvoz nije uspio" with a retry option that uses the now-restored sync path. Manual cleanup not required.
+Any batch sitting in `enqueued` or `parsing` from the failed cutover gets cleaned up — flipped to `failed` with `error_message='parsing_timeout'` — either by the watchdog (within its cron interval, if 0.0 was completed and watchdog is re-introduced) or by `recoverStuckImports` (within ~10 min of the affected user opening `/import`). Users see "Uvoz nije uspio" with a retry option that uses the now-restored sync path. Manual cleanup not required.
 
 ---
 
@@ -257,14 +270,14 @@ Note: Inngest already does this correctly when it auto-syncs — the deploy-spec
 
 ## Appendix B — Failure-mode quick reference
 
-| Symptom                                                                                         | Most likely cause                                                                          | Fix                                                                                                                             |
-| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| POST returns 500, log shows `parse_route_enqueue_mark_error` with check-constraint violation    | Migration 00040 not applied                                                                | `supabase db push`                                                                                                              |
-| POST returns 500, log shows `parse_route_enqueue_send_error` with "Event key not found"         | `INNGEST_EVENT_KEY` missing in Production scope                                            | Add it, redeploy                                                                                                                |
-| POST returns 500, log shows `parse_route_enqueue_send_error` with "Unauthorized"                | Event key from wrong Inngest env (Test vs Prod)                                            | Replace with Production key, redeploy                                                                                           |
-| POST returns 202 but no Inngest run                                                             | Function URL unreachable from Inngest cloud                                                | Re-sync from dashboard; if still broken, check Vercel deployment protection                                                     |
-| UI shows "Uvoz nije uspio" but DB row is `enqueued`/`parsing`                                   | Frontend missing `'enqueued'` in `narrowStatus()`                                          | Merge the fix; redeploy                                                                                                         |
-| Inngest run completes, status stays `parsing` indefinitely                                      | Inngest function returned but did not update status (bug); watchdog will recover after 90s | Inspect run, file bug                                                                                                           |
-| All Inngest runs fail with "Cannot find module pdf.worker.mjs"                                  | `outputFileTracingIncludes` regression                                                     | Check `next.config.ts`; verify `node-linker=hoisted` in `.npmrc`                                                                |
-| Inngest run fails with `FUNCTION_INVOCATION_TIMEOUT`; batch ends `failed` / `parsing_timeout`   | Vercel plan-tier `maxDuration` exceeded (60s on Hobby; 300s default Pro)                   | See Phase 0.7. On Hobby: cutover not viable until plan upgrade or refactor.                                                     |
-| Inngest run errors `[GoogleGenerativeAI Error]: Request aborted ... This operation was aborted` | `GEMINI_TIMEOUT_MS` fired before Gemini answered                                           | Bump `GEMINI_TIMEOUT_MS` and the watchdog `STUCK_THRESHOLD_SECONDS` together (the two are coupled — see comments in both files) |
+| Symptom                                                                                         | Most likely cause                                                                                                                                                                                      | Fix                                                                                                                                                                                                                       |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST returns 500, log shows `parse_route_enqueue_mark_error` with check-constraint violation    | Migration 00040 not applied                                                                                                                                                                            | `supabase db push`                                                                                                                                                                                                        |
+| POST returns 500, log shows `parse_route_enqueue_send_error` with "Event key not found"         | `INNGEST_EVENT_KEY` missing in Production scope                                                                                                                                                        | Add it, redeploy                                                                                                                                                                                                          |
+| POST returns 500, log shows `parse_route_enqueue_send_error` with "Unauthorized"                | Event key from wrong Inngest env (Test vs Prod)                                                                                                                                                        | Replace with Production key, redeploy                                                                                                                                                                                     |
+| POST returns 202 but no Inngest run                                                             | Function URL unreachable from Inngest cloud                                                                                                                                                            | Re-sync from dashboard; if still broken, check Vercel deployment protection                                                                                                                                               |
+| UI shows "Uvoz nije uspio" but DB row is `enqueued`/`parsing`                                   | Frontend missing `'enqueued'` in `narrowStatus()`                                                                                                                                                      | Merge the fix; redeploy                                                                                                                                                                                                   |
+| Inngest run completes, status stays `parsing` indefinitely                                      | Inngest function returned but did not update status (bug); watchdog (if re-introduced per 0.0) recovers within its cron interval, otherwise `recoverStuckImports` recovers on next `/import` page load | Inspect run, file bug                                                                                                                                                                                                     |
+| All Inngest runs fail with "Cannot find module pdf.worker.mjs"                                  | `outputFileTracingIncludes` regression                                                                                                                                                                 | Check `next.config.ts`; verify `node-linker=hoisted` in `.npmrc`                                                                                                                                                          |
+| Inngest run fails with `FUNCTION_INVOCATION_TIMEOUT`; batch ends `failed` / `parsing_timeout`   | Vercel plan-tier `maxDuration` exceeded (60s on Hobby; 300s default Pro)                                                                                                                               | See Phase 0.7. On Hobby: cutover not viable until plan upgrade or refactor.                                                                                                                                               |
+| Inngest run errors `[GoogleGenerativeAI Error]: Request aborted ... This operation was aborted` | `GEMINI_TIMEOUT_MS` fired before Gemini answered                                                                                                                                                       | Bump `GEMINI_TIMEOUT_MS` and the recovery `STUCK_THRESHOLD_SECONDS` together (in `lib/server/actions/recover-stuck-imports.ts` and in any re-introduced watchdog — they must stay ≥2× the worst-case Gemini retry budget) |
