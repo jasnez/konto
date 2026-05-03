@@ -6,17 +6,26 @@ import { useHapticFeedback } from '@/hooks/use-haptic-feedback';
 import { cn } from '@/lib/utils';
 import { BOTTOM_NAV_ITEMS, isActive } from './nav-items';
 import { MobileFab } from './fab';
+import { MoreNavSheet } from './more-nav-sheet';
 
 /**
- * Fixed bottom navigation for mobile. 5 inline slots: 2 nav links | FAB |
- * 2 nav links — symmetric layout, FAB sits flush inside the bar (no
- * floating overlay) so it stops "sticking out" of the chrome. Includes
- * iOS/Android safe-area padding and is hidden on md+ screens where the
+ * Fixed bottom navigation for mobile. 5 inline slots:
+ *   [Početna] [Računi] | (FAB) | [Transakcije] [Više]
+ *
+ * The first three are direct links (BOTTOM_NAV_ITEMS), the FAB is the
+ * Quick Add trigger, and the 4th slot is a "Više" overflow Sheet
+ * (<MoreNavSheet/>) that surfaces every NAV_ITEMS route not already in
+ * the direct slots — so Budžeti / Kategorije / Skeniraj / Uvoz / Pomoć /
+ * Uvidi / Podešavanja and any future route are reachable without
+ * per-route nav surgery.
+ *
+ * Includes iOS/Android safe-area padding; hidden on md+ where the
  * sidebar takes over.
  */
 export function BottomNav() {
   const pathname = usePathname();
-  const [leftItems, rightItems] = [BOTTOM_NAV_ITEMS.slice(0, 2), BOTTOM_NAV_ITEMS.slice(2)];
+  const leftItems = BOTTOM_NAV_ITEMS.slice(0, 2);
+  const rightItems = BOTTOM_NAV_ITEMS.slice(2);
 
   return (
     <nav
@@ -32,6 +41,7 @@ export function BottomNav() {
       {rightItems.map((item) => (
         <NavSlot key={item.href} item={item} active={isActive(pathname, item.href)} />
       ))}
+      <MoreNavSheet />
     </nav>
   );
 }
