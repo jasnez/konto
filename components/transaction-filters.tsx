@@ -83,7 +83,7 @@ export function TransactionFilters({
 
   return (
     <>
-      <div className="pointer-events-none sticky top-16 z-20 -mx-4 border-b border-border/50 bg-background/95 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6">
+      <div className="pointer-events-none -mx-4 border-b border-border/50 bg-background/95 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6 md:sticky md:top-16 md:z-20">
         {/* The outer sticky wrapper has `pointer-events-none` so a finger pull
             that lands on the bar's padding/background still bubbles to the
             wrapper's pull-to-refresh handler in transactions-client.tsx. The
