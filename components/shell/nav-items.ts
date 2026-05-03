@@ -3,7 +3,6 @@ import {
   Home,
   Receipt,
   PieChart,
-  MoreHorizontal,
   PiggyBank,
   Settings,
   Store,
@@ -63,18 +62,24 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 /**
- * On mobile, the bottom nav has exactly 4 link slots — Početna, Računi |
- * (FAB centre) | Transakcije, Više — plus the FAB rendered as the 5th slot
- * by <BottomNav/> itself. Kategorije is intentionally not in the mobile nav
- * (less daily-frequency than Transakcije / Računi); it remains reachable
- * via the desktop sidebar and direct URL.
+ * Bottom nav direct-link slots on mobile: Početna, Računi | (FAB centre) |
+ * Transakcije. The 4th slot is a "Više" overflow Sheet rendered by
+ * <BottomNav/> itself (see <MoreNavSheet/>) — it surfaces every NAV_ITEMS
+ * route that is not already a direct slot here, so future desktopOnly
+ * routes (Budžeti, Pretplate, Skeniraj, Uvoz, Pomoć, Uvidi, …) and
+ * Kategorije are reachable on mobile without per-route nav surgery.
+ *
+ * Why "Više" is not in this array: the Sheet derives its label/icon from
+ * the trigger button itself, not from a NavItem entry. Keeping it out of
+ * BOTTOM_NAV_ITEMS lets `MoreNavSheet` filter NAV_ITEMS as
+ * "everything not in BOTTOM_NAV_ITEMS" without special-casing Podešavanja.
  */
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
   { href: '/pocetna', label: 'Početna', mobileLabel: 'Početna', icon: Home },
   { href: '/racuni', label: 'Računi', mobileLabel: 'Računi', icon: Wallet },
   // FAB sits here in the middle — rendered by <BottomNav/> itself.
   { href: '/transakcije', label: 'Transakcije', mobileLabel: 'Tx', icon: Receipt },
-  { href: '/podesavanja', label: 'Više', mobileLabel: 'Više', icon: MoreHorizontal },
+  // 4th slot = <MoreNavSheet/> overflow Sheet (rendered by <BottomNav/>).
 ];
 
 export function isActive(pathname: string, href: string): boolean {
