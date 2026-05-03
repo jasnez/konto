@@ -4,6 +4,7 @@ import {
   Receipt,
   PieChart,
   MoreHorizontal,
+  PiggyBank,
   Settings,
   Store,
   Tags,
@@ -41,6 +42,7 @@ export const NAV_ITEMS: NavItem[] = [
     desktopOnly: true,
   },
   { href: '/transakcije', label: 'Transakcije', mobileLabel: 'Transakcije', icon: Receipt },
+  { href: '/budzeti', label: 'Budžeti', mobileLabel: 'Budž.', icon: PiggyBank, desktopOnly: true },
   {
     href: '/skeniraj',
     label: 'Skeniraj račun',
