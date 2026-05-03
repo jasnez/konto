@@ -9,6 +9,7 @@ import {
   Settings,
   Store,
   Tags,
+  Target,
   Wallet,
   CreditCard,
   FileUp,
@@ -44,6 +45,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { href: '/transakcije', label: 'Transakcije', mobileLabel: 'Transakcije', icon: Receipt },
   { href: '/budzeti', label: 'Budžeti', mobileLabel: 'Budž.', icon: PiggyBank, desktopOnly: true },
+  { href: '/ciljevi', label: 'Ciljevi', mobileLabel: 'Cilj.', icon: Target, desktopOnly: true },
   { href: '/pretplate', label: 'Pretplate', mobileLabel: 'Pret.', icon: Repeat, desktopOnly: true },
   {
     href: '/skeniraj',
