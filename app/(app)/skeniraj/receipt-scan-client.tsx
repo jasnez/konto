@@ -303,7 +303,12 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
         return;
       }
 
-      toast.success('Transakcija sačuvana.');
+      if (result.data.merchantCreated) {
+        const displayName = merchantRaw.trim();
+        toast.success(`Transakcija sačuvana. Dodan novi prodavac: ${displayName}`);
+      } else {
+        toast.success('Transakcija sačuvana.');
+      }
       URL.revokeObjectURL(phase.previewUrl);
       setPhase({ name: 'done' });
       router.push(`/transakcije/${result.data.transactionId}`);

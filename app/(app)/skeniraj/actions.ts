@@ -7,6 +7,7 @@ import { computeDedupHash } from '@/lib/dedup';
 import { computeAccountLedgerCents } from '@/lib/fx/account-ledger';
 import { convertToBase } from '@/lib/fx/convert';
 import { extractReceiptFields } from '@/lib/llm/gemini-receipt';
+import { resolveMerchantForReceipt } from '@/lib/merchants/resolve-merchant';
 import {
   ExtractedReceiptSchema,
   emptyExtractedReceipt,
@@ -65,7 +66,10 @@ export type AnalyzeReceiptResult =
   | { success: false; error: 'LLM_ERROR'; message: string };
 
 export type CreateTransactionFromReceiptResult =
-  | { success: true; data: { transactionId: string } }
+  | {
+      success: true;
+      data: { transactionId: string; merchantId: string | null; merchantCreated: boolean };
+    }
   | { success: false; error: 'UNAUTHORIZED' }
   | { success: false; error: 'FORBIDDEN' }
   | { success: false; error: 'NOT_FOUND' }
@@ -332,8 +336,12 @@ export async function createTransactionFromReceipt(
   if (!scan) return { success: false, error: 'NOT_FOUND' };
   if (scan.user_id !== user.id) return { success: false, error: 'FORBIDDEN' };
   if (scan.transaction_id) {
-    // Already linked — return that transaction for idempotency.
-    return { success: true, data: { transactionId: scan.transaction_id } };
+    // Already linked — return that transaction for idempotency. We don't refetch
+    // the merchant link here; the second call gets a benign null + false.
+    return {
+      success: true,
+      data: { transactionId: scan.transaction_id, merchantId: null, merchantCreated: false },
+    };
   }
 
   const { data: account, error: acctErr } = await supabase
@@ -397,6 +405,16 @@ export async function createTransactionFromReceipt(
     return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
   }
 
+  // Auto-link or auto-create the merchant from the OCR'd / user-edited name.
+  // Never fails the save — returns { merchantId: null, created: false } on any
+  // error. dedup_hash continues to use the raw user input (not canonical) so
+  // we don't change historical hashing semantics.
+  const { merchantId, created: merchantCreated } = await resolveMerchantForReceipt(
+    supabase,
+    user.id,
+    data.merchant_raw,
+  );
+
   const dedupHash = computeDedupHash({
     account_id: data.account_id,
     amount_cents: signedCents,
@@ -419,6 +437,7 @@ export async function createTransactionFromReceipt(
       fx_stale: fxResult.fxStale,
       transaction_date: data.transaction_date,
       merchant_raw: data.merchant_raw,
+      merchant_id: merchantId,
       category_id: data.category_id ?? null,
       category_source: data.category_id ? 'user' : null,
       notes: data.notes ?? null,
@@ -445,8 +464,12 @@ export async function createTransactionFromReceipt(
   revalidatePath(`/racuni/${data.account_id}`);
   revalidatePath('/skeniraj');
   revalidatePath('/');
+  if (merchantCreated) revalidatePath('/merchants');
 
-  return { success: true, data: { transactionId: tx.id } };
+  return {
+    success: true,
+    data: { transactionId: tx.id, merchantId, merchantCreated },
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
