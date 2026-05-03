@@ -62,6 +62,12 @@ export default async function PodesavanjaPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Link
+            href="/vodic"
+            className="inline-flex h-11 min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Vodič kroz Konto
+          </Link>
+          <Link
             href="/help"
             className="inline-flex h-11 min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
