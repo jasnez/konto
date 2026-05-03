@@ -3,7 +3,9 @@ import {
   bindTransactionToRecurring,
   cancelRecurring,
   confirmRecurring,
+  detectAndSuggestRecurring,
   editRecurring,
+  ignoreCandidate,
   pauseRecurring,
 } from './actions';
 import { revalidatePath } from 'next/cache';
@@ -34,10 +36,12 @@ function fluent(terminal: ChainTerminal) {
     select: () => chain,
     insert: () => chain,
     update: () => chain,
+    upsert: () => chain,
     delete: () => chain,
     eq: () => chain,
     is: () => chain,
     in: () => chain,
+    gte: () => chain,
     order: () => chain,
     limit: () => chain,
     maybeSingle: () => Promise.resolve(terminal),
@@ -323,5 +327,94 @@ describe('bindTransactionToRecurring', () => {
   it('VALIDATION_ERROR for malformed transactionId', async () => {
     const result = await bindTransactionToRecurring(REC_ID, { transactionId: 'not-uuid' });
     expect(result.success).toBe(false);
+  });
+});
+
+// ─── ignoreCandidate ────────────────────────────────────────────────────────
+
+describe('ignoreCandidate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getUser.mockResolvedValue({ data: { user: { id: 'user-a' } } });
+    from.mockReset();
+  });
+
+  it('UNAUTHORIZED when not logged in', async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    const result = await ignoreCandidate({ groupKey: 'merchant:abc:BAM' });
+    expect(result).toEqual({ success: false, error: 'UNAUTHORIZED' });
+  });
+
+  it('VALIDATION_ERROR when groupKey is empty', async () => {
+    const result = await ignoreCandidate({ groupKey: '' });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toBe('VALIDATION_ERROR');
+  });
+
+  it('happy path: upserts and revalidates', async () => {
+    from.mockImplementationOnce(() => fluent({ data: null, error: null }));
+    const result = await ignoreCandidate({ groupKey: 'merchant:abc:BAM' });
+    expect(result).toEqual({ success: true });
+    expect(revalidatePath).toHaveBeenCalledWith('/pretplate');
+  });
+
+  it('DATABASE_ERROR when upsert fails', async () => {
+    from.mockImplementationOnce(() =>
+      fluent({ data: null, error: { code: '08006', message: 'connection failure' } }),
+    );
+    const result = await ignoreCandidate({ groupKey: 'merchant:abc:BAM' });
+    expect(result).toEqual({ success: false, error: 'DATABASE_ERROR' });
+  });
+});
+
+// ─── detectAndSuggestRecurring ──────────────────────────────────────────────
+//
+// We don't mock the detector — it walks the same Supabase mock chain
+// (`from('transactions').select(...)` → empty), so it returns []
+// naturally. That's enough to exercise the *filtering* logic on the
+// surface around it.
+
+describe('detectAndSuggestRecurring', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getUser.mockResolvedValue({ data: { user: { id: 'user-a' } } });
+    from.mockReset();
+  });
+
+  it('UNAUTHORIZED when not logged in', async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    const result = await detectAndSuggestRecurring();
+    expect(result).toEqual({ success: false, error: 'UNAUTHORIZED' });
+  });
+
+  it('returns empty candidates when user has no transactions / active / ignored', async () => {
+    // detectRecurring's transactions fetch
+    from.mockImplementationOnce(() => fluent({ data: [], error: null }));
+    // recurring_transactions select
+    from.mockImplementationOnce(() => fluent({ data: [], error: null }));
+    // ignored_recurring_candidates select
+    from.mockImplementationOnce(() => fluent({ data: [], error: null }));
+    const result = await detectAndSuggestRecurring();
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.candidates).toEqual([]);
+  });
+
+  it('DATABASE_ERROR when active rows fetch fails', async () => {
+    from.mockImplementationOnce(() => fluent({ data: [], error: null }));
+    from.mockImplementationOnce(() =>
+      fluent({ data: null, error: { message: 'connection lost' } }),
+    );
+    const result = await detectAndSuggestRecurring();
+    expect(result).toEqual({ success: false, error: 'DATABASE_ERROR' });
+  });
+
+  it('DATABASE_ERROR when ignored rows fetch fails', async () => {
+    from.mockImplementationOnce(() => fluent({ data: [], error: null }));
+    from.mockImplementationOnce(() => fluent({ data: [], error: null }));
+    from.mockImplementationOnce(() =>
+      fluent({ data: null, error: { message: 'connection lost' } }),
+    );
+    const result = await detectAndSuggestRecurring();
+    expect(result).toEqual({ success: false, error: 'DATABASE_ERROR' });
   });
 });
