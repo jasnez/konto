@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { DeletionCanceledToast } from '@/components/auth/deletion-canceled-toast';
 import { BalanceHero } from '@/components/dashboard/balance-hero';
 import { BudgetsWidget } from '@/components/dashboard/budgets-widget';
+import { ForecastWidget, type SerializedForecast } from '@/components/dashboard/forecast-widget';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import {
   RecentTransactions,
@@ -10,6 +11,7 @@ import {
 } from '@/components/dashboard/recent-transactions';
 import {
   DashboardBudgetsSkeleton,
+  DashboardForecastSkeleton,
   DashboardHeroSkeleton,
   DashboardMetricsSkeleton,
   DashboardRecentTransactionsSkeleton,
@@ -17,6 +19,7 @@ import {
 import { PullToRefreshWrapper } from '@/components/shell/pull-to-refresh-wrapper';
 import { fetchTransferCounterpartyAccountNames } from '@/lib/db/transfer-counterparty-names';
 import { getTransactionPrimaryLabel } from '@/lib/format/transaction-primary-label';
+import { forecastCashflow, type ForecastResult } from '@/lib/analytics/forecast';
 import { listBudgetsWithSpent } from '@/lib/queries/budgets';
 import {
   getMonthlySummary,
@@ -204,6 +207,41 @@ async function RecentTransactionsSection({
   return <RecentTransactions items={items} />;
 }
 
+/**
+ * Bigints can't cross the RSC boundary natively. Stringify every cents
+ * value and the chart-internal balance ones too, then the Client widget
+ * deserialises with `BigInt(...)`.
+ */
+function serialiseForecast(f: ForecastResult): SerializedForecast {
+  return {
+    baseCurrency: f.baseCurrency,
+    startBalanceCents: f.startBalanceCents.toString(),
+    startDate: f.startDate,
+    daysAhead: f.daysAhead,
+    projections: f.projections.map((d) => ({
+      date: d.date,
+      balanceCents: d.balanceCents.toString(),
+      inflowCents: d.inflowCents.toString(),
+      outflowCents: d.outflowCents.toString(),
+      events: d.events.map((e) => ({
+        type: e.type,
+        description: e.description,
+        amountCents: e.amountCents.toString(),
+        sourceId: e.sourceId,
+      })),
+    })),
+    lowestPoint: f.lowestPoint
+      ? { date: f.lowestPoint.date, balanceCents: f.lowestPoint.balanceCents.toString() }
+      : null,
+    warnings: f.warnings,
+  };
+}
+
+async function ForecastSection({ forecastPromise }: { forecastPromise: Promise<ForecastResult> }) {
+  const result = await forecastPromise;
+  return <ForecastWidget forecast={serialiseForecast(result)} />;
+}
+
 export default async function PocetnaPage() {
   const supabase = await createClient();
   const {
@@ -235,6 +273,9 @@ export default async function PocetnaPage() {
   // it inside its own Suspense boundary so the rest of the page still
   // streams in independently.
   const budgetsPromise = listBudgetsWithSpent(supabase, user.id, { onlyActive: true });
+  // Forecast: server fetches the 90-day window once; the widget client-
+  // side toggles between 30/60/90 by slicing without a refetch.
+  const forecastPromise = forecastCashflow(supabase, user.id, 90, { baseCurrency });
 
   return (
     <PullToRefreshWrapper
@@ -260,6 +301,10 @@ export default async function PocetnaPage() {
 
       <Suspense fallback={<DashboardBudgetsSkeleton />}>
         <BudgetsWidget budgetsPromise={budgetsPromise} />
+      </Suspense>
+
+      <Suspense fallback={<DashboardForecastSkeleton />}>
+        <ForecastSection forecastPromise={forecastPromise} />
       </Suspense>
 
       <Suspense fallback={<DashboardRecentTransactionsSkeleton />}>
