@@ -302,9 +302,21 @@ export function TransactionEditForm({
                 : 'max-md:bottom-[calc(5rem+env(safe-area-inset-bottom))]',
             )}
           >
-            <Button asChild type="button" variant="outline">
-              <Link href={`/transakcije/${transactionId}`}>Otkaži</Link>
-            </Button>
+            {chromeless ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  router.back();
+                }}
+              >
+                Otkaži
+              </Button>
+            ) : (
+              <Button asChild type="button" variant="outline">
+                <Link href={`/transakcije/${transactionId}`}>Otkaži</Link>
+              </Button>
+            )}
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Sačuvaj
