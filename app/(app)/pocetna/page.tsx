@@ -2,12 +2,14 @@ import { Suspense } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { DeletionCanceledToast } from '@/components/auth/deletion-canceled-toast';
 import { BalanceHero } from '@/components/dashboard/balance-hero';
+import { BudgetsWidget } from '@/components/dashboard/budgets-widget';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import {
   RecentTransactions,
   type RecentTransactionItem,
 } from '@/components/dashboard/recent-transactions';
 import {
+  DashboardBudgetsSkeleton,
   DashboardHeroSkeleton,
   DashboardMetricsSkeleton,
   DashboardRecentTransactionsSkeleton,
@@ -15,6 +17,7 @@ import {
 import { PullToRefreshWrapper } from '@/components/shell/pull-to-refresh-wrapper';
 import { fetchTransferCounterpartyAccountNames } from '@/lib/db/transfer-counterparty-names';
 import { getTransactionPrimaryLabel } from '@/lib/format/transaction-primary-label';
+import { listBudgetsWithSpent } from '@/lib/queries/budgets';
 import {
   getMonthlySummary,
   resolveSummaryDateParts,
@@ -228,6 +231,10 @@ export default async function PocetnaPage() {
     resolveSummaryDateParts(profile?.timezone),
   );
   const recentPromise = getRecentTransactions(supabase, user.id);
+  // Fired in parallel with the other dashboard fetches; the widget awaits
+  // it inside its own Suspense boundary so the rest of the page still
+  // streams in independently.
+  const budgetsPromise = listBudgetsWithSpent(supabase, user.id, { onlyActive: true });
 
   return (
     <PullToRefreshWrapper
@@ -249,6 +256,10 @@ export default async function PocetnaPage() {
 
       <Suspense fallback={<DashboardMetricsSkeleton />}>
         <MetricsSection summaryPromise={summaryPromise} baseCurrency={baseCurrency} />
+      </Suspense>
+
+      <Suspense fallback={<DashboardBudgetsSkeleton />}>
+        <BudgetsWidget budgetsPromise={budgetsPromise} />
       </Suspense>
 
       <Suspense fallback={<DashboardRecentTransactionsSkeleton />}>
