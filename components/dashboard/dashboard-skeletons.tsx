@@ -73,6 +73,25 @@ export function DashboardTrendSkeleton() {
 }
 
 /**
+ * Skeleton for the Forecast dashboard widget. Header chrome + chart
+ * area placeholder + runway stripe placeholder.
+ */
+export function DashboardForecastSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-3 space-y-0 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <Skeleton className="h-6 w-28" />
+        <Skeleton className="h-9 w-44 rounded-md" />
+      </CardHeader>
+      <CardContent className="space-y-3 px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
+        <Skeleton className="h-48 w-full rounded-md sm:h-60" />
+        <Skeleton className="h-9 w-full rounded-md" />
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
  * Skeleton for the Budgets dashboard widget. Mirrors the 3-row layout the
  * widget will resolve to (each row = title line + slim progress bar).
  * Slightly different from the recent-transactions skeleton so the eye
@@ -107,6 +126,7 @@ export function DashboardPageSkeleton() {
       <DashboardHeroSkeleton />
       <DashboardMetricsSkeleton />
       <DashboardBudgetsSkeleton />
+      <DashboardForecastSkeleton />
       <DashboardRecentTransactionsSkeleton />
       <DashboardTrendSkeleton />
     </div>
