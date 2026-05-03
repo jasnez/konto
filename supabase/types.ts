@@ -1214,6 +1214,10 @@ export type Database = {
             };
             Returns: Json;
           };
+      get_period_spent_for_category: {
+        Args: { p_category_id: string; p_offset?: number; p_period: string };
+        Returns: number;
+      };
       import_dedup_filter: {
         Args: { p_account_id: string; p_rows: Json };
         Returns: number[];
