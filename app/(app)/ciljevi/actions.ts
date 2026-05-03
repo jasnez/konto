@@ -423,9 +423,7 @@ export async function addContribution(
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  const finalCurrent =
-    updated.current_amount_cents != null ? BigInt(updated.current_amount_cents) : newCurrent;
+  const finalCurrent = BigInt(updated.current_amount_cents);
   const nowAchieved = updated.achieved_at !== null;
   const justAchieved = !wasAchieved && nowAchieved;
 

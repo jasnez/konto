@@ -139,7 +139,7 @@ export async function listGoals(
     );
     // Supabase join returns array or object depending on cardinality.
     // We use accounts (singular join) which returns an object or null.
-    const accountRaw = r.account as { id: string; name: string } | null | Array<{ id: string; name: string }>;
+    const accountRaw = r.account as { id: string; name: string } | null | { id: string; name: string }[];
     const account = Array.isArray(accountRaw) ? (accountRaw[0] ?? null) : accountRaw;
 
     return {
