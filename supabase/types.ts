@@ -363,6 +363,65 @@ export type Database = {
         };
         Relationships: [];
       };
+      goals: {
+        Row: {
+          account_id: string | null;
+          achieved_at: string | null;
+          active: boolean;
+          color: string | null;
+          created_at: string;
+          currency: string;
+          current_amount_cents: number;
+          icon: string | null;
+          id: string;
+          name: string;
+          target_amount_cents: number;
+          target_date: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          account_id?: string | null;
+          achieved_at?: string | null;
+          active?: boolean;
+          color?: string | null;
+          created_at?: string;
+          currency?: string;
+          current_amount_cents?: number;
+          icon?: string | null;
+          id?: string;
+          name: string;
+          target_amount_cents: number;
+          target_date?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          account_id?: string | null;
+          achieved_at?: string | null;
+          active?: boolean;
+          color?: string | null;
+          created_at?: string;
+          currency?: string;
+          current_amount_cents?: number;
+          icon?: string | null;
+          id?: string;
+          name?: string;
+          target_amount_cents?: number;
+          target_date?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'goals_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       ignored_recurring_candidates: {
         Row: {
           group_key: string;
@@ -1341,6 +1400,10 @@ export type Database = {
       normalize_for_categorization: {
         Args: { p_input: string };
         Returns: string;
+      };
+      recompute_goal_from_account: {
+        Args: { p_goal_id: string };
+        Returns: undefined;
       };
       restore_default_categories_for_user: { Args: never; Returns: undefined };
       run_categorization_cascade: {
