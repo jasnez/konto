@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Camera,
   Home,
   Receipt,
@@ -58,6 +59,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: FileUp,
     desktopOnly: true,
   },
+  { href: '/vodic', label: 'Vodič', mobileLabel: 'Vodič', icon: BookOpen, desktopOnly: true },
   { href: '/help', label: 'Pomoć', mobileLabel: 'Pomoć', icon: HelpCircle, desktopOnly: true },
   { href: '/uvidi', label: 'Uvidi', mobileLabel: 'Uvidi', icon: PieChart, desktopOnly: true },
   { href: '/podesavanja', label: 'Podešavanja', mobileLabel: 'Više', icon: Settings },
