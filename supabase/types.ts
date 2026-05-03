@@ -905,6 +905,88 @@ export type Database = {
           },
         ];
       };
+      recurring_transactions: {
+        Row: {
+          account_id: string | null;
+          active: boolean;
+          average_amount_cents: number;
+          category_id: string | null;
+          created_at: string;
+          currency: string;
+          description: string;
+          detection_confidence: number | null;
+          id: string;
+          last_seen_date: string | null;
+          merchant_id: string | null;
+          next_expected_date: string | null;
+          occurrences: number;
+          paused_until: string | null;
+          period: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          account_id?: string | null;
+          active?: boolean;
+          average_amount_cents: number;
+          category_id?: string | null;
+          created_at?: string;
+          currency: string;
+          description: string;
+          detection_confidence?: number | null;
+          id?: string;
+          last_seen_date?: string | null;
+          merchant_id?: string | null;
+          next_expected_date?: string | null;
+          occurrences?: number;
+          paused_until?: string | null;
+          period: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          account_id?: string | null;
+          active?: boolean;
+          average_amount_cents?: number;
+          category_id?: string | null;
+          created_at?: string;
+          currency?: string;
+          description?: string;
+          detection_confidence?: number | null;
+          id?: string;
+          last_seen_date?: string | null;
+          merchant_id?: string | null;
+          next_expected_date?: string | null;
+          occurrences?: number;
+          paused_until?: string | null;
+          period?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'recurring_transactions_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'recurring_transactions_category_id_fkey';
+            columns: ['category_id'];
+            isOneToOne: false;
+            referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'recurring_transactions_merchant_id_fkey';
+            columns: ['merchant_id'];
+            isOneToOne: false;
+            referencedRelation: 'merchants';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       transactions: {
         Row: {
           account_id: string;
@@ -1072,6 +1154,13 @@ export type Database = {
             referencedColumns: ['id'];
           },
           {
+            foreignKeyName: 'transactions_recurring_group_id_fkey';
+            columns: ['recurring_group_id'];
+            isOneToOne: false;
+            referencedRelation: 'recurring_transactions';
+            referencedColumns: ['id'];
+          },
+          {
             foreignKeyName: 'transactions_split_parent_id_fkey';
             columns: ['split_parent_id'];
             isOneToOne: false;
@@ -1157,6 +1246,7 @@ export type Database = {
         };
         Returns: boolean;
       };
+      confirm_recurring: { Args: { p_payload: Json }; Returns: Json };
       convert_transaction_to_transfer: {
         Args: { p_counterparty_account_id: string; p_transaction_id: string };
         Returns: Json;
@@ -1217,6 +1307,10 @@ export type Database = {
       get_period_spent_for_category: {
         Args: { p_category_id: string; p_offset?: number; p_period: string };
         Returns: number;
+      };
+      get_recurring_with_history: {
+        Args: { p_recurring_id: string };
+        Returns: Json;
       };
       import_dedup_filter: {
         Args: { p_account_id: string; p_rows: Json };
