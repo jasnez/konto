@@ -72,11 +72,41 @@ export function DashboardTrendSkeleton() {
   );
 }
 
+/**
+ * Skeleton for the Budgets dashboard widget. Mirrors the 3-row layout the
+ * widget will resolve to (each row = title line + slim progress bar).
+ * Slightly different from the recent-transactions skeleton so the eye
+ * doesn't read both as the same loading block.
+ */
+export function DashboardBudgetsSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 p-4 sm:p-6">
+        <Skeleton className="h-6 w-24" />
+        <Skeleton className="h-9 w-28 rounded-md" />
+      </CardHeader>
+      <CardContent className="space-y-3 px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={String(index)} className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-10" />
+            </div>
+            <Skeleton className="h-1.5 w-full rounded-full" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function DashboardPageSkeleton() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
       <DashboardHeroSkeleton />
       <DashboardMetricsSkeleton />
+      <DashboardBudgetsSkeleton />
       <DashboardRecentTransactionsSkeleton />
       <DashboardTrendSkeleton />
     </div>
