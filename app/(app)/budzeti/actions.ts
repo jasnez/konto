@@ -12,6 +12,60 @@ import {
 import type { Database } from '@/supabase/types';
 import { logSafe } from '@/lib/logger';
 
+const PreviewPeriodSpentSchema = z.object({
+  category_id: z.uuid(),
+  period: z.enum(['monthly', 'weekly']),
+  offset: z.number().int().min(-12).max(0).default(-1),
+});
+
+export type PreviewPeriodSpentResult =
+  | { success: true; data: { spentCents: string } }
+  | { success: false; error: 'VALIDATION_ERROR' }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
+/**
+ * @public
+ * Returns total spending for the given category over a relative period.
+ * `offset = -1` (default) is "previous monthly/weekly" — used by the budget
+ * Add form to suggest a realistic limit.
+ *
+ * Reads via the SECURITY-INVOKER RPC `get_period_spent_for_category`. The
+ * RPC enforces auth.uid() and rejects foreign category_ids by returning 0
+ * (no row leak; this Server Action just surfaces the bigint).
+ */
+export async function previewCategoryPeriodSpent(
+  input: unknown,
+): Promise<PreviewPeriodSpentResult> {
+  const parsed = PreviewPeriodSpentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: 'VALIDATION_ERROR' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  const { data, error } = await supabase.rpc('get_period_spent_for_category', {
+    p_category_id: parsed.data.category_id,
+    p_period: parsed.data.period,
+    p_offset: parsed.data.offset,
+  });
+  if (error) {
+    logSafe('preview_category_period_spent', { userId: user.id, error: error.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  // RPC returns bigint; supabase-js may surface it as number | string. Normalise
+  // through BigInt so the client always receives a deterministic decimal string.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  const spent = data === null || data === undefined ? 0n : BigInt(data);
+  return { success: true, data: { spentCents: spent.toString() } };
+}
+
 type BudgetUpdate = Database['public']['Tables']['budgets']['Update'];
 
 interface ZodErrorTree {
