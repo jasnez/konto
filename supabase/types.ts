@@ -363,6 +363,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      ignored_recurring_candidates: {
+        Row: {
+          group_key: string;
+          ignored_at: string;
+          user_id: string;
+        };
+        Insert: {
+          group_key: string;
+          ignored_at?: string;
+          user_id: string;
+        };
+        Update: {
+          group_key?: string;
+          ignored_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       import_batches: {
         Row: {
           account_id: string | null;

@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { detectRecurring, type RecurringCandidate } from '@/lib/analytics/recurring-detection';
+import { normalizeDescription } from '@/lib/categorization/cascade';
 import {
   BindTransactionSchema,
   ConfirmRecurringSchema,
@@ -64,6 +66,37 @@ export type BindTransactionResult =
   | { success: false; error: 'UNAUTHORIZED' }
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'DATABASE_ERROR' };
+
+export type DetectAndSuggestResult =
+  | { success: true; data: { candidates: SuggestedCandidate[] } }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
+export type IgnoreCandidateResult =
+  | { success: true }
+  | { success: false; error: 'VALIDATION_ERROR'; details: { _root: string[] } }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
+/**
+ * Suggested candidate as it crosses the RSC boundary. RecurringCandidate
+ * from the detector contains a bigint, which can't be JSON-serialised;
+ * we convert to a decimal string here.
+ */
+export interface SuggestedCandidate {
+  groupKey: string;
+  merchantId: string | null;
+  description: string;
+  period: 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'yearly';
+  averageAmountCents: string;
+  currency: string;
+  lastSeen: string;
+  nextExpected: string;
+  confidence: number;
+  occurrences: number;
+  transactionIds: string[];
+  suggestedCategoryId: string | null;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -437,6 +470,148 @@ export async function bindTransactionToRecurring(
     .eq('user_id', user.id);
   if (upErr) {
     logSafe('bind_tx_update', { userId: user.id, error: upErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidateRecurringPaths();
+  return { success: true };
+}
+
+// ─── Suggestion / ignore actions ─────────────────────────────────────────────
+
+const IgnoreCandidateSchema = z.object({
+  groupKey: z.string().min(1).max(500),
+});
+
+/**
+ * Build the same `groupKey` shape the detector emits, but for an
+ * already-confirmed `recurring_transactions` row. Lets us subtract
+ * "already-active" pretplate from the detector output without touching
+ * the algorithm.
+ *
+ * Detector keys:
+ *   - merchant:<merchant_uuid>:<currency>
+ *   - desc:<normalized_text>:<currency>
+ *
+ * For a confirmed row we have the merchant_id; if not, we fall back to
+ * the description (which the user may have edited, but is the best
+ * proxy we've got — same reasoning as the detector itself).
+ */
+function activeGroupKey(row: {
+  merchant_id: string | null;
+  description: string;
+  currency: string;
+}): string {
+  if (row.merchant_id) {
+    return `merchant:${row.merchant_id}:${row.currency}`;
+  }
+  const norm = normalizeDescription(row.description);
+  return `desc:${norm.length === 0 ? '_empty_' : norm}:${row.currency}`;
+}
+
+/**
+ * @public
+ * Run the detector + filter out (a) candidates that are already an
+ * active recurring row and (b) candidates the user has explicitly
+ * ignored. UI calls this on page load AND on the "Pronađi nove
+ * pretplate" CTA.
+ *
+ * Bigint amounts are stringified at the boundary because the result
+ * crosses an RSC seam and Next can't serialise BigInt natively.
+ */
+export async function detectAndSuggestRecurring(): Promise<DetectAndSuggestResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  let candidates: RecurringCandidate[];
+  try {
+    candidates = await detectRecurring(supabase, user.id);
+  } catch (err) {
+    logSafe('detect_and_suggest_run', {
+      userId: user.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  // Active rows we should subtract from suggestions.
+  const { data: active, error: activeErr } = await supabase
+    .from('recurring_transactions')
+    .select('merchant_id, description, currency')
+    .eq('user_id', user.id);
+  if (activeErr) {
+    logSafe('detect_and_suggest_active', { userId: user.id, error: activeErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  const activeKeys = new Set(active.map((r) => activeGroupKey(r)));
+
+  const { data: ignored, error: ignoredErr } = await supabase
+    .from('ignored_recurring_candidates')
+    .select('group_key')
+    .eq('user_id', user.id);
+  if (ignoredErr) {
+    logSafe('detect_and_suggest_ignored', { userId: user.id, error: ignoredErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  const ignoredKeys = new Set(ignored.map((r) => r.group_key));
+
+  const filtered: SuggestedCandidate[] = candidates
+    .filter((c) => !activeKeys.has(c.groupKey) && !ignoredKeys.has(c.groupKey))
+    .map((c) => ({
+      groupKey: c.groupKey,
+      merchantId: c.merchantId,
+      description: c.description,
+      period: c.period,
+      averageAmountCents: c.averageAmountCents.toString(),
+      currency: c.currency,
+      lastSeen: c.lastSeen,
+      nextExpected: c.nextExpected,
+      confidence: c.confidence,
+      occurrences: c.occurrences,
+      transactionIds: c.transactionIds,
+      suggestedCategoryId: c.suggestedCategoryId,
+    }));
+
+  return { success: true, data: { candidates: filtered } };
+}
+
+/**
+ * @public
+ * Mark a suggested candidate as "ignore — don't propose this again".
+ * Idempotent: a second call for the same (user, groupKey) is a no-op
+ * via the PK conflict.
+ */
+export async function ignoreCandidate(input: unknown): Promise<IgnoreCandidateResult> {
+  const parsed = IgnoreCandidateSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: 'VALIDATION_ERROR',
+      details: { _root: asErrorTree(z.treeifyError(parsed.error)).errors },
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  const { error } = await supabase
+    .from('ignored_recurring_candidates')
+    .upsert(
+      { user_id: user.id, group_key: parsed.data.groupKey },
+      { onConflict: 'user_id,group_key', ignoreDuplicates: true },
+    );
+  if (error) {
+    logSafe('ignore_candidate_error', { userId: user.id, error: error.message });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 

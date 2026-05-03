@@ -4,6 +4,7 @@ import {
   Receipt,
   PieChart,
   PiggyBank,
+  Repeat,
   Settings,
   Store,
   Tags,
@@ -42,6 +43,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { href: '/transakcije', label: 'Transakcije', mobileLabel: 'Transakcije', icon: Receipt },
   { href: '/budzeti', label: 'Budžeti', mobileLabel: 'Budž.', icon: PiggyBank, desktopOnly: true },
+  { href: '/pretplate', label: 'Pretplate', mobileLabel: 'Pret.', icon: Repeat, desktopOnly: true },
   {
     href: '/skeniraj',
     label: 'Skeniraj račun',
