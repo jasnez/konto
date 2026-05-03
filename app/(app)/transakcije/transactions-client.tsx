@@ -375,7 +375,7 @@ export function TransactionsClient({
         <ul className="space-y-3">
           {grouped.map((group) => (
             <li key={group.label} className="list-none">
-              <div className="sticky top-[calc(4rem+var(--filter-region-height,3.75rem))] z-10 mb-2 rounded-md bg-background/95 px-2 py-1 text-[11px] font-medium tracking-wide text-muted-foreground backdrop-blur-sm">
+              <div className="sticky top-16 z-10 mb-2 rounded-md bg-background/95 px-2 py-1 text-[11px] font-medium tracking-wide text-muted-foreground backdrop-blur-sm md:top-[calc(4rem+var(--filter-region-height,3.75rem))]">
                 {group.label}
               </div>
               <ul className="space-y-2">

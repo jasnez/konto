@@ -39,7 +39,7 @@ export function AccountFilters({
 
   return (
     <>
-      <div className="sticky top-16 z-20 -mx-4 border-b border-border/50 bg-background/95 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6">
+      <div className="-mx-4 border-b border-border/50 bg-background/95 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6 md:sticky md:top-16 md:z-20">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search
