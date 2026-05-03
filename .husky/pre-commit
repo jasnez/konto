@@ -1,3 +1,4 @@
+#!/usr/bin/env sh
 gitleaks git --staged --verbose --redact || exit 1
 pnpm exec lint-staged
 pnpm typecheck
