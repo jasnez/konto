@@ -6,7 +6,7 @@ import { format, parseISO } from 'date-fns';
 import { bs } from 'date-fns/locale';
 import { AlertTriangle, ArrowRight, Check, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { formatMoney } from '@/lib/format/format-money';
 import type { ForecastDay, ForecastEvent } from '@/lib/analytics/forecast';
@@ -153,6 +153,13 @@ export function ForecastWidget({ forecast }: ForecastWidgetProps) {
               </TabsTrigger>
             ))}
           </TabsList>
+          {/* Hidden panels are required by Radix Tabs so each trigger's
+              aria-controls points to a real DOM element (WCAG / axe). The
+              chart lives outside the Tabs component intentionally — we only
+              use Tabs for the keyboard-navigable toggle chrome. */}
+          {WINDOW_OPTIONS.map((opt) => (
+            <TabsContent key={opt} value={String(opt)} className="hidden" />
+          ))}
         </Tabs>
       </CardHeader>
       <CardContent className="space-y-3 px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
