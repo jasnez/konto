@@ -1,0 +1,21 @@
+# Discourage good-faith crawlers (Googlebot, Bingbot, Ahrefs, etc.) from
+# probing the API surface and authed app routes. Marketing pages and the
+# public security disclosure surface stay crawlable by default.
+
+User-agent: *
+Disallow: /api/
+Disallow: /auth/
+Disallow: /pocetna
+Disallow: /transakcije
+Disallow: /racuni
+Disallow: /uvidi
+Disallow: /podesavanja
+Disallow: /kategorije
+Disallow: /merchants
+Disallow: /skeniraj
+Disallow: /import
+Disallow: /kartice-rate
+Disallow: /help
+Disallow: /obrisan
+Disallow: /prijava
+Disallow: /registracija
