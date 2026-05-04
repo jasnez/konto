@@ -132,20 +132,19 @@ function EmailStep({
   requireInvite: boolean;
   onSent: (email: string) => void;
 }) {
+  // When invites aren't required, omit `inviteCode` from defaultValues so
+  // it's `undefined` in form state — the schema's `.optional()` allows
+  // that. Including it as `''` would trip the 8-char regex on submit even
+  // though the user never sees the field. The conditional render below
+  // matches: the field is mounted only when requireInvite=true.
   const form = useForm<SendOtpInput>({
     resolver: zodResolver(SendOtpSchema),
-    defaultValues: { email: '', inviteCode: '' },
+    defaultValues: requireInvite ? { email: '', inviteCode: '' } : { email: '' },
     mode: 'onSubmit',
   });
 
   async function onSubmit(values: SendOtpInput) {
-    // Strip empty invite code before sending so Zod's optional+regex doesn't
-    // reject an empty string when invites aren't required.
-    const payload =
-      values.inviteCode && values.inviteCode.length > 0
-        ? values
-        : { email: values.email };
-    const result = await sendOtp(payload);
+    const result = await sendOtp(values);
 
     if (result.success) {
       onSent(values.email);
