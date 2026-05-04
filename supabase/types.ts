@@ -683,6 +683,39 @@ export type Database = {
           },
         ];
       };
+      invite_codes: {
+        Row: {
+          code: string;
+          created_at: string;
+          created_by: string | null;
+          expires_at: string;
+          id: string;
+          notes: string | null;
+          used_at: string | null;
+          used_by: string | null;
+        };
+        Insert: {
+          code: string;
+          created_at?: string;
+          created_by?: string | null;
+          expires_at?: string;
+          id?: string;
+          notes?: string | null;
+          used_at?: string | null;
+          used_by?: string | null;
+        };
+        Update: {
+          code?: string;
+          created_at?: string;
+          created_by?: string | null;
+          expires_at?: string;
+          id?: string;
+          notes?: string | null;
+          used_at?: string | null;
+          used_by?: string | null;
+        };
+        Relationships: [];
+      };
       llm_categorization_cache: {
         Row: {
           amount_bucket: number;
@@ -1452,6 +1485,7 @@ export type Database = {
         Args: { p_input: string };
         Returns: string;
       };
+      preview_invite_code: { Args: { p_code: string }; Returns: string };
       recompute_goal_from_account: {
         Args: { p_goal_id: string };
         Returns: undefined;

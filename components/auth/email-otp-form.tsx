@@ -34,6 +34,14 @@ interface EmailOtpFormProps {
   callbackErrored?: boolean;
   /** True when middleware ili klijent pošalju ovdje nakon istekle sesije. */
   sessionExpired?: boolean;
+  /**
+   * When true (controlled by `ENABLE_INVITES` env on the server, passed
+   * down by the page), shows the invite code input. New users without a
+   * valid code can't sign up. Existing users sign in normally — the
+   * Server Action looks up email existence and waives the gate when the
+   * email is already in `auth.users`.
+   */
+  requireInvite?: boolean;
 }
 
 const COPY: Record<
@@ -75,6 +83,7 @@ export function EmailOtpForm({
   variant,
   callbackErrored = false,
   sessionExpired = false,
+  requireInvite = false,
 }: EmailOtpFormProps) {
   const copy = COPY[variant];
   const [sentTo, setSentTo] = useState<string | null>(null);
@@ -93,6 +102,7 @@ export function EmailOtpForm({
           copy={copy}
           callbackErrored={callbackErrored}
           sessionExpired={sessionExpired}
+          requireInvite={requireInvite}
           onSent={(email) => {
             setSentTo(email);
           }}
@@ -102,20 +112,34 @@ export function EmailOtpForm({
   );
 }
 
+const INVITE_ERROR_COPY: Record<string, string> = {
+  INVITE_REQUIRED: 'Trenutno smo u zatvorenom beta testu — unesi invite kod.',
+  INVITE_INVALID: 'Invite kod nije valjan. Provjeri da je tačno unesen.',
+  INVITE_USED: 'Ovaj kod je već iskorišten.',
+  INVITE_EXPIRED: 'Ovaj kod je istekao. Zatraži novi.',
+};
+
 function EmailStep({
   copy,
   callbackErrored,
   sessionExpired,
+  requireInvite,
   onSent,
 }: {
   copy: (typeof COPY)[Variant];
   callbackErrored: boolean;
   sessionExpired: boolean;
+  requireInvite: boolean;
   onSent: (email: string) => void;
 }) {
+  // When invites aren't required, omit `inviteCode` from defaultValues so
+  // it's `undefined` in form state — the schema's `.optional()` allows
+  // that. Including it as `''` would trip the 8-char regex on submit even
+  // though the user never sees the field. The conditional render below
+  // matches: the field is mounted only when requireInvite=true.
   const form = useForm<SendOtpInput>({
     resolver: zodResolver(SendOtpSchema),
-    defaultValues: { email: '' },
+    defaultValues: requireInvite ? { email: '', inviteCode: '' } : { email: '' },
     mode: 'onSubmit',
   });
 
@@ -128,8 +152,24 @@ function EmailStep({
     }
 
     if (result.error === 'VALIDATION_ERROR') {
-      const message = result.details.email?.[0] ?? 'Provjeri email i pokušaj ponovo.';
-      form.setError('email', { message });
+      if (result.details.email?.[0]) {
+        form.setError('email', { message: result.details.email[0] });
+      }
+      if (result.details.inviteCode?.[0]) {
+        form.setError('inviteCode', { message: result.details.inviteCode[0] });
+      }
+      return;
+    }
+
+    if (
+      result.error === 'INVITE_REQUIRED' ||
+      result.error === 'INVITE_INVALID' ||
+      result.error === 'INVITE_USED' ||
+      result.error === 'INVITE_EXPIRED'
+    ) {
+      form.setError('inviteCode', {
+        message: INVITE_ERROR_COPY[result.error] ?? 'Kod nije valjan.',
+      });
       return;
     }
 
@@ -190,6 +230,41 @@ function EmailStep({
                 </FormItem>
               )}
             />
+            {requireInvite ? (
+              <FormField
+                control={form.control}
+                name="inviteCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Invite kod</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        inputMode="text"
+                        autoCapitalize="characters"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        placeholder="ABCD2345"
+                        maxLength={8}
+                        className="h-11 font-mono uppercase tracking-[0.25em]"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e.target.value.toUpperCase());
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      8 znakova. Trenutno smo u zatvorenom beta testu —{' '}
+                      <Link href="/cekanje" className="underline">
+                        prijavi se na čekanje
+                      </Link>{' '}
+                      ako nemaš kod.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
             <Button type="submit" disabled={form.formState.isSubmitting} className="h-11 w-full">
               {form.formState.isSubmitting ? (
                 <>
@@ -234,6 +309,14 @@ function OtpCodeStep({ email, onResend }: { email: string; onResend: () => void 
     if (result.error === 'VALIDATION_ERROR') {
       const tokenError = result.details.token?.[0] ?? 'Provjeri kod.';
       form.setError('token', { message: tokenError });
+      return;
+    }
+
+    if (result.error === 'INVITE_REJECTED') {
+      form.setError('token', {
+        message:
+          'Invite kod više nije valjan (možda je u međuvremenu iskorišten). Zatraži drugi kod.',
+      });
       return;
     }
 
