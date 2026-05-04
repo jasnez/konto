@@ -508,6 +508,54 @@ export type Database = {
           },
         ];
       };
+      insights: {
+        Row: {
+          action_url: string | null;
+          body: string;
+          created_at: string;
+          dedup_key: string;
+          dismissed_at: string | null;
+          id: string;
+          metadata: Json;
+          severity: string;
+          title: string;
+          type: string;
+          updated_at: string;
+          user_id: string;
+          valid_until: string | null;
+        };
+        Insert: {
+          action_url?: string | null;
+          body: string;
+          created_at?: string;
+          dedup_key: string;
+          dismissed_at?: string | null;
+          id?: string;
+          metadata?: Json;
+          severity: string;
+          title: string;
+          type: string;
+          updated_at?: string;
+          user_id: string;
+          valid_until?: string | null;
+        };
+        Update: {
+          action_url?: string | null;
+          body?: string;
+          created_at?: string;
+          dedup_key?: string;
+          dismissed_at?: string | null;
+          id?: string;
+          metadata?: Json;
+          severity?: string;
+          title?: string;
+          type?: string;
+          updated_at?: string;
+          user_id?: string;
+          valid_until?: string | null;
+        };
+        Relationships: [];
+      };
       installment_occurrences: {
         Row: {
           amount_cents: number;

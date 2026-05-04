@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/post-due-installments",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/insights-nightly",
+      "schedule": "0 3 * * *"
     }
   ]
 }
