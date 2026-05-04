@@ -92,7 +92,11 @@ export default defineConfig({
   webServer: {
     command: 'pnpm run e2e:web',
     url: 'http://127.0.0.1:4173',
-    timeout: 180_000,
+    // 300s budget covers cold-start of Docker + 60+ supabase migrations +
+    // Next dev compile on a slow CI runner. The previous 180s would
+    // intermittently expire before health checks completed (saw it post-merge
+    // at #127). Local dev rarely needs more than 60s.
+    timeout: 300_000,
     reuseExistingServer: !process.env.CI,
     env: {
       ...process.env,
