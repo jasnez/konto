@@ -1,0 +1,186 @@
+'use server';
+
+/**
+ * Server Actions for /uvidi (F3-E5-T1).
+ *
+ * Two actions:
+ *   - `dismissInsight(id)` — marks an insight as dismissed. Standard pattern:
+ *     Zod parse → getUser → ownership pre-check → mutation → revalidatePath.
+ *   - `regenerateInsights()` — manual trigger of the engine for the current
+ *     user. Useful for power users + dev. Rate-limited to one call per 60s
+ *     by checking the latest insight's `created_at` for the user — prevents
+ *     trivially abusing the engine compute.
+ *
+ * `archiveInsight` is intentionally absent. The product decision in T1 is
+ * that "dismiss" is the only user action; a future "history" UI can query
+ * `where dismissed_at is not null`.
+ */
+import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { generateInsights } from '@/lib/analytics/insights/engine';
+import { logSafe } from '@/lib/logger';
+
+// ─── Schemas ──────────────────────────────────────────────────────────────────
+
+const InsightIdSchema = z.uuid({ message: 'Neispravan ID uvida' });
+
+// ─── Result types ─────────────────────────────────────────────────────────────
+
+export type DismissInsightResult =
+  | { success: true }
+  | { success: false; error: 'VALIDATION_ERROR'; details: { _root: string[] } }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'NOT_FOUND' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
+export type RegenerateInsightsResult =
+  | { success: true; data: { created: number; skipped: number; errored: number } }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'RATE_LIMITED'; retryAfterSeconds: number }
+  | { success: false; error: 'DATABASE_ERROR' };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function rootErrors(error: z.ZodError): string[] {
+  return z.treeifyError(error).errors;
+}
+
+function revalidateInsightPaths(): void {
+  revalidatePath('/uvidi');
+  revalidatePath('/pocetna');
+}
+
+const REGENERATE_COOLDOWN_SECONDS = 60;
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+
+/**
+ * @public
+ * Dismiss an insight (single-column soft-delete via `dismissed_at`). The
+ * insight is hidden from the UI but kept for 90 days (cleanup cron sweeps
+ * it after that).
+ */
+export async function dismissInsight(id: unknown): Promise<DismissInsightResult> {
+  const idParse = InsightIdSchema.safeParse(id);
+  if (!idParse.success) {
+    return {
+      success: false,
+      error: 'VALIDATION_ERROR',
+      details: { _root: rootErrors(idParse.error) },
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  // Ownership pre-check. Dismissed-already-dismissed is a no-op success;
+  // we don't punish the user for a double-click.
+  const { data: existing, error: selErr } = await supabase
+    .from('insights')
+    .select('id')
+    .eq('id', idParse.data)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (selErr) {
+    logSafe('dismiss_insight_select', { userId: user.id, error: selErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  if (!existing) {
+    return { success: false, error: 'NOT_FOUND' };
+  }
+
+  const { error: upErr } = await supabase
+    .from('insights')
+    .update({ dismissed_at: new Date().toISOString() })
+    .eq('id', idParse.data)
+    .eq('user_id', user.id);
+
+  if (upErr) {
+    logSafe('dismiss_insight_update', {
+      userId: user.id,
+      insightId: idParse.data,
+      error: upErr.message,
+    });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidateInsightPaths();
+  return { success: true };
+}
+
+/**
+ * @public
+ * Regenerate insights for the current user. Rate-limited to one call per
+ * `REGENERATE_COOLDOWN_SECONDS` to prevent compute abuse.
+ *
+ * Uses the service-role client to write — same path as the nightly cron.
+ * The service-role usage is safe because we already validated `user.id`
+ * via `auth.getUser()` and the engine scopes every query by `user_id`.
+ */
+export async function regenerateInsights(): Promise<RegenerateInsightsResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  // Rate limit: check the most recent insight's created_at.
+  const { data: recent, error: recentErr } = await supabase
+    .from('insights')
+    .select('created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (recentErr) {
+    logSafe('regenerate_insights_recent_check', { userId: user.id, error: recentErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  if (recent !== null) {
+    const lastMs = new Date(recent.created_at).getTime();
+    const elapsedSec = Math.floor((Date.now() - lastMs) / 1000);
+    if (elapsedSec < REGENERATE_COOLDOWN_SECONDS) {
+      return {
+        success: false,
+        error: 'RATE_LIMITED',
+        retryAfterSeconds: REGENERATE_COOLDOWN_SECONDS - elapsedSec,
+      };
+    }
+  }
+
+  // Run with service-role client — engine is user-scoped via `user.id`
+  // parameter, and we just confirmed the user is authenticated.
+  const adminSupabase = createAdminClient();
+  let result;
+  try {
+    result = await generateInsights(adminSupabase, user.id, new Date());
+  } catch (err) {
+    logSafe('regenerate_insights_engine_error', {
+      userId: user.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidateInsightPaths();
+  return {
+    success: true,
+    data: {
+      created: result.created,
+      skipped: result.skipped,
+      errored: result.errored,
+    },
+  };
+}
