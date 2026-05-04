@@ -35,6 +35,16 @@ export type DismissInsightResult =
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'DATABASE_ERROR' };
 
+export type UndismissInsightResult =
+  | { success: true }
+  | { success: false; error: 'VALIDATION_ERROR'; details: { _root: string[] } }
+  | { success: false; error: 'UNAUTHORIZED' }
+  | { success: false; error: 'NOT_FOUND' }
+  /** A live insight with the same dedup_key already exists (unique partial
+   *  index hit). Tells the UI to surface "Postoji noviji uvid sa istim ključem." */
+  | { success: false; error: 'CONFLICT' }
+  | { success: false; error: 'DATABASE_ERROR' };
+
 export type RegenerateInsightsResult =
   | { success: true; data: { created: number; skipped: number; errored: number } }
   | { success: false; error: 'UNAUTHORIZED' }
@@ -105,6 +115,73 @@ export async function dismissInsight(id: unknown): Promise<DismissInsightResult>
 
   if (upErr) {
     logSafe('dismiss_insight_update', {
+      userId: user.id,
+      insightId: idParse.data,
+      error: upErr.message,
+    });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  revalidateInsightPaths();
+  return { success: true };
+}
+
+/**
+ * @public
+ * Restore a dismissed insight (set `dismissed_at = null`). Used by the
+ * "Vrati" undo toast and by the Arhiva tab "Vrati" button.
+ *
+ * The unique partial index on `(user_id, dedup_key) WHERE dismissed_at IS NULL`
+ * means undismiss can fail with PG `23505` if a fresh insight with the same
+ * dedup_key was generated since the original dismiss (e.g., the cron ran in
+ * between). We surface that as `CONFLICT` so the UI can show a tailored toast.
+ */
+export async function undismissInsight(id: unknown): Promise<UndismissInsightResult> {
+  const idParse = InsightIdSchema.safeParse(id);
+  if (!idParse.success) {
+    return {
+      success: false,
+      error: 'VALIDATION_ERROR',
+      details: { _root: rootErrors(idParse.error) },
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  const { data: existing, error: selErr } = await supabase
+    .from('insights')
+    .select('id')
+    .eq('id', idParse.data)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (selErr) {
+    logSafe('undismiss_insight_select', { userId: user.id, error: selErr.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+  if (!existing) {
+    return { success: false, error: 'NOT_FOUND' };
+  }
+
+  const { error: upErr } = await supabase
+    .from('insights')
+    .update({ dismissed_at: null })
+    .eq('id', idParse.data)
+    .eq('user_id', user.id);
+
+  if (upErr) {
+    // 23505 = unique_violation. Our partial index can fire here if a fresh
+    // insight with the same dedup_key was inserted while this one was dismissed.
+    if (upErr.code === '23505') {
+      return { success: false, error: 'CONFLICT' };
+    }
+    logSafe('undismiss_insight_update', {
       userId: user.id,
       insightId: idParse.data,
       error: upErr.message,

@@ -8,6 +8,7 @@ import { KeyboardShortcutsDialog } from '@/components/shell/keyboard-shortcuts-d
 import { QuickAddHotkeys } from '@/components/shell/quick-add-hotkeys';
 import { Sidebar } from '@/components/shell/sidebar';
 import { TopBar } from '@/components/shell/top-bar';
+import { NotificationBell } from '@/components/insights/notification-bell';
 import { createClient } from '@/lib/supabase/server';
 
 function isCategoryKind(value: string): value is CategoryOption['kind'] {
@@ -96,7 +97,7 @@ export default async function AppLayout({
       <div className="flex min-h-screen">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar />
+          <TopBar rightSlot={<NotificationBell />} />
           {/*
            * Bottom padding reserves space for the mobile bottom nav (~64px tall)
            * + safe-area inset. The FAB now sits flush inside the nav (no float

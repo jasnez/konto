@@ -2,10 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { ReactNode } from 'react';
 import { useHideOnScrollDown } from '@/hooks/use-hide-on-scroll-down';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { cn } from '@/lib/utils';
 import { getPageTitleForPath } from './nav-items';
+
+export interface TopBarProps {
+  /**
+   * Optional right-side action slot. Server Components are accepted (e.g.
+   * <NotificationBell />), since Client Components can render Server
+   * Component children passed in via props.
+   */
+  rightSlot?: ReactNode;
+}
 
 /**
  * Sticky top bar used by the (app) layout. Desktop shows the page title left
@@ -17,7 +27,7 @@ import { getPageTitleForPath } from './nav-items';
  * desktop (md+) where the bar is part of the chrome and doesn't compete for
  * vertical space the same way.
  */
-export function TopBar() {
+export function TopBar({ rightSlot }: TopBarProps = {}) {
   const pathname = usePathname();
   const title = getPageTitleForPath(pathname);
   const isMobile = useIsMobile();
@@ -46,6 +56,7 @@ export function TopBar() {
           · {title}
         </span>
       </div>
+      {rightSlot && <div className="flex shrink-0 items-center gap-2">{rightSlot}</div>}
     </header>
   );
 }
