@@ -1,5 +1,12 @@
 import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
+
+// Public marketing/disclosure pages: no Supabase auth needed. Skipping
+// updateSession() saves two Supabase round-trips per request, which is the
+// dominant cost when bots/SEO crawlers hit public content. CSP nonce is
+// still set so inline hydration scripts continue to work.
+const PUBLIC_PAGE_PATHS = new Set(['/', '/privatnost', '/uslovi', '/kontakt', '/sigurnost']);
 
 function buildCsp(nonce: string): string {
   // Include the explicit Supabase URL so the browser-side Supabase client
@@ -35,6 +42,16 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
 
+  // Public marketing/disclosure paths: skip Supabase session refresh.
+  // Saves two Supabase round-trips per request — the dominant middleware
+  // cost when bots/SEO crawlers hit public pages. CSP nonce is still set
+  // so inline hydration scripts continue to work.
+  if (PUBLIC_PAGE_PATHS.has(request.nextUrl.pathname)) {
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    response.headers.set('Content-Security-Policy', buildCsp(nonce));
+    return response;
+  }
+
   const response = await updateSession(request, requestHeaders);
 
   response.headers.set('Content-Security-Policy', buildCsp(nonce));
@@ -43,5 +60,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/webhooks).*)'],
+  // Matcher excludes static-like paths (no HTML, no JS, no auth) so they
+  // never count as middleware invocations. Anything else flows through
+  // middleware so CSP nonce + (when needed) Supabase session refresh can run.
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|api/webhooks|manifest.webmanifest|sw.js|offline.html|icons|.well-known|sitemap.xml|robots.txt).*)',
+  ],
 };
