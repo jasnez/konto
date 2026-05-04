@@ -31,7 +31,9 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "esbuild",
       "msw",
+      "sharp",
       "supabase"
     ]
   },
