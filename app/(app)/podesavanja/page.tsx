@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ThemeToggle } from '@/components/shell/theme-toggle';
+import { ResetOnboardingButton } from '@/components/onboarding/reset-onboarding-button';
 import { createClient } from '@/lib/supabase/server';
 import { ProfileForm } from './profile-form';
 import { RestoreDefaultCategoriesButton } from './restore-default-categories-button';
@@ -118,6 +119,20 @@ export default async function PodesavanjaPage() {
           <RestoreDefaultCategoriesButton />
         </CardContent>
       </Card>
+
+      {process.env.NODE_ENV === 'development' && (
+        <Card className="border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20">
+          <CardHeader>
+            <CardTitle>Dev: Onboarding</CardTitle>
+            <CardDescription>
+              Vraća tebe u onboarding wizard. Vidljivo samo u razvojnom modu.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResetOnboardingButton />
+          </CardContent>
+        </Card>
+      )}
 
       <Separator />
 

@@ -2,6 +2,12 @@ import { Suspense } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { DeletionCanceledToast } from '@/components/auth/deletion-canceled-toast';
 import { BalanceHero } from '@/components/dashboard/balance-hero';
+import {
+  OnboardingWizard,
+  type OnboardingProgress,
+} from '@/components/onboarding/onboarding-wizard';
+import type { BudgetableCategory } from '@/components/budgets/budget-form';
+import type { GoalAccount } from '@/components/goals/goal-form';
 import { BudgetsWidget } from '@/components/dashboard/budgets-widget';
 import { ForecastWidget, type SerializedForecast } from '@/components/dashboard/forecast-widget';
 import { InsightsWidget } from '@/components/dashboard/insights-widget';
@@ -245,6 +251,84 @@ async function ForecastSection({ forecastPromise }: { forecastPromise: Promise<F
   return <ForecastWidget forecast={serialiseForecast(result)} />;
 }
 
+/**
+ * Coerces unknown JSON from the DB into the strict OnboardingProgress shape.
+ * Tolerates older rows with missing keys and never trusts arbitrary jsonb
+ * input — only `boolean` values pass through.
+ */
+function normalizeProgress(raw: unknown): OnboardingProgress {
+  const out: OnboardingProgress = { step1: false, step2: false, step3: false, step4: false };
+  if (typeof raw !== 'object' || raw === null) return out;
+  const obj = raw as Record<string, unknown>;
+  if (obj.step1 === true) out.step1 = true;
+  if (obj.step2 === true) out.step2 = true;
+  if (obj.step3 === true) out.step3 = true;
+  if (obj.step4 === true) out.step4 = true;
+  return out;
+}
+
+interface CategoryRow {
+  id: string;
+  name: string;
+  icon: string | null;
+  kind: string;
+}
+
+/**
+ * Server Component that fetches the wizard's input data (categories for the
+ * Budget step, accounts for the Goal step) and renders the client wizard.
+ * Kept separate from the main `PocetnaPage` body so the wizard's
+ * dependencies don't pay parallel dispatch cost when the dashboard renders.
+ */
+async function OnboardingGate({
+  baseCurrency,
+  progress,
+  supabase,
+  userId,
+}: {
+  baseCurrency: string;
+  progress: OnboardingProgress;
+  supabase: SupabaseClient<Database>;
+  userId: string;
+}) {
+  const [categoriesRes, accountsRes] = await Promise.all([
+    supabase
+      .from('categories')
+      .select('id, name, icon, kind')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .in('kind', ['expense', 'saving'])
+      .order('sort_order', { ascending: true }),
+    supabase
+      .from('accounts')
+      .select('id, name')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .order('sort_order', { ascending: true }),
+  ]);
+
+  const categories: BudgetableCategory[] = (categoriesRes.data ?? [])
+    .filter(
+      (c): c is CategoryRow & { kind: 'expense' | 'saving' } =>
+        c.kind === 'expense' || c.kind === 'saving',
+    )
+    .map((c) => ({ id: c.id, name: c.name, icon: c.icon, kind: c.kind }));
+
+  const accounts: GoalAccount[] = (accountsRes.data ?? []).map((a) => ({
+    id: a.id,
+    name: a.name,
+  }));
+
+  return (
+    <OnboardingWizard
+      progress={progress}
+      categories={categories}
+      accounts={accounts}
+      baseCurrency={baseCurrency}
+    />
+  );
+}
+
 export default async function PocetnaPage() {
   const supabase = await createClient();
   const {
@@ -257,13 +341,51 @@ export default async function PocetnaPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name,base_currency,timezone,onboarding_completed_at')
+    .select(
+      'display_name,base_currency,timezone,onboarding_completed_at,onboarding_completed',
+    )
     .eq('id', user.id)
     .maybeSingle();
 
   const baseCurrency = profile?.base_currency ?? 'BAM';
   const firstName = getFirstName(profile?.display_name ?? null, user.email);
   const greeting = getGreetingPart(safeIanaTimeZone(profile?.timezone));
+
+  // ── Onboarding wizard gate ────────────────────────────────────────────────
+  // Show the wizard when:
+  //   1. The user has NOT completed onboarding (no terminal timestamp), AND
+  //   2. They have no accounts AND no transactions (truly fresh — not a
+  //      legacy user with the timestamp never set).
+  // The accounts/transactions guard prevents resurrecting the wizard for
+  // users who pre-date the column. They'll keep `onboarding_completed_at`
+  // null forever, but having any data means they're past the wizard's UX.
+  if (profile?.onboarding_completed_at === null || profile?.onboarding_completed_at === undefined) {
+    const [accountsCheck, txCheck] = await Promise.all([
+      supabase
+        .from('accounts')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .is('deleted_at', null),
+      supabase
+        .from('transactions')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .is('deleted_at', null),
+    ]);
+    const hasAccounts = (accountsCheck.count ?? 0) > 0;
+    const hasTransactions = (txCheck.count ?? 0) > 0;
+
+    if (!hasAccounts && !hasTransactions) {
+      return (
+        <OnboardingGate
+          baseCurrency={baseCurrency}
+          progress={normalizeProgress(profile?.onboarding_completed)}
+          supabase={supabase}
+          userId={user.id}
+        />
+      );
+    }
+  }
 
   const summaryPromise = getMonthlySummary(
     supabase,

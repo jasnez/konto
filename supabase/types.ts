@@ -925,6 +925,7 @@ export type Database = {
           display_name: string | null;
           id: string;
           locale: string;
+          onboarding_completed: Json;
           onboarding_completed_at: string | null;
           timezone: string;
           updated_at: string;
@@ -937,6 +938,7 @@ export type Database = {
           display_name?: string | null;
           id: string;
           locale?: string;
+          onboarding_completed?: Json;
           onboarding_completed_at?: string | null;
           timezone?: string;
           updated_at?: string;
@@ -949,6 +951,7 @@ export type Database = {
           display_name?: string | null;
           id?: string;
           locale?: string;
+          onboarding_completed?: Json;
           onboarding_completed_at?: string | null;
           timezone?: string;
           updated_at?: string;
