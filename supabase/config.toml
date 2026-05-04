@@ -238,6 +238,16 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Custom magic-link email template. The default Supabase template only
+# emits {{ .ConfirmationURL }} — no 6-digit token — but the Konto login
+# form accepts both the link click and the typed code (the latter is
+# more reliable because some mail clients prefetch links and consume
+# the magic-link code before the user reads the email). This template
+# emits both so either path works.
+[auth.email.template.magic_link]
+subject = "Tvoj kod za prijavu u Konto"
+content_path = "./supabase/templates/magic_link.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

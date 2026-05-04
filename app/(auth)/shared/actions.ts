@@ -10,7 +10,11 @@ import { logSafe } from '@/lib/logger';
 
 export type SendOtpResult =
   | { success: true; isNewUser: boolean }
-  | { success: false; error: 'VALIDATION_ERROR'; details: { email?: string[]; inviteCode?: string[] } }
+  | {
+      success: false;
+      error: 'VALIDATION_ERROR';
+      details: { email?: string[]; inviteCode?: string[] };
+    }
   | { success: false; error: 'INVITE_REQUIRED' }
   | { success: false; error: 'INVITE_INVALID' }
   | { success: false; error: 'INVITE_USED' }
@@ -80,12 +84,15 @@ export async function sendOtp(input: unknown): Promise<SendOtpResult> {
 
   const siteUrl = mustExist('NEXT_PUBLIC_SITE_URL', process.env.NEXT_PUBLIC_SITE_URL);
 
-  // Supabase's default "Magic Link" email template includes both the link and
-  // a 6-digit `{{ .Token }}`. Users can click the link (goes through
-  // /auth/callback with PKCE) OR paste the code into verifyOtp — whichever
-  // is less fragile on their device. Mobile email apps and corporate
-  // antivirus frequently prefetch links, which consumes the magic-link code
-  // before the user clicks it, so the typed code is the reliable path.
+  // The custom magic-link template at supabase/templates/magic_link.html
+  // emits both {{ .ConfirmationURL }} and {{ .Token }}, so users can click
+  // the link (PKCE through /auth/callback) OR paste the 6-digit code into
+  // verifyOtp — whichever is less fragile on their device. Mobile mail
+  // clients and corporate antivirus frequently prefetch links, consuming
+  // the magic-link code before the user reads the email, so the typed
+  // code is the reliable path. The default Supabase template does NOT
+  // include {{ .Token }} — must be customised via auth.email.template.
+  // magic_link in supabase/config.toml.
   //
   // When invites are enabled, we attach the code in `data` so it surfaces in
   // the new user's `raw_user_meta_data` for the handle_new_user trigger to
@@ -95,9 +102,8 @@ export async function sendOtp(input: unknown): Promise<SendOtpResult> {
     email,
     options: {
       emailRedirectTo: `${siteUrl}/auth/callback`,
-      data: inviteCode !== undefined && inviteCode.length > 0
-        ? { invite_code: inviteCode }
-        : undefined,
+      data:
+        inviteCode !== undefined && inviteCode.length > 0 ? { invite_code: inviteCode } : undefined,
     },
   });
 
