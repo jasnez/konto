@@ -17,13 +17,22 @@ interface Section {
 const sections: Section[] = [
   {
     id: 'brzi-start',
-    title: 'Brzi start (3 koraka)',
+    title: 'Brzi start (onboarding + 3 koraka)',
     body: (
       <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
         <p>
           Konto je tvoja lična financijska aplikacija — bez povezivanja banke, sa podacima u EU.
-          Ovaj vodič te vodi kroz sve glavne funkcionalnosti. Procijenjeno čitanje: 8–10 minuta.
+          Ovaj vodič te vodi kroz sve glavne funkcionalnosti. Procijenjeno čitanje: 10–12 minuta.
         </p>
+        <p>
+          <strong className="text-foreground">Onboarding wizard.</strong> Pri prvoj prijavi (kad još
+          nemaš ni račun ni transakciju) Konto te automatski vodi kroz 4-step wizard: (1) prvi
+          račun, (2) prva transakcija ili PDF uvoz, (3) prvi budžet, (4) prvi cilj štednje. Svaki
+          korak možeš <strong className="text-foreground">preskočiti</strong> (link u gornjem desnom
+          uglu), ili izaći potpuno i vratiti se kasnije — Konto pamti dokle si stigao i nastavlja
+          odakle si stao.
+        </p>
+        <p>Ako preskočiš wizard ili počinješ ručno, evo 3 koraka:</p>
         <ol className="list-inside list-decimal space-y-2">
           <li>
             <strong className="text-foreground">Dodaj račun</strong> na{' '}
@@ -46,7 +55,7 @@ const sections: Section[] = [
             <Link href="/pocetna" className="font-medium text-primary hover:underline">
               /pocetna
             </Link>{' '}
-            — vidiš ukupno stanje, mjesečne metrike i zadnje transakcije.
+            — vidiš ukupno stanje, mjesečne metrike, top budžete, prve uvide i zadnje transakcije.
           </li>
         </ol>
         <p>
@@ -85,16 +94,25 @@ const sections: Section[] = [
           <li>
             <strong className="text-foreground">Projekcija novca (30/60/90 dana)</strong> — Konto
             koristi auto-detektovane pretplate i historijske trendove da prognozira buduće stanje;
-            ako se očekuje minus, vidiš upozorenje.
+            ako linija prelazi u minus prije kraja prozora, dobijaš <em>runway upozorenje</em> sa
+            očekivanim datumom.
           </li>
           <li>
-            <strong className="text-foreground">Zadnjih 10 transakcija</strong> — brzi pristup,
-            klik na red vodi na detalje.
+            <strong className="text-foreground">Top 3 uvida</strong> — najvažnije anomalije i
+            prilike za uštedu sa{' '}
+            <Link href="/uvidi" className="font-medium text-primary hover:underline">
+              /uvidi
+            </Link>{' '}
+            stranice; bell ikona u top-baru pokazuje broj nepročitanih.
+          </li>
+          <li>
+            <strong className="text-foreground">Zadnjih 10 transakcija</strong> — brzi pristup, klik
+            na red vodi na detalje.
           </li>
         </ul>
         <p>
-          <strong className="text-foreground">Mobilno:</strong> povuci ekran prema dolje
-          (<em>pull-to-refresh</em>) za osvježavanje podataka.
+          <strong className="text-foreground">Mobilno:</strong> povuci ekran prema dolje (
+          <em>pull-to-refresh</em>) za osvježavanje podataka.
         </p>
         <p>
           <strong className="text-foreground">Edge case:</strong> ako tek počinješ i nemaš još
@@ -108,9 +126,7 @@ const sections: Section[] = [
     title: 'Računi',
     body: (
       <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
-        <p>
-          Račun = bilo koji izvor ili odredište novca. Konto podržava više vrsta:
-        </p>
+        <p>Račun = bilo koji izvor ili odredište novca. Konto podržava više vrsta:</p>
         <ul className="list-inside list-disc space-y-1">
           <li>tekući račun (banka)</li>
           <li>gotovina (novčanik)</li>
@@ -121,8 +137,8 @@ const sections: Section[] = [
         </ul>
         <p>
           <strong className="text-foreground">Multi-currency.</strong> Svaki račun ima svoju valutu
-          (BAM, EUR, USD, RSD…). Na listi vidiš stanje u izvornoj valuti, a u zaglavlju
-          („Stanje aktiva") sumu u tvojoj baznoj valuti, preračunatu po aktuelnom tečaju.
+          (BAM, EUR, USD, RSD…). Na listi vidiš stanje u izvornoj valuti, a u zaglavlju („Stanje
+          aktiva") sumu u tvojoj baznoj valuti, preračunatu po aktuelnom tečaju.
         </p>
         <p>
           <strong className="text-foreground">Pretraga i filteri.</strong> Pretraži po imenu ili
@@ -171,14 +187,14 @@ const sections: Section[] = [
             računa (vidi sljedeći odjeljak).
           </li>
           <li>
-            <strong className="text-foreground">Štednja / investicija</strong> — odvajanje za
-            cilj (ne troši se, ali je odvojeno od slobodnih sredstava).
+            <strong className="text-foreground">Štednja / investicija</strong> — odvajanje za cilj
+            (ne troši se, ali je odvojeno od slobodnih sredstava).
           </li>
         </ul>
         <p>
           <strong className="text-foreground">Filteri.</strong> Pretraga po opisu, prodavcu i
-          bilješkama; period, račun, kategorija i vrsta. Podrazumijevano se prikazuje tekući
-          mjesec, paginacija 50 po stranici.
+          bilješkama; period, račun, kategorija i vrsta. Podrazumijevano se prikazuje tekući mjesec,
+          paginacija 50 po stranici.
         </p>
         <p>
           <strong className="text-foreground">Detalji i izmjene.</strong> Klik na red otvara modal
@@ -187,8 +203,8 @@ const sections: Section[] = [
         </p>
         <p>
           <strong className="text-foreground">Multi-currency prikaz.</strong> Iznos je u valuti
-          računa. Ako transakcija ima zastarjeli FX tečaj, vidjet ćeš to u prikazu — stvarni
-          iznos ostaje tačan, ali konverzija u baznu valutu je aproksimacija.
+          računa. Ako transakcija ima zastarjeli FX tečaj, vidjet ćeš to u prikazu — stvarni iznos
+          ostaje tačan, ali konverzija u baznu valutu je aproksimacija.
         </p>
       </div>
     ),
@@ -200,7 +216,8 @@ const sections: Section[] = [
       <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
         <p>
           Kada premještaš novac sa jednog svog računa na drugi (npr. iz banke u Revolut, ili sa
-          tekućeg na štednju), to nije ni prihod ni rashod — to je <strong className="text-foreground">transfer</strong>.
+          tekućeg na štednju), to nije ni prihod ni rashod — to je{' '}
+          <strong className="text-foreground">transfer</strong>.
         </p>
         <p>
           <strong className="text-foreground">Kako:</strong> nova transakcija → vrsta{' '}
@@ -215,8 +232,8 @@ const sections: Section[] = [
         </p>
         <p>
           <strong className="text-foreground">Edge case — transfer između valuta:</strong> kada
-          šalješ EUR sa Wise računa na BAM tekući, sistem traži tečaj. Možeš ga override-ati ako
-          je banka primijenila drugačiji kurs nego tržišni.
+          šalješ EUR sa Wise računa na BAM tekući, sistem traži tečaj. Možeš ga override-ati ako je
+          banka primijenila drugačiji kurs nego tržišni.
         </p>
       </div>
     ),
@@ -232,8 +249,8 @@ const sections: Section[] = [
         </p>
         <ul className="list-inside list-disc space-y-2">
           <li>
-            <strong className="text-foreground">Sistemske kategorije</strong> su zaključane (ne
-            mogu se obrisati, ali možeš mijenjati ime/ikonu/boju).
+            <strong className="text-foreground">Sistemske kategorije</strong> su zaključane (ne mogu
+            se obrisati, ali možeš mijenjati ime/ikonu/boju).
           </li>
           <li>
             <strong className="text-foreground">Vlastite kategorije</strong> se slobodno dodaju,
@@ -267,8 +284,8 @@ const sections: Section[] = [
     body: (
       <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
         <p>
-          Prodavač je entitet iz čijeg imena dolazi transakcija — npr. „BINGO", „Konzum",
-          „Netflix". Konto ih automatski izvuče iz opisa transakcija (i iz uvezenih PDF izvoda).
+          Prodavač je entitet iz čijeg imena dolazi transakcija — npr. „BINGO", „Konzum", „Netflix".
+          Konto ih automatski izvuče iz opisa transakcija (i iz uvezenih PDF izvoda).
         </p>
         <p>
           <strong className="text-foreground">Default kategorija po prodavcu.</strong> Kad jednom
@@ -280,13 +297,13 @@ const sections: Section[] = [
           <Link href="/merchants" className="font-medium text-primary hover:underline">
             /merchants
           </Link>{' '}
-          možeš jednim klikom promijeniti kategoriju za sve historijske + buduće transakcije
-          jednog prodavca. Korisno kad shvatiš da je nešto pogrešno klasifikovano.
+          možeš jednim klikom promijeniti kategoriju za sve historijske + buduće transakcije jednog
+          prodavca. Korisno kad shvatiš da je nešto pogrešno klasifikovano.
         </p>
         <p>
           <strong className="text-foreground">Sistem uči.</strong> Što više ispravki napraviš (u
-          uvozu PDF-a, u listi transakcija, na merchant stranici), to je predviđanje
-          predvidljivije. Aliasi i pravila se pamte automatski.
+          uvozu PDF-a, u listi transakcija, na merchant stranici), to je predviđanje predvidljivije.
+          Aliasi i pravila se pamte automatski.
         </p>
       </div>
     ),
@@ -310,17 +327,20 @@ const sections: Section[] = [
           dodaš račun i kategoriju, snimiš.
         </p>
         <p>
+          <strong className="text-foreground">Auto-povezivanje prodavca.</strong> Konto pri snimanju
+          pokušava prepoznati prodavca i povezati ga sa tvojom postojećom listom: prvo tačno
+          poklapanje, pa fuzzy match (sličnost). Ako ništa ne odgovara, pravi novog. Tako buduće
+          transakcije sa istim prodavcem ulaze u istu kategoriju automatski.
+        </p>
+        <p>
           <strong className="text-foreground">Edge case:</strong> ako je slika mutna ili presjajna,
           neka polja možda neće biti izvučena. Sve što fali, dopuni ručno prije snimanja — manualni
           unos je uvijek dostupan.
         </p>
         <p>
-          <strong className="text-foreground">Privatnost:</strong> slika ide u sigurno
-          skladište u Frankfurtu, AI obrada je u EU regiji. Detalji:{' '}
-          <Link
-            href="/sigurnost#skeniraj"
-            className="font-medium text-primary hover:underline"
-          >
+          <strong className="text-foreground">Privatnost:</strong> slika ide u sigurno skladište u
+          Frankfurtu, AI obrada je u EU regiji. Detalji:{' '}
+          <Link href="/sigurnost#skeniraj" className="font-medium text-primary hover:underline">
             Sigurnost — skeniranje
           </Link>
           .
@@ -334,8 +354,8 @@ const sections: Section[] = [
     body: (
       <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
         <p>
-          Najbrži način da popuniš mjesec ili više: uvezi PDF izvod direktno iz banke. Konto
-          izvuče sve transakcije i ti samo potvrdiš.
+          Najbrži način da popuniš mjesec ili više: uvezi PDF izvod direktno iz banke. Konto izvuče
+          sve transakcije i ti samo potvrdiš.
         </p>
         <p>
           <strong className="text-foreground">Kako:</strong> idi na{' '}
@@ -365,18 +385,18 @@ const sections: Section[] = [
         </p>
         <p>
           <strong className="text-foreground">Historija uvoza.</strong> Sve prošle uvoze vidiš u
-          tabeli sa statusom: <em>pripremljen, u obradi, spreman, odbačen, ne uspijeva</em>. Ako
-          se uvoz „zaglavi", aplikacija ga automatski reset-uje pri sljedećem otvaranju stranice.
+          tabeli sa statusom: <em>pripremljen, u obradi, spreman, odbačen, ne uspijeva</em>. Ako se
+          uvoz „zaglavi", aplikacija ga automatski reset-uje pri sljedećem otvaranju stranice.
         </p>
         <p>
           <strong className="text-foreground">PDF se briše unutar 24h</strong> nakon obrade — ne
           čuvamo ga dugoročno.
         </p>
         <p>
-          <strong className="text-foreground">Edge case — ne parsira:</strong> provjeri da je
-          fajl pravi PDF (ne fotografija sa ekstenzijom .pdf), pokušaj drugi izvod iste banke,
-          osvježi stranicu. Ako ni to ne pomogne, unesi ručno dok ne proširimo podršku za taj
-          oblik. Više detalja u{' '}
+          <strong className="text-foreground">Edge case — ne parsira:</strong> provjeri da je fajl
+          pravi PDF (ne fotografija sa ekstenzijom .pdf), pokušaj drugi izvod iste banke, osvježi
+          stranicu. Ako ni to ne pomogne, unesi ručno dok ne proširimo podršku za taj oblik. Više
+          detalja u{' '}
           <Link href="/help#uvoz-ne-parsira" className="font-medium text-primary hover:underline">
             FAQ — Izvod se ne parsira
           </Link>
@@ -391,8 +411,8 @@ const sections: Section[] = [
     body: (
       <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
         <p>
-          Budžet = limit potrošnje za jednu kategoriju u određenom periodu. Konto te informiše,
-          ne sprječava — odluka je uvijek tvoja.
+          Budžet = limit potrošnje za jednu kategoriju u određenom periodu. Konto te informiše, ne
+          sprječava — odluka je uvijek tvoja.
         </p>
         <p>
           <strong className="text-foreground">Kreiranje:</strong>{' '}
@@ -405,12 +425,17 @@ const sections: Section[] = [
         </p>
         <p>
           <strong className="text-foreground">Praćenje:</strong> svaki budžet pokazuje koliko si
-          potrošio, koliko ti ostaje, % iskorištenosti i koliko dana ostaje do kraja perioda.
-          Vizualna traka mijenja boju kad se približavaš limitu.
+          potrošio, koliko ti ostaje, % iskorištenosti i koliko dana ostaje do kraja perioda. Traka
+          mijenja boju: zelena ispod 70%, žuta 70–95%, crvena iznad 95%.
         </p>
         <p>
-          <strong className="text-foreground">Top 3 na dashboardu</strong> — budžeti sa najvišim
-          % iskorištenosti se ističu na{' '}
+          <strong className="text-foreground">Šta se ne računa u budžet:</strong> transferi između
+          tvojih računa (oni nisu trošak) i transakcije koje označiš kao{' '}
+          <em>isključeno iz budžeta</em> u detaljima.
+        </p>
+        <p>
+          <strong className="text-foreground">Top 3 na dashboardu</strong> — budžeti sa najvišim %
+          iskorištenosti se ističu na{' '}
           <Link href="/pocetna" className="font-medium text-primary hover:underline">
             /pocetna
           </Link>
@@ -418,7 +443,55 @@ const sections: Section[] = [
         </p>
         <p>
           <strong className="text-foreground">Edge case — pređen limit:</strong> traka postaje
-          crvena, ali transakcije se i dalje normalno bilježe. Konto ne blokira potrošnju.
+          crvena, ali transakcije se i dalje normalno bilježe. Konto ne blokira potrošnju —
+          informiše te i, ako se trend nastavi, generiše uvid „Prijetnja budžetu".
+        </p>
+      </div>
+    ),
+  },
+  {
+    id: 'ciljevi',
+    title: 'Ciljevi štednje',
+    body: (
+      <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+        <p>
+          Cilj = iznos koji želiš sakupiti, opciono sa rokom (npr. „Ljetovanje 2.000 BAM do 1.7.").
+          Vidiš ih kao kartice sa SVG progress kružićem na{' '}
+          <Link href="/ciljevi" className="font-medium text-primary hover:underline">
+            /ciljevi
+          </Link>
+          .
+        </p>
+        <p>
+          <strong className="text-foreground">Kreiranje:</strong> klik na <em>+</em> → ime, ciljani
+          iznos, valuta, opcionalno datum, ikona i boja.
+        </p>
+        <p>
+          <strong className="text-foreground">Dva načina praćenja napretka:</strong>
+        </p>
+        <ul className="list-inside list-disc space-y-2">
+          <li>
+            <strong className="text-foreground">Ručno</strong> — koristiš dugme{' '}
+            <em>Dodaj uplatu</em> kad odvojiš novac. Konto inkrementira trenutni iznos.
+          </li>
+          <li>
+            <strong className="text-foreground">Vezano za račun</strong> — povežeš cilj sa štednim
+            računom; trenutni saldo tog računa automatski postaje napredak ka cilju.
+          </li>
+        </ul>
+        <p>
+          <strong className="text-foreground">Preporučeni mjesečni iznos.</strong> Ako postaviš
+          datum, Konto izračuna koliko bi trebao odvajati svakog mjeseca da postigneš cilj na
+          vrijeme.
+        </p>
+        <p>
+          <strong className="text-foreground">Tabovi:</strong> aktivni, postignuti, arhivirani. Kad
+          pređeš ciljani iznos dobijaš confetti i cilj prelazi u <em>Postignuti</em>. Možeš ga
+          arhivirati, izmijeniti ili obrisati.
+        </p>
+        <p>
+          <strong className="text-foreground">Veza sa pretplatama:</strong> ciljevi nisu mjesečni
+          rashod — ne računaju se u budžet, ne pojavljuju u projekciji.
         </p>
       </div>
     ),
@@ -429,14 +502,15 @@ const sections: Section[] = [
     body: (
       <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
         <p>
-          Konto automatski detektuje ponavljajuće transakcije (Netflix, osiguranje, teretana, struja)
-          i predlaže ih kao pretplate. Ne moraš ručno dodavati — samo potvrdi prijedloge.
+          Konto automatski detektuje ponavljajuće transakcije (Netflix, osiguranje, teretana,
+          struja) i predlaže ih kao pretplate. Ne moraš ručno dodavati — samo potvrdi prijedloge.
         </p>
         <p>
           <strong className="text-foreground">Kako radi.</strong> Algoritam pretražuje historiju
-          transakcija i traži obrasce: isti prodavac, sličan iznos, regularan period
-          (mjesečno, godišnje…). Svaki prijedlog ima <strong className="text-foreground">confidence score</strong>{' '}
-          — koliko je sistem siguran u detekciju.
+          transakcija i traži obrasce: isti prodavac, sličan iznos, regularan period (mjesečno,
+          godišnje…). Svaki prijedlog ima{' '}
+          <strong className="text-foreground">confidence score</strong> — koliko je sistem siguran u
+          detekciju.
         </p>
         <p>
           <strong className="text-foreground">Šta vidiš na</strong>{' '}
@@ -496,32 +570,59 @@ const sections: Section[] = [
   },
   {
     id: 'uvidi',
-    title: 'Uvidi (uskoro)',
+    title: 'Uvidi',
     body: (
       <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
         <p>
-          Stranica{' '}
+          Uvidi su <strong className="text-foreground">automatski generisana zapažanja</strong> o
+          tvojim financijama — anomalije, prilike za uštedu i upozorenja. Dashboard pokazuje top 3,
+          puna lista je na{' '}
+          <Link href="/uvidi" className="font-medium text-primary hover:underline">
+            /uvidi
+          </Link>
+          ; bell ikona u top-baru sa brojem ukazuje na nepročitane.
+        </p>
+        <p>
+          <strong className="text-foreground">Šest detektora</strong> radi svake noći u 03:00 UTC:
+        </p>
+        <ul className="list-inside list-disc space-y-1">
+          <li>
+            <strong className="text-foreground">Anomalija kategorije</strong> — potrošnja u
+            kategoriji preko 130% prosjeka zadnja 3 mjeseca.
+          </li>
+          <li>
+            <strong className="text-foreground">Ušteda</strong> — kategorija ispod 80% prosjeka
+            (pohvalno).
+          </li>
+          <li>
+            <strong className="text-foreground">Neobična transakcija</strong> — pojedinačna
+            transakcija više od 2σ iznad prosjeka kategorije.
+          </li>
+          <li>
+            <strong className="text-foreground">Promjena cijene pretplate</strong> — najnovija
+            transakcija +10% iznad prosjeka recurring-a.
+          </li>
+          <li>
+            <strong className="text-foreground">Prijetnja budžetu</strong> — projekcija pokazuje da
+            ćeš preći limit prije kraja perioda.
+          </li>
+          <li>
+            <strong className="text-foreground">Neaktivna pretplata</strong> — recurring koji nije
+            naplaćen 1.5× duže od očekivanog perioda.
+          </li>
+        </ul>
+        <p>
+          <strong className="text-foreground">Filtriranje i odbacivanje.</strong> Na{' '}
           <Link href="/uvidi" className="font-medium text-primary hover:underline">
             /uvidi
           </Link>{' '}
-          je u izradi. Kad bude gotova, pokazivat će:
+          imaš dvije liste — <em>Aktivni</em> i <em>Arhivirani</em>. Filtriraš po ozbiljnosti (info
+          / oprez / upozorenje) i tipu (anomalija / prilika / alarm) preko chip dugmadi. Nepoželjne
+          uvide odbacuješ X dugmetom; iz arhive ih vraćaš preko <em>Vrati</em>.
         </p>
-        <ul className="list-inside list-disc space-y-1">
-          <li>trendove potrošnje po kategorijama (mjesec po mjesec, godinu po godinu);</li>
-          <li>breakdown — gdje ti odlazi novac, sa pie i bar grafovima;</li>
-          <li>izvještaje o pretplatama (godišnji trošak, najveći potrošači);</li>
-          <li>upozorenja: ako se neki trend dramatično mijenja u odnosu na prosjek.</li>
-        </ul>
         <p>
-          Trenutno je placeholder — radimo na njoj. U međuvremenu, sve podatke vidiš na{' '}
-          <Link href="/pocetna" className="font-medium text-primary hover:underline">
-            /pocetna
-          </Link>{' '}
-          i u listi{' '}
-          <Link href="/transakcije" className="font-medium text-primary hover:underline">
-            /transakcije
-          </Link>
-          .
+          <strong className="text-foreground">Privatnost:</strong> sva analiza je server-strana,
+          rade se samo agregati — bez slanja sirovih transakcija na vanjske servise.
         </p>
       </div>
     ),
@@ -540,25 +641,23 @@ const sections: Section[] = [
         </p>
         <ul className="list-inside list-disc space-y-2">
           <li>
-            <strong className="text-foreground">Profil</strong> — ime za prikaz, bazna valuta
-            (BAM, EUR, USD…), jezik (bs-BA, hr-HR, sr-RS).
+            <strong className="text-foreground">Profil</strong> — ime za prikaz, bazna valuta (BAM,
+            EUR, USD…), jezik (bs-BA, hr-HR, sr-RS).
           </li>
           <li>
-            <strong className="text-foreground">Tema</strong> — svjetla, tamna ili sistemska
-            (prati postavku tvog uređaja).
+            <strong className="text-foreground">Tema</strong> — svjetla, tamna ili sistemska (prati
+            postavku tvog uređaja).
           </li>
           <li>
             <strong className="text-foreground">Vrati podrazumijevane kategorije</strong> — dopuni
             standardni set ako ti nedostaje (ne briše tvoje).
           </li>
           <li>
-            <strong className="text-foreground">Brisanje računa</strong> — pokreće 30-dnevni
-            period čekanja. Tokom tog perioda možeš poništiti brisanje preko emaila koji ti
-            pošaljemo.
+            <strong className="text-foreground">Brisanje računa</strong> — pokreće 30-dnevni period
+            čekanja. Tokom tog perioda možeš poništiti brisanje preko emaila koji ti pošaljemo.
           </li>
           <li>
-            <strong className="text-foreground">Odjava</strong> — briše sesiju samo na ovom
-            uređaju.
+            <strong className="text-foreground">Odjava</strong> — briše sesiju samo na ovom uređaju.
           </li>
         </ul>
       </div>
@@ -575,8 +674,8 @@ const sections: Section[] = [
         </p>
         <ul className="list-inside list-disc space-y-2">
           <li>
-            <strong className="text-foreground">PII redakcija</strong> prije AI obrade — IBAN,
-            broj kartice i JMBG se zamijene placeholder-ima prije slanja modelu.
+            <strong className="text-foreground">PII redakcija</strong> prije AI obrade — IBAN, broj
+            kartice i JMBG se zamijene placeholder-ima prije slanja modelu.
           </li>
           <li>
             <strong className="text-foreground">PDF se briše unutar 24h</strong> nakon obrade.
@@ -612,28 +711,26 @@ const sections: Section[] = [
         </p>
         <ul className="list-inside list-disc space-y-2">
           <li>
-            <strong className="text-foreground">Svaki račun u svojoj valuti.</strong> Nikad
-            nemoj mijenjati valutu računa nakon kreiranja — postojeće transakcije ostaju u
-            izvornoj valuti, što stvara nekonzistentnost.
+            <strong className="text-foreground">Svaki račun u svojoj valuti.</strong> Nikad nemoj
+            mijenjati valutu računa nakon kreiranja — postojeće transakcije ostaju u izvornoj
+            valuti, što stvara nekonzistentnost.
           </li>
           <li>
-            <strong className="text-foreground">Bazna valuta</strong> je samo prikazna jedinica
-            za sume na dashboardu i u izvještajima. Mijenjaš je u{' '}
+            <strong className="text-foreground">Bazna valuta</strong> je samo prikazna jedinica za
+            sume na dashboardu i u izvještajima. Mijenjaš je u{' '}
             <Link href="/podesavanja" className="font-medium text-primary hover:underline">
               Podešavanjima
             </Link>{' '}
             kad god želiš — historijske transakcije se ne diraju.
           </li>
           <li>
-            <strong className="text-foreground">FX tečajevi</strong> se ažuriraju automatski.
-            Oznaka upozorenja se pojavi kad su tečajevi zastarjeli — stvarno stanje računa u
-            izvornoj valuti je tačno, samo je suma u baznoj valuti aproksimacija dok se tečaj
-            ne osvježi.
+            <strong className="text-foreground">FX tečajevi</strong> se ažuriraju automatski. Oznaka
+            upozorenja se pojavi kad su tečajevi zastarjeli — stvarno stanje računa u izvornoj
+            valuti je tačno, samo je suma u baznoj valuti aproksimacija dok se tečaj ne osvježi.
           </li>
           <li>
-            <strong className="text-foreground">Transferi između valuta</strong> koriste tečaj
-            za datum transakcije. Možeš override-ati tečaj ako je banka primijenila drugačiji
-            kurs.
+            <strong className="text-foreground">Transferi između valuta</strong> koriste tečaj za
+            datum transakcije. Možeš override-ati tečaj ako je banka primijenila drugačiji kurs.
           </li>
         </ul>
       </div>
@@ -672,10 +769,7 @@ export default function VodicPage() {
             <ol className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
               {tocItems.map((item, i) => (
                 <li key={item.id}>
-                  <Link
-                    href={`#${item.id}`}
-                    className="font-medium text-primary hover:underline"
-                  >
+                  <Link href={`#${item.id}`} className="font-medium text-primary hover:underline">
                     {i + 1}. {item.label}
                   </Link>
                 </li>
