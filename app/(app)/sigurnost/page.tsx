@@ -108,6 +108,68 @@ export default function SigurnostPage() {
 
       <Separator />
 
+      <section id="uvidi-engine" className="scroll-mt-20 space-y-4">
+        <h2 className="text-lg font-medium tracking-tight">Uvidi (insights) — analiza tvojih podataka</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Šta radi engine i šta NE radi</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              Konto svake noći pokreće{' '}
+              <strong className="text-foreground">analizu tvojih transakcija</strong> da bi otkrio
+              anomalije (npr. potrošnja u kategoriji veća od prosjeka), prilike za uštedu, prijetnje
+              budžetu i neaktivne pretplate. Rezultat ide u tabelu{' '}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">insights</code> na koju samo ti
+              imaš pristup (RLS).
+            </p>
+            <p>
+              <strong className="text-foreground">Sve se dešava na našem serveru.</strong> Tvoji
+              podaci ne idu trećim stranama — analiza koristi samo agregate (sume po kategoriji po
+              mjesecu, prosjeke, standardne devijacije). Engine{' '}
+              <strong className="text-foreground">ne šalje ništa</strong> ka eksternim API-jima:
+              ni LLM-ovima, ni analytics provajderima, ni reklamnim mrežama.
+            </p>
+            <p>
+              <strong className="text-foreground">Tehnička izolacija:</strong>
+            </p>
+            <ul className="ml-5 list-disc space-y-1.5">
+              <li>
+                Cron job (Vercel) trča u 03:00 UTC i obrađuje svakog korisnika zasebno; nema
+                cross-user agregacije.
+              </li>
+              <li>
+                Sva polja u <code className="rounded bg-muted px-1 py-0.5 text-xs">insights</code>{' '}
+                tabeli (naslov, body, metadata) su generisana na našem serveru, nikad ne sadrže
+                IBAN, JMBG, broj kartice ni email — samo imena tvojih kategorija/trgovaca i iznose
+                u tvojoj valuti.
+              </li>
+              <li>
+                Kad odbiješ uvid (klikneš X), označava se kao{' '}
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">dismissed_at</code> i ostaje
+                u bazi 90 dana radi historije, nakon čega se trajno briše.
+              </li>
+              <li>
+                Možeš ručno pokrenuti analizu (dugme "Generiši ponovo" u dev modu); rate-limited
+                na jedan poziv u 60 sekundi.
+              </li>
+            </ul>
+            <p>
+              Detalji o tome šta tačno engine traži:{' '}
+              <Link
+                href="/help#uvidi-engine"
+                className="font-medium text-primary hover:underline"
+              >
+                Pomoć — uvidi
+              </Link>
+              .
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      <Separator />
+
       <section id="prijava-ranjivosti" className="scroll-mt-20 space-y-4">
         <h2 className="text-lg font-medium tracking-tight">Prijava sigurnosnih ranjivosti</h2>
         <Card>

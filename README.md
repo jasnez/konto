@@ -19,7 +19,18 @@ Kratki pregled korisničkih mogućnosti u toku (PFM, bez direktne bankovne konek
 - **Uvoz bankarskog PDF-a** — upload u zaštićeno skladište, ekstrakcija teksta, PII redakcija, parsiranje preko **Gemini 2.5 Flash-Lite** (Google Generative Language API), ručni pregled i uvođenje transakcija u nalog. Zadržavanje PDF-a u skladištu usklađeno s ograničenjem (npr. 24h) i obris nakon uvođenja.
 - **Pomoć u aplikaciji** — rute `/help` (FAQ) i `/sigurnost` (sigurnost i privatnost, uključujući uvoz PDF-a).
 
-Detaljna mapa zadataka: [`docs/06-backlog.md`](./docs/06-backlog.md).
+## Faza 3 (finansijska inteligencija)
+
+Funkcionalnosti dodane u Fazi 3 — alati koji aplikaciju izvode iznad ručnog spreadsheeta:
+
+- **Budžeti** (`/budzeti`) — mjesečni i sedmični limiti po kategoriji sa progress prikazom u tri stadija (zelena/žuta/crvena). Server-strana RPC funkcija `get_current_period_spent` računa potrošnju u trenutnom periodu.
+- **Pretplate** (`/pretplate`) — automatska detekcija ponavljajućih transakcija iz historije (Netflix, kirija, internet…) plus ručna potvrda kandidata. Footer pokazuje mjesečni ekvivalent svih pretplata.
+- **Prognoza salda** (`/pocetna` widget "Projekcija") — projektovani saldo narednih 30/60/90 dana na osnovu recurring transakcija + linearne potrošnje. Crvena traka kad očekujemo negativan saldo, zelena ako računi izdrže.
+- **Ciljevi štednje** (`/ciljevi`) — definiši cilj sa rokom i opcionalno veži za štedni račun (auto-sinhronizacija salda). Konto računa preporučeni mjesečni iznos. Confetti kad postigneš cilj.
+- **Uvidi** (`/uvidi` + dashboard widget + bell ikona) — noćni cron sa 6 detektora: anomalije po kategoriji, promjena cijene pretplate, neobične transakcije, prilike za uštedu, prijetnja budžetu, neaktivne pretplate. Markdown render bodyja, dismiss/undo, severity i tip filteri.
+- **Onboarding wizard** — 4-step vodič za nove usere (račun → transakcija → budžet → cilj) sa per-step persistencijom u `profiles.onboarding_completed` jsonb polju. Skip dostupan na svakom koraku.
+
+Detaljna mapa zadataka: [`docs/06-backlog.md`](./docs/06-backlog.md) i [`docs/06-backlog 2.md`](./docs/06-backlog%202.md) (revidirana verzija).
 
 ## Zahtjevi
 

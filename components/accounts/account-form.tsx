@@ -52,7 +52,18 @@ const defaultCreate: CreateAccountFormValues = {
 };
 
 type AccountFormProps =
-  | { mode: 'create' }
+  | {
+      mode: 'create';
+      /**
+       * Optional callback fired after a successful create. When provided,
+       * the form skips its default `router.push('/racuni')` redirect — the
+       * caller decides what to do next (e.g., advance an onboarding wizard
+       * to the next step). Receives the newly-created account id.
+       */
+      onSuccess?: (accountId: string) => void;
+      /** Override the success toast (e.g. wizard says "Korak 1 gotov"). */
+      successToast?: string;
+    }
   | {
       mode: 'edit';
       accountId: string;
@@ -62,7 +73,7 @@ type AccountFormProps =
 
 export function AccountForm(props: AccountFormProps) {
   if (props.mode === 'create') {
-    return <CreateAccountForm />;
+    return <CreateAccountForm onSuccess={props.onSuccess} successToast={props.successToast} />;
   }
   return (
     <EditAccountForm
@@ -73,7 +84,12 @@ export function AccountForm(props: AccountFormProps) {
   );
 }
 
-function CreateAccountForm() {
+interface CreateAccountFormProps {
+  onSuccess?: (accountId: string) => void;
+  successToast?: string;
+}
+
+function CreateAccountForm({ onSuccess, successToast }: CreateAccountFormProps) {
   const router = useRouter();
   const form = useForm<CreateAccountFormValues>({
     resolver: zodResolver(CreateAccountFormSchema) as never,
@@ -86,7 +102,12 @@ function CreateAccountForm() {
   async function onSubmit(values: CreateAccountFormValues) {
     const result: CreateAccountResult = await createAccount(values);
     if (result.success) {
-      toast.success('Račun je kreiran.');
+      toast.success(successToast ?? 'Račun je kreiran.');
+      if (onSuccess) {
+        // Caller drives the next step (e.g. wizard). Skip the default redirect.
+        onSuccess(result.data.id);
+        return;
+      }
       router.push('/racuni');
       router.refresh();
       return;
