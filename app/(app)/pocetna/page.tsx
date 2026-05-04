@@ -4,6 +4,7 @@ import { DeletionCanceledToast } from '@/components/auth/deletion-canceled-toast
 import { BalanceHero } from '@/components/dashboard/balance-hero';
 import { BudgetsWidget } from '@/components/dashboard/budgets-widget';
 import { ForecastWidget, type SerializedForecast } from '@/components/dashboard/forecast-widget';
+import { InsightsWidget } from '@/components/dashboard/insights-widget';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import {
   RecentTransactions,
@@ -13,6 +14,7 @@ import {
   DashboardBudgetsSkeleton,
   DashboardForecastSkeleton,
   DashboardHeroSkeleton,
+  DashboardInsightsSkeleton,
   DashboardMetricsSkeleton,
   DashboardRecentTransactionsSkeleton,
 } from '@/components/dashboard/dashboard-skeletons';
@@ -21,6 +23,7 @@ import { fetchTransferCounterpartyAccountNames } from '@/lib/db/transfer-counter
 import { getTransactionPrimaryLabel } from '@/lib/format/transaction-primary-label';
 import { forecastCashflow, type ForecastResult } from '@/lib/analytics/forecast';
 import { listBudgetsWithSpent } from '@/lib/queries/budgets';
+import { listInsights } from '@/lib/queries/insights';
 import {
   getMonthlySummary,
   resolveSummaryDateParts,
@@ -276,6 +279,9 @@ export default async function PocetnaPage() {
   // Forecast: server fetches the 90-day window once; the widget client-
   // side toggles between 30/60/90 by slicing without a refetch.
   const forecastPromise = forecastCashflow(supabase, user.id, 90, { baseCurrency });
+  // Top 3 active insights for the dashboard widget. Engine writes nightly;
+  // we just read the freshest active rows here.
+  const insightsPromise = listInsights(supabase, user.id, { mode: 'active', limit: 3 });
 
   return (
     <PullToRefreshWrapper
@@ -301,6 +307,10 @@ export default async function PocetnaPage() {
 
       <Suspense fallback={<DashboardBudgetsSkeleton />}>
         <BudgetsWidget budgetsPromise={budgetsPromise} />
+      </Suspense>
+
+      <Suspense fallback={<DashboardInsightsSkeleton />}>
+        <InsightsWidget insightsPromise={insightsPromise} />
       </Suspense>
 
       <Suspense fallback={<DashboardForecastSkeleton />}>

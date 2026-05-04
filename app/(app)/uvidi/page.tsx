@@ -1,29 +1,36 @@
 import type { Metadata } from 'next';
-import { PieChart } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { listInsights } from '@/lib/queries/insights';
+import { UvidiClient } from './uvidi-client';
 
 export const metadata: Metadata = {
   title: 'Uvidi — Konto',
 };
 
-export default function UvidiPage() {
+export default async function UvidiPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/prijava');
+
+  // Both lists fetched in parallel — same Supabase client, separate filters.
+  const [active, archived] = await Promise.all([
+    listInsights(supabase, user.id, { mode: 'active', limit: 100 }),
+    listInsights(supabase, user.id, { mode: 'archived', limit: 100 }),
+  ]);
+
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-4 sm:px-6 sm:py-6">
-      <Card>
-        <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <PieChart className="h-6 w-6 text-muted-foreground" aria-hidden />
-          </div>
-          <CardTitle>Uvidi stižu uskoro</CardTitle>
-          <CardDescription>
-            Trendovi, kategorizacija potrošnje, pretplate i prognoze — sve iz tvojih transakcija.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center text-sm text-muted-foreground">
-          Nastavi unositi transakcije; čim ih bude dovoljno, tu ćeš vidjeti obrasce — gdje novac
-          odlazi, kad rastu pretplate, šta bi mogao uštedjeti.
-        </CardContent>
-      </Card>
+    <div className="mx-auto w-full max-w-4xl space-y-4 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
+      <UvidiClient
+        active={active}
+        archived={archived}
+        // Surface the dev-only "Generiši ponovo" affordance only on dev builds.
+        // In production the user can wait for the nightly cron — manual trigger
+        // is intentionally hidden to avoid abuse without a UI rate-limit toast.
+        isDev={process.env.NODE_ENV === 'development'}
+      />
     </div>
   );
 }
