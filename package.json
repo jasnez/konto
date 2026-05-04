@@ -14,6 +14,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:parser:benchmark": "vitest run tests/parser/benchmark.test.ts",
+    "test:rls": "vitest run __tests__/rls",
+    "test:rls:report": "vitest run __tests__/rls --reporter=json --outputFile=tests/security/rls-results.json && node scripts/generate-rls-report.mjs",
     "parser:golden:generate": "node scripts/generate-parser-golden-dataset.mjs",
     "test:e2e": "playwright test --grep-invert @slow",
     "test:e2e:all": "playwright test",

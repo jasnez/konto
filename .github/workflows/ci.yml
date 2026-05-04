@@ -119,12 +119,25 @@ jobs:
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}" >> "$GITHUB_ENV"
           echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}" >> "$GITHUB_ENV"
 
-      - name: Run integration tests (__tests__/rls)
-        # The 9 specs under __tests__/rls all gate on RUN_INTEGRATION_TESTS=1
-        # and skip themselves otherwise. Unit-style tests in __tests__/actions
-        # use vi.mock() and already run in the `verify` job — they're not
-        # re-run here.
-        run: pnpm exec vitest run __tests__/rls
+      - name: Run RLS audit (__tests__/rls)
+        # Specs under __tests__/rls gate on RUN_INTEGRATION_TESTS=1 and skip
+        # themselves otherwise. F4-E1-T1: full RLS audit covers every
+        # user-scoped table. JSON output is consumed below to generate the
+        # HTML report uploaded as an artifact.
+        run: pnpm exec vitest run __tests__/rls --reporter=json --outputFile=tests/security/rls-results.json --reporter=default
+
+      - name: Generate RLS HTML report
+        if: always()
+        run: node scripts/generate-rls-report.mjs
+
+      - name: Upload RLS audit artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rls-audit-report
+          path: tests/security/RLS_REPORT.html
+          retention-days: 30
+          if-no-files-found: warn
 
       - name: Stop Supabase
         if: always()
