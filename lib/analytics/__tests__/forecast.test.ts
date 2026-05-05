@@ -409,9 +409,17 @@ function makeSupabase(opts: {
   history?: {
     transaction_date: string;
     base_amount_cents: number;
+    /** Defaults to `base_amount_cents` (i.e. signed) for non-transfer rows.
+     *  Tests that exercise transfer-sign behaviour should pass an explicit
+     *  signed value here while keeping `base_amount_cents` as the magnitude. */
+    original_amount_cents?: number;
     category_id?: string | null;
-    /** Optional — defaults to the first account in `accounts` if any. */
+    /** Optional — defaults to the first spending account in `accounts` if any. */
     account_id?: string;
+    /** Optional — auto-generated `tx-<idx>` if missing so transfer pairs can reference it. */
+    id?: string;
+    is_transfer?: boolean;
+    transfer_pair_id?: string | null;
   }[];
   openingBalanceCategoryId?: string | null;
 }) {
@@ -424,9 +432,15 @@ function makeSupabase(opts: {
   // pass the SPENDING_ACCOUNT_TYPES filter inside forecastCashflow.
   const SPENDING = ['checking', 'cash', 'credit_card', 'revolut', 'wise', 'other'];
   const defaultAcctId = accounts.find((a) => SPENDING.includes(a.type))?.id ?? 'default-acct';
-  const history = (opts.history ?? []).map((h) => ({
-    ...h,
+  const history = (opts.history ?? []).map((h, idx) => ({
+    id: h.id ?? `tx-${String(idx)}`,
+    transaction_date: h.transaction_date,
+    base_amount_cents: h.base_amount_cents,
+    original_amount_cents: h.original_amount_cents ?? h.base_amount_cents,
+    category_id: h.category_id ?? null,
     account_id: h.account_id ?? defaultAcctId,
+    is_transfer: h.is_transfer ?? false,
+    transfer_pair_id: h.transfer_pair_id ?? null,
   }));
 
   const fromMock = vi.fn((table: string) => {
@@ -798,6 +812,180 @@ describe('forecastCashflow (savings/loan baseline exclusion)', () => {
     expect(result.startBalanceCents).toBe(50_000n);
     const day30 = result.projections[result.projections.length - 1];
     expect(day30.balanceCents).toBe(50_000n);
+  });
+});
+
+// ─── Transfer-aware baseline ────────────────────────────────────────────────
+
+describe('forecastCashflow (transfer-aware baseline)', () => {
+  it('counts transfer from a spending account to a loan as outflow (rata kredita)', async () => {
+    const accounts: AccountRow[] = [
+      {
+        id: 'checking-1',
+        type: 'checking',
+        currency: 'BAM',
+        current_balance_cents: 100_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+      {
+        id: 'loan-1',
+        type: 'loan',
+        currency: 'BAM',
+        current_balance_cents: -5_000_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+    ];
+    // Real-world Konto convention: `base_amount_cents` is the magnitude
+    // on BOTH legs of a transfer; only `original_amount_cents` is signed.
+    // The forecast must re-derive sign from original_amount_cents.
+    const history = [
+      {
+        id: 'leg-out',
+        transaction_date: format(addDays(NOW, -10), 'yyyy-MM-dd'),
+        base_amount_cents: 50_000, // magnitude (per Konto convention)
+        original_amount_cents: -50_000, // signed: outflow on checking
+        account_id: 'checking-1',
+        is_transfer: true,
+        transfer_pair_id: 'leg-in',
+      },
+      {
+        id: 'leg-in',
+        transaction_date: format(addDays(NOW, -10), 'yyyy-MM-dd'),
+        base_amount_cents: 50_000, // magnitude
+        original_amount_cents: 50_000, // signed: inflow on loan
+        account_id: 'loan-1',
+        is_transfer: true,
+        transfer_pair_id: 'leg-out',
+      },
+    ];
+    const result = await forecastCashflow(makeSupabase({ accounts, history }), 'u-1', 30, {
+      now: NOW,
+      skipFx: true,
+    });
+    // Spending side counts the outflow; loan side is filtered by
+    // SPENDING_ACCOUNT_TYPES on its own row anyway.
+    expect(result.baselineOutflowCents).toBe(50_000n);
+    expect(result.baselineInflowCents).toBe(0n);
+  });
+
+  it('counts transfer from a savings account into spending as inflow', async () => {
+    const accounts: AccountRow[] = [
+      {
+        id: 'checking-1',
+        type: 'checking',
+        currency: 'BAM',
+        current_balance_cents: 100_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+      {
+        id: 'savings-1',
+        type: 'savings',
+        currency: 'BAM',
+        current_balance_cents: 500_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+    ];
+    // savings → checking: -X on savings, +X on checking.
+    const history = [
+      {
+        id: 'sav-out',
+        transaction_date: format(addDays(NOW, -3), 'yyyy-MM-dd'),
+        base_amount_cents: -30_000,
+        account_id: 'savings-1',
+        is_transfer: true,
+        transfer_pair_id: 'chk-in',
+      },
+      {
+        id: 'chk-in',
+        transaction_date: format(addDays(NOW, -3), 'yyyy-MM-dd'),
+        base_amount_cents: 30_000,
+        account_id: 'checking-1',
+        is_transfer: true,
+        transfer_pair_id: 'sav-out',
+      },
+    ];
+    const result = await forecastCashflow(makeSupabase({ accounts, history }), 'u-1', 30, {
+      now: NOW,
+      skipFx: true,
+    });
+    // Money entered the spending pool — counts as inflow.
+    expect(result.baselineInflowCents).toBe(30_000n);
+    expect(result.baselineOutflowCents).toBe(0n);
+  });
+
+  it('ignores internal transfers between two spending accounts', async () => {
+    const accounts: AccountRow[] = [
+      {
+        id: 'checking-1',
+        type: 'checking',
+        currency: 'BAM',
+        current_balance_cents: 100_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+      {
+        id: 'cash-1',
+        type: 'cash',
+        currency: 'BAM',
+        current_balance_cents: 50_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+    ];
+    const history = [
+      {
+        id: 'chk-out',
+        transaction_date: format(addDays(NOW, -1), 'yyyy-MM-dd'),
+        base_amount_cents: -10_000,
+        account_id: 'checking-1',
+        is_transfer: true,
+        transfer_pair_id: 'cash-in',
+      },
+      {
+        id: 'cash-in',
+        transaction_date: format(addDays(NOW, -1), 'yyyy-MM-dd'),
+        base_amount_cents: 10_000,
+        account_id: 'cash-1',
+        is_transfer: true,
+        transfer_pair_id: 'chk-out',
+      },
+    ];
+    const result = await forecastCashflow(makeSupabase({ accounts, history }), 'u-1', 30, {
+      now: NOW,
+      skipFx: true,
+    });
+    // No money left or entered the spending pool.
+    expect(result.baselineInflowCents).toBe(0n);
+    expect(result.baselineOutflowCents).toBe(0n);
+  });
+
+  it('skips a transfer when the pair leg is missing from the 90d window', async () => {
+    const accounts: AccountRow[] = [
+      {
+        id: 'checking-1',
+        type: 'checking',
+        currency: 'BAM',
+        current_balance_cents: 100_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+    ];
+    // Orphaned transfer leg: pair_id points to a tx that's not in the
+    // history we just fetched (out-of-window or deleted). Filter must
+    // skip it conservatively rather than guess what the pair was.
+    const history = [
+      {
+        id: 'orphan-leg',
+        transaction_date: format(addDays(NOW, -1), 'yyyy-MM-dd'),
+        base_amount_cents: -25_000,
+        account_id: 'checking-1',
+        is_transfer: true,
+        transfer_pair_id: 'tx-out-of-window',
+      },
+    ];
+    const result = await forecastCashflow(makeSupabase({ accounts, history }), 'u-1', 30, {
+      now: NOW,
+      skipFx: true,
+    });
+    expect(result.baselineOutflowCents).toBe(0n);
+    expect(result.baselineInflowCents).toBe(0n);
   });
 });
 
