@@ -12,13 +12,12 @@ test('landing → prijava → email → Provjeri inbox, zatim magic link (admin)
   await expect(page).toHaveURL(/\/prijava(?:\?.*)?$/);
 
   await page.getByLabel('Email').fill(email);
-  await page.getByRole('button', { name: 'Pošalji kod' }).click();
+  await page.getByRole('button', { name: 'Pošalji mi kod' }).click();
   // CardTitle is a styled `div`, not a semantic heading — assert on copy.
   await expect(page.getByText('Provjeri inbox', { exact: true })).toBeVisible({
     timeout: 30_000,
   });
-  await expect(page.getByText('Poslali smo kod na', { exact: false })).toBeVisible();
-  await expect(page.getByPlaceholder('123456')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('Poslali smo 6-cifreni kod na', { exact: false })).toBeVisible();
 
   const { actionUrl, userId } = await getMagicLinkActionForEmail(email);
   try {

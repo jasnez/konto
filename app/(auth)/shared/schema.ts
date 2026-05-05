@@ -5,45 +5,72 @@ import { z } from 'zod';
  * server actions. Single source of truth per `.cursor/rules/server-actions.mdc`.
  * Used by both /prijava and /registracija.
  */
+
+const EmailSchema = z
+  .email({ message: 'Ovo ne izgleda kao ispravan email.' })
+  .trim()
+  .min(1, { message: 'Unesi email adresu.' });
+
 /**
- * Invite code shape: 8 characters from a non-ambiguous alphabet — uppercase
- * A–Z minus I/O plus digits 2–9 (no 0/O/1/I/l so handwritten/typed codes
- * don't get confused). The generator script uses the same alphabet.
+ * Invite ("pozivnica"): 8 characters from a non-ambiguous alphabet —
+ * uppercase A–Z minus I/O plus digits 2–9 (no 0, 1, I, O, l so codes
+ * survive handwriting, OCR, and SMS without confusion). The generator
+ * script and the `handle_new_user` trigger normalise the same way.
  *
- * Always uppercased before validation so users can type either case. The
- * trigger normalises with `upper()` too. Optional in the schema —
- * required-or-not is decided at the Server Action layer based on
- * `ENABLE_INVITES` env var (per F4-E2-T1).
+ * Two distinct messages:
+ *  - length-only error (≠ 8 chars) — terse, common typo
+ *  - alphabet error — explicitly lists forbidden characters so the user
+ *    knows why a 1 or O was rejected (the original message lied,
+ *    saying "8 znakova (slova i brojevi)" when the real problem was a
+ *    forbidden digit/letter).
  */
 const InviteCodeSchema = z
   .string()
   .trim()
   .toUpperCase()
-  .regex(/^[A-HJ-NP-Z2-9]{8}$/u, { message: 'Kod ima 8 znakova (slova i brojevi).' })
-  .optional();
+  .superRefine((value, ctx) => {
+    if (value.length !== 8) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Pozivnica ima tačno 8 znakova.',
+      });
+      return;
+    }
+    if (!/^[A-HJ-NP-Z2-9]{8}$/u.test(value)) {
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'Pozivnica ne smije sadržavati 0, 1, O, I ili l. Provjeri da nisi pomiješao slova i cifre.',
+      });
+    }
+  });
 
-export const SendOtpSchema = z.object({
-  email: z
-    .email({ message: 'Ovo ne izgleda kao ispravan email.' })
-    .trim()
-    .min(1, { message: 'Unesi email adresu.' }),
+export const PreviewInviteSchema = z.object({
   inviteCode: InviteCodeSchema,
 });
+export type PreviewInviteInput = z.infer<typeof PreviewInviteSchema>;
 
-export type SendOtpInput = z.infer<typeof SendOtpSchema>;
+export const SendSigninOtpSchema = z.object({
+  email: EmailSchema,
+});
+export type SendSigninOtpInput = z.infer<typeof SendSigninOtpSchema>;
+
+export const SendSignupOtpSchema = z.object({
+  email: EmailSchema,
+  inviteCode: InviteCodeSchema.optional(),
+});
+export type SendSignupOtpInput = z.infer<typeof SendSignupOtpSchema>;
 
 /**
- * Verifying a 6-digit code from the email. Supabase always sends a 6-digit
- * token together with the magic link under the default "Magic Link" template,
- * so users can either click the link or type the code — whatever is easier
- * on their device.
+ * 6-digit numeric token from the magic-link email. Custom template at
+ * supabase/templates/magic_link.html emits both the link and the token,
+ * so users can click OR type — whichever survives their mail client.
  */
 export const VerifyOtpSchema = z.object({
-  email: z.email().trim().min(1),
+  email: EmailSchema,
   token: z
     .string()
     .trim()
     .regex(/^\d{6}$/u, { message: 'Kod ima 6 cifara.' }),
 });
-
 export type VerifyOtpInput = z.infer<typeof VerifyOtpSchema>;
