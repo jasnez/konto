@@ -14,6 +14,7 @@ import {
   YAxis,
 } from 'recharts';
 import { formatMoney } from '@/lib/format/format-money';
+import { cn } from '@/lib/utils';
 import type { ForecastDay, ForecastEvent } from '@/lib/analytics/forecast';
 
 /**
@@ -41,6 +42,8 @@ interface ChartRow {
   balance: number;
   /** Pretty-formatted via formatMoney for tooltip. */
   balanceLabel: string;
+  inflowCents: bigint;
+  outflowCents: bigint;
   events: ForecastEvent[];
 }
 
@@ -63,27 +66,52 @@ interface ChartTooltipProps {
   currency: string;
 }
 
-function ChartTooltip({ active, payload, currency }: ChartTooltipProps): React.ReactNode {
+export function ChartTooltip({ active, payload, currency }: ChartTooltipProps): React.ReactNode {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
-  const dayEvents = row.events.filter((e) => e.type !== 'baseline');
   const formattedDate = format(parseISO(row.date), 'd. MMM yyyy.', { locale: bs });
+  // Show every event (incl. baseline); baseline first so the user sees
+  // "Prosječna dnevna potrošnja" even on days with no recurring/installment.
+  const baselineFirst = [...row.events].sort((a, b) => {
+    if (a.type === 'baseline') return -1;
+    if (b.type === 'baseline') return 1;
+    return 0;
+  });
+  const net = row.inflowCents - row.outflowCents;
   return (
     <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-md">
       <div className="font-medium">{formattedDate}</div>
       <div className="font-mono tabular-nums">{row.balanceLabel}</div>
-      {dayEvents.length > 0 && (
+      <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 border-t pt-1.5 text-[11px]">
+        <dt className="text-emerald-600 dark:text-emerald-400">Prihod</dt>
+        <dd className="text-right font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+          +{formatMoney(row.inflowCents, currency, 'bs-BA', { showCurrency: false })}
+        </dd>
+        <dt className="text-destructive">Trošak</dt>
+        <dd className="text-right font-mono tabular-nums text-destructive">
+          −{formatMoney(row.outflowCents, currency, 'bs-BA', { showCurrency: false })}
+        </dd>
+        <dt className="font-medium">Neto</dt>
+        <dd className="text-right font-mono tabular-nums font-medium">
+          {net >= 0n ? '+' : ''}
+          {formatMoney(net, currency, 'bs-BA', { showCurrency: false })}
+        </dd>
+      </dl>
+      {baselineFirst.length > 0 && (
         <ul className="mt-1.5 space-y-0.5 border-t pt-1.5 text-[11px]">
-          {dayEvents.slice(0, 5).map((e, i) => (
+          {baselineFirst.slice(0, 5).map((e, i) => (
             <li key={i} className="flex items-center justify-between gap-2">
-              <span className="truncate">{e.description}</span>
+              <span className={cn('truncate', e.type === 'baseline' && 'text-muted-foreground')}>
+                {e.description}
+              </span>
               <span className="font-mono tabular-nums">
+                {e.amountCents >= 0n ? '+' : ''}
                 {formatMoney(e.amountCents, currency, 'bs-BA', { showCurrency: false })}
               </span>
             </li>
           ))}
-          {dayEvents.length > 5 && (
-            <li className="text-muted-foreground">+{String(dayEvents.length - 5)} više</li>
+          {baselineFirst.length > 5 && (
+            <li className="text-muted-foreground">+{String(baselineFirst.length - 5)} više</li>
           )}
         </ul>
       )}
@@ -125,6 +153,8 @@ export function ForecastChart({ days, currency, trendDown }: ForecastChartProps)
         date: d.date,
         balance: centsToNumber(d.balanceCents),
         balanceLabel: formatMoney(d.balanceCents, currency, 'bs-BA', { showCurrency: true }),
+        inflowCents: d.inflowCents,
+        outflowCents: d.outflowCents,
         events: d.events,
       })),
     [days, currency],
