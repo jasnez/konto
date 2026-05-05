@@ -63,13 +63,13 @@ export function BalanceHero({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 p-4 sm:p-6">
-        <div className="space-y-1">
-          <p className="text-caption text-muted-foreground">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 p-4 sm:p-6 lg:p-8">
+        <div className="space-y-1 lg:space-y-2">
+          <p className="text-caption text-muted-foreground md:text-sm md:font-semibold md:uppercase md:tracking-[0.08em]">
             {hasLiabilities ? 'Neto stanje' : 'Stanje'}
           </p>
           <CardTitle
-            className={cn('text-display tabular-nums', netToneClass)}
+            className={cn('text-display tabular-nums md:text-5xl lg:text-6xl', netToneClass)}
             data-testid="balance-hero-net-amount"
           >
             <Money cents={netWorthCents} currency={baseCurrency} tone="default" />
@@ -77,7 +77,7 @@ export function BalanceHero({
         </div>
         <Link
           href="/racuni"
-          className="inline-flex h-11 items-center gap-1 rounded-md px-3 text-sm font-medium text-primary transition-colors hover:bg-accent"
+          className="inline-flex h-11 items-center gap-1 rounded-md px-3 text-sm font-medium text-primary transition-colors hover:bg-accent md:text-base"
         >
           Svi računi
           <ArrowRight className="h-4 w-4" aria-hidden />
@@ -85,8 +85,8 @@ export function BalanceHero({
       </CardHeader>
 
       {hasLiabilities ? (
-        <CardContent className="space-y-1.5 px-4 pb-3 pt-0 sm:px-6">
-          <div className="flex items-center justify-between text-sm">
+        <CardContent className="space-y-1.5 px-4 pb-3 pt-0 sm:px-6 md:space-y-2 lg:space-y-2.5 lg:px-8 lg:pb-4">
+          <div className="flex items-center justify-between text-sm md:text-base lg:text-lg">
             <span className="text-muted-foreground">Aktiva</span>
             <Money
               cents={totalBalanceCents}
@@ -95,7 +95,7 @@ export function BalanceHero({
               className="font-medium tabular-nums"
             />
           </div>
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-sm md:text-base lg:text-lg">
             <span className="text-muted-foreground">Pasiva</span>
             <Money
               cents={-totalLiabilitiesCents}
@@ -118,12 +118,12 @@ export function BalanceHero({
       {hasOutOfScope ? (
         <CardContent
           className={cn(
-            'space-y-0.5 px-4 pb-3 pt-3 sm:px-6',
+            'space-y-0.5 px-4 pb-3 pt-3 sm:px-6 lg:px-8 lg:pb-4 lg:pt-4',
             hasLiabilities ? 'border-t' : 'border-t pt-3',
           )}
           data-testid="balance-hero-out-of-scope"
         >
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-sm md:text-base lg:text-lg">
             <span className="text-muted-foreground">Krediti (informativno)</span>
             <Money
               cents={-outOfScopeLiabilitiesCents}
@@ -132,7 +132,7 @@ export function BalanceHero({
               className="font-medium tabular-nums"
             />
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground md:text-sm">
             {pluralizeCredits(outOfScopeLiabilityCount)} — ne ulazi u Neto
           </p>
         </CardContent>
@@ -140,7 +140,7 @@ export function BalanceHero({
 
       <CardContent
         className={cn(
-          'px-4 pb-4 pt-2 sm:px-6 sm:pb-6',
+          'px-4 pb-4 pt-2 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8 lg:pt-4',
           hasLiabilities || hasOutOfScope ? 'border-t' : 'pt-0',
         )}
       >
@@ -148,14 +148,14 @@ export function BalanceHero({
           <Badge
             variant="secondary"
             className={cn(
-              'font-medium',
+              'font-medium md:text-sm lg:text-base',
               netChangePercent > 0 && 'text-income',
               netChangePercent < 0 && 'text-expense',
             )}
           >
             {formatPercent(netChangePercent)}
           </Badge>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground md:text-base lg:text-lg">
             {hasLiabilities ? 'Neto' : 'Stanje'}: vs prošli mjesec
           </span>
         </div>
