@@ -69,7 +69,7 @@ export function BalanceHero({
             {hasLiabilities ? 'Neto stanje' : 'Stanje'}
           </p>
           <CardTitle
-            className={cn('text-display tabular-nums md:text-5xl lg:text-6xl', netToneClass)}
+            className={cn('text-display tabular-nums lg:text-[2.75rem]', netToneClass)}
             data-testid="balance-hero-net-amount"
           >
             <Money cents={netWorthCents} currency={baseCurrency} tone="default" />
