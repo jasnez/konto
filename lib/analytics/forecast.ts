@@ -186,37 +186,45 @@ export async function forecastCashflow(
   const warnings: string[] = [];
 
   // 1. Parallel data fetch.
-  const [accountsRes, recurringRes, installmentsRes, historyRes] = await Promise.all([
-    supabase
-      .from('accounts')
-      .select(
-        'id, type, currency, current_balance_cents, is_active, include_in_net_worth, deleted_at',
-      )
-      .eq('user_id', userId)
-      .is('deleted_at', null),
-    supabase
-      .from('recurring_transactions')
-      .select(
-        'id, description, period, average_amount_cents, currency, next_expected_date, last_seen_date, paused_until, active',
-      )
-      .eq('user_id', userId)
-      .eq('active', true),
-    supabase
-      .from('installment_plans')
-      .select(
-        'id, notes, account_id, currency, installment_count, installment_cents, start_date, day_of_month, status',
-      )
-      .eq('user_id', userId)
-      .eq('status', 'active'),
-    supabase
-      .from('transactions')
-      .select('transaction_date, base_amount_cents')
-      .eq('user_id', userId)
-      .gte('transaction_date', format(addDays(today, -BASELINE_WINDOW_DAYS), 'yyyy-MM-dd'))
-      .is('deleted_at', null)
-      .eq('is_transfer', false)
-      .eq('is_excluded', false),
-  ]);
+  const [accountsRes, recurringRes, installmentsRes, historyRes, openingBalanceCatRes] =
+    await Promise.all([
+      supabase
+        .from('accounts')
+        .select(
+          'id, type, currency, current_balance_cents, is_active, include_in_net_worth, deleted_at',
+        )
+        .eq('user_id', userId)
+        .is('deleted_at', null),
+      supabase
+        .from('recurring_transactions')
+        .select(
+          'id, description, period, average_amount_cents, currency, next_expected_date, last_seen_date, paused_until, active',
+        )
+        .eq('user_id', userId)
+        .eq('active', true),
+      supabase
+        .from('installment_plans')
+        .select(
+          'id, notes, account_id, currency, installment_count, installment_cents, start_date, day_of_month, status',
+        )
+        .eq('user_id', userId)
+        .eq('status', 'active'),
+      supabase
+        .from('transactions')
+        .select('transaction_date, base_amount_cents, category_id')
+        .eq('user_id', userId)
+        .gte('transaction_date', format(addDays(today, -BASELINE_WINDOW_DAYS), 'yyyy-MM-dd'))
+        .is('deleted_at', null)
+        .eq('is_transfer', false)
+        .eq('is_excluded', false),
+      supabase
+        .from('categories')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('slug', 'opening_balance')
+        .is('deleted_at', null)
+        .maybeSingle(),
+    ]);
 
   if (accountsRes.error) {
     logSafe('forecast_accounts', { userId, error: accountsRes.error.message });
@@ -230,14 +238,30 @@ export async function forecastCashflow(
   if (historyRes.error) {
     logSafe('forecast_history', { userId, error: historyRes.error.message });
   }
+  if (openingBalanceCatRes.error) {
+    logSafe('forecast_opening_balance_cat', {
+      userId,
+      error: openingBalanceCatRes.error.message,
+    });
+  }
 
   const accounts = (accountsRes.data ?? []) as AccountRow[];
   const recurring = (recurringRes.data ?? []) as RecurringRow[];
   const installments = (installmentsRes.data ?? []) as InstallmentRow[];
-  const history = (historyRes.data ?? []) as {
-    transaction_date: string;
-    base_amount_cents: number;
-  }[];
+  const openingBalanceCategoryId = openingBalanceCatRes.data?.id ?? null;
+  // Opening-balance txs already shape the start balance via account
+  // triggers; counting them again in the 90d baseline distorts daily
+  // averages (esp. when a loan opening is a large negative). Mirrors
+  // the same exclusion in get_monthly_summary (migration 00038).
+  const history = (
+    (historyRes.data ?? []) as {
+      transaction_date: string;
+      base_amount_cents: number;
+      category_id: string | null;
+    }[]
+  ).filter((t) =>
+    openingBalanceCategoryId === null ? true : t.category_id !== openingBalanceCategoryId,
+  );
 
   // 2. Start balance — sum in-scope accounts in their original currency,
   //    convert each to base currency on today's date, then add.

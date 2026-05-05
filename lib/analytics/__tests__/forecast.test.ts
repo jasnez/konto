@@ -394,6 +394,7 @@ function fluent<T>(terminal: ChainResult<T>) {
     eq: () => chain,
     is: () => chain,
     gte: () => chain,
+    maybeSingle: () => Promise.resolve(terminal),
     then: (resolve: (v: ChainResult<T>) => void) => {
       resolve(terminal);
     },
@@ -405,18 +406,27 @@ function makeSupabase(opts: {
   accounts?: AccountRow[];
   recurring?: RecurringRow[];
   installments?: InstallmentRow[];
-  history?: { transaction_date: string; base_amount_cents: number }[];
+  history?: {
+    transaction_date: string;
+    base_amount_cents: number;
+    category_id?: string | null;
+  }[];
+  openingBalanceCategoryId?: string | null;
 }) {
   const accounts = opts.accounts ?? [];
   const recurring = opts.recurring ?? [];
   const installments = opts.installments ?? [];
   const history = opts.history ?? [];
+  const obCatId = opts.openingBalanceCategoryId ?? null;
 
   const fromMock = vi.fn((table: string) => {
     if (table === 'accounts') return fluent({ data: accounts, error: null });
     if (table === 'recurring_transactions') return fluent({ data: recurring, error: null });
     if (table === 'installment_plans') return fluent({ data: installments, error: null });
     if (table === 'transactions') return fluent({ data: history, error: null });
+    if (table === 'categories') {
+      return fluent({ data: obCatId ? { id: obCatId } : null, error: null });
+    }
     throw new Error(`Unmocked table: ${table}`);
   });
   return { from: fromMock as never };
@@ -595,6 +605,88 @@ describe('forecastCashflow (end-to-end)', () => {
       { now: NOW, skipFx: true },
     );
     expect(result.runwayDays).toBeNull();
+  });
+});
+
+// ─── Opening-balance exclusion ──────────────────────────────────────────────
+
+describe('forecastCashflow (opening_balance baseline exclusion)', () => {
+  it('drops opening_balance transactions from the baseline so a single large initial balance cannot dominate daily-spend signal', async () => {
+    // Mirrors the regression: a user with a -150K loan opening_balance
+    // entry and ~200 BAM/day of regular spend was getting a forecast
+    // that plummeted by ~5K/day because the opening entry was averaged
+    // into the 90d baseline.
+    const obCatId = 'oc-1';
+    const accounts: AccountRow[] = [
+      {
+        id: 'a1',
+        type: 'checking',
+        currency: 'BAM',
+        current_balance_cents: 1_000_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+    ];
+    // 30 days of small regular outflows + one giant negative opening_balance.
+    const regularSpend = Array.from({ length: 30 }, (_, i) => ({
+      transaction_date: format(addDays(NOW, -i - 1), 'yyyy-MM-dd'),
+      base_amount_cents: -200,
+      category_id: 'cat-groceries',
+    }));
+    const openingEntry = {
+      transaction_date: format(addDays(NOW, -1), 'yyyy-MM-dd'),
+      base_amount_cents: -15_000_000,
+      category_id: obCatId,
+    };
+
+    const result = await forecastCashflow(
+      makeSupabase({
+        accounts,
+        history: [...regularSpend, openingEntry],
+        openingBalanceCategoryId: obCatId,
+      }),
+      'u-1',
+      30,
+      { now: NOW, skipFx: true },
+    );
+
+    // Without the exclusion the baseline outflow would be ~500K/day.
+    // With it, average outflow per active day is ~200 cents.
+    const day30 = result.projections[result.projections.length - 1];
+    const drift = result.startBalanceCents - day30.balanceCents;
+    expect(drift).toBeLessThan(20_000n);
+    expect(result.runwayDays).toBeNull();
+  });
+
+  it('still works when the user has no opening_balance category yet', async () => {
+    const result = await forecastCashflow(
+      makeSupabase({
+        accounts: [
+          {
+            id: 'a1',
+            type: 'checking',
+            currency: 'BAM',
+            current_balance_cents: 50_000,
+            ...ACCOUNT_DEFAULTS,
+          },
+        ],
+        history: [
+          {
+            transaction_date: format(addDays(NOW, -1), 'yyyy-MM-dd'),
+            base_amount_cents: -1_000,
+            category_id: null,
+          },
+        ],
+        // No category id means the `categories` lookup returns null
+        // (maybeSingle), and every history row should be retained.
+        openingBalanceCategoryId: null,
+      }),
+      'u-1',
+      30,
+      { now: NOW, skipFx: true },
+    );
+
+    expect(result.startBalanceCents).toBe(50_000n);
+    expect(result.projections).toHaveLength(30);
   });
 });
 
