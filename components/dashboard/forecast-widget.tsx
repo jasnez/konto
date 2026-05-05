@@ -281,8 +281,11 @@ function HowItWorks({
           .
         </p>
         <p>Na konkretne datume dodajemo zakazane pretplate i rate (vidi listu ispod).</p>
+        <p className="text-[11px]">Ne uračunavamo: štednju, investicije, početna stanja računa.</p>
         <p className="text-[11px]">
-          Ne uračunavamo: kredite, investicije, početna stanja računa, prebacivanja između računa.
+          Transferi se uračunavaju samo kad prelaze granicu — rata kredita (tekući → kredit) se
+          broji kao trošak, povlačenje sa štednje na tekući se broji kao prihod. Interna
+          prebacivanja između tvojih tekućih/cash računa se ignoriraju.
         </p>
       </div>
     </details>
