@@ -24,6 +24,13 @@
  *     investments excluded as volatile. Same scope applies to both
  *     start balance and the 90d baseline so the projection answers
  *     one consistent question: "spending money on day N".
+ *   - Transfers: an internal move between two spending accounts (cash →
+ *     checking) does NOT count — money stays inside the pool. A move
+ *     from spending → non-spending (rata kredita = tekući → loan;
+ *     savings deposit = tekući → savings) DOES count as outflow, and
+ *     the reverse (savings → tekući) DOES count as inflow. The filter
+ *     resolves `transfer_pair_id` → pair.account_id locally using a
+ *     map built from the same 90d fetch.
  *   - Recurring inflows not modelled in T1 (the detector is
  *     outflow-only). Inflow component comes from the baseline.
  *   - Baseline = (avg-daily-flow last 90d) MINUS (avg-daily contribution
@@ -107,6 +114,23 @@ export interface RecurringRow {
   last_seen_date: string | null;
   paused_until: string | null;
   active: boolean;
+}
+
+/** Subset of `transactions` columns the baseline filter consumes. */
+export interface HistoryRow {
+  id: string;
+  transaction_date: string;
+  /** For non-transfer rows this is signed (negative = outflow). For
+   *  transfer rows the DB stores the magnitude here on BOTH legs —
+   *  use `original_amount_cents`'s sign to recover direction. */
+  base_amount_cents: number;
+  /** Signed amount in the row's original currency. Reliable for sign
+   *  on every row including transfer legs. */
+  original_amount_cents: number;
+  category_id: string | null;
+  account_id: string;
+  is_transfer: boolean;
+  transfer_pair_id: string | null;
 }
 
 /** Subset of `installment_plans` columns. */
@@ -232,11 +256,12 @@ export async function forecastCashflow(
         .eq('status', 'active'),
       supabase
         .from('transactions')
-        .select('transaction_date, base_amount_cents, category_id, account_id')
+        .select(
+          'id, transaction_date, base_amount_cents, original_amount_cents, category_id, account_id, is_transfer, transfer_pair_id',
+        )
         .eq('user_id', userId)
         .gte('transaction_date', format(addDays(today, -BASELINE_WINDOW_DAYS), 'yyyy-MM-dd'))
         .is('deleted_at', null)
-        .eq('is_transfer', false)
         .eq('is_excluded', false),
       supabase
         .from('categories')
@@ -270,30 +295,61 @@ export async function forecastCashflow(
   const recurring = (recurringRes.data ?? []) as RecurringRow[];
   const installments = (installmentsRes.data ?? []) as InstallmentRow[];
   const openingBalanceCategoryId = openingBalanceCatRes.data?.id ?? null;
-  // Map account_id → type so we can drop history rows booked on
-  // non-spending accounts (savings/loan/investment). Same scope as
-  // start balance — projection stays consistent end-to-end.
+  // Map account_id → type so we can decide whether a row sits on a
+  // spending account (and, for transfers, where the pair leg sits).
   const accountTypeById = new Map<string, string>();
   for (const a of accounts) accountTypeById.set(a.id, a.type);
-  // Opening-balance txs already shape the start balance via account
-  // triggers; counting them again in the 90d baseline distorts daily
-  // averages (esp. when a loan opening is a large negative). Mirrors
-  // the same exclusion in get_monthly_summary (migration 00038).
-  const history = (
-    (historyRes.data ?? []) as {
-      transaction_date: string;
-      base_amount_cents: number;
-      category_id: string | null;
-      account_id: string;
-    }[]
-  ).filter((t) => {
-    if (openingBalanceCategoryId !== null && t.category_id === openingBalanceCategoryId) {
-      return false;
+  // tx.id → tx.account_id over the whole 90d window (transfers
+  // included). Lets the filter resolve `transfer_pair_id` →
+  // pair.account_id without a second roundtrip; pair always lands on
+  // the same `transaction_date` (same parameter in create_transfer_pair),
+  // so it's almost always inside the same window we just fetched.
+  const rawHistoryRows = (historyRes.data ?? []) as HistoryRow[];
+  const txAccountById = new Map<string, string>();
+  for (const t of rawHistoryRows) txAccountById.set(t.id, t.account_id);
+  const SPENDING = SPENDING_ACCOUNT_TYPES as readonly string[];
+  // Filter rules:
+  //   - Drop opening_balance category (already shapes start balance via
+  //     account-balance triggers; mirrors get_monthly_summary, migration
+  //     00038).
+  //   - Keep only rows on spending-type accounts. Savings, loan and
+  //     investment accounts are out of the "money I actually spend" pool.
+  //   - For transfers: keep ONLY when the pair leg sits on a non-spending
+  //     account, i.e. the transfer crosses the pool boundary (rata
+  //     kredita with checking → loan, štednja with checking → savings,
+  //     and the symmetric inflow when money returns to checking).
+  //     Internal transfers between two spending accounts don't move
+  //     money in or out of the pool, so they're dropped.
+  // Sign quirk: the DB stores `base_amount_cents` as the magnitude on
+  // both legs of a transfer (only `original_amount_cents` is signed),
+  // so we re-sign each kept transfer row from `original_amount_cents`
+  // before passing it to aggregateHistoryStats (which expects
+  // "negative = outflow").
+  const history: { transaction_date: string; base_amount_cents: number }[] = [];
+  for (const t of rawHistoryRows) {
+    if (openingBalanceCategoryId !== null && t.category_id === openingBalanceCategoryId) continue;
+    const myType = accountTypeById.get(t.account_id);
+    if (myType === undefined) continue;
+    if (!SPENDING.includes(myType)) continue;
+    if (t.is_transfer) {
+      if (t.transfer_pair_id === null) continue;
+      const otherAcct = txAccountById.get(t.transfer_pair_id);
+      if (otherAcct === undefined) continue;
+      const otherType = accountTypeById.get(otherAcct);
+      if (otherType === undefined) continue;
+      if (SPENDING.includes(otherType)) continue;
+      const sign = t.original_amount_cents < 0 ? -1 : 1;
+      history.push({
+        transaction_date: t.transaction_date,
+        base_amount_cents: sign * Math.abs(t.base_amount_cents),
+      });
+      continue;
     }
-    const accType = accountTypeById.get(t.account_id);
-    if (accType === undefined) return false;
-    return (SPENDING_ACCOUNT_TYPES as readonly string[]).includes(accType);
-  });
+    history.push({
+      transaction_date: t.transaction_date,
+      base_amount_cents: t.base_amount_cents,
+    });
+  }
 
   // 2. Start balance — sum in-scope accounts in their original currency,
   //    convert each to base currency on today's date, then add.
