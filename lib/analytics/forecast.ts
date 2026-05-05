@@ -17,10 +17,13 @@
  * the start date so the day-by-day series stays in one denomination.
  *
  * Design notes:
- *   - Account scope: cash-flow-bearing types only (checking, savings,
- *     cash, credit_card, revolut, wise, other). Investments excluded
- *     as volatile; loans excluded because the principal is long-term
- *     and we model the *payments* separately via installment_plans.
+ *   - Account scope: "spending" types only (checking, cash, credit_card,
+ *     revolut, wise, other). Savings excluded — that money sits, it
+ *     isn't spent. Loans excluded because the principal is long-term
+ *     and we model the *payments* separately via installment_plans;
+ *     investments excluded as volatile. Same scope applies to both
+ *     start balance and the 90d baseline so the projection answers
+ *     one consistent question: "spending money on day N".
  *   - Recurring inflows not modelled in T1 (the detector is
  *     outflow-only). Inflow component comes from the baseline.
  *   - Baseline = (avg-daily-flow last 90d) MINUS (avg-daily contribution
@@ -140,10 +143,24 @@ export interface HistoryStats {
 
 // ─── Tunables ────────────────────────────────────────────────────────────────
 
-/** Account types whose balances roll into the start figure. */
-export const FORECAST_ACCOUNT_TYPES = [
+/**
+ * "Spending" accounts — money the user actually moves around for daily
+ * life. The forecast scopes itself to these for both start balance AND
+ * the baseline-spend window, so the projection answers a single
+ * question: "how much spending money will I have on day N?".
+ *
+ * Savings are intentionally excluded — that money sits earning, not
+ * being spent. Loans/investments are excluded for the same reason
+ * (long-term, volatile, modelled separately via `installment_plans`).
+ *
+ * If a user's salary lands on a checking account, it counts. If it
+ * lands on a savings account first and is later transferred to
+ * checking, the transfer is `is_transfer=true` and stays out of the
+ * baseline either way — only the salary entry on the checking side
+ * (when it eventually moves) matters.
+ */
+export const SPENDING_ACCOUNT_TYPES = [
   'checking',
-  'savings',
   'cash',
   'credit_card',
   'revolut',
@@ -215,7 +232,7 @@ export async function forecastCashflow(
         .eq('status', 'active'),
       supabase
         .from('transactions')
-        .select('transaction_date, base_amount_cents, category_id')
+        .select('transaction_date, base_amount_cents, category_id, account_id')
         .eq('user_id', userId)
         .gte('transaction_date', format(addDays(today, -BASELINE_WINDOW_DAYS), 'yyyy-MM-dd'))
         .is('deleted_at', null)
@@ -253,6 +270,11 @@ export async function forecastCashflow(
   const recurring = (recurringRes.data ?? []) as RecurringRow[];
   const installments = (installmentsRes.data ?? []) as InstallmentRow[];
   const openingBalanceCategoryId = openingBalanceCatRes.data?.id ?? null;
+  // Map account_id → type so we can drop history rows booked on
+  // non-spending accounts (savings/loan/investment). Same scope as
+  // start balance — projection stays consistent end-to-end.
+  const accountTypeById = new Map<string, string>();
+  for (const a of accounts) accountTypeById.set(a.id, a.type);
   // Opening-balance txs already shape the start balance via account
   // triggers; counting them again in the 90d baseline distorts daily
   // averages (esp. when a loan opening is a large negative). Mirrors
@@ -262,10 +284,16 @@ export async function forecastCashflow(
       transaction_date: string;
       base_amount_cents: number;
       category_id: string | null;
+      account_id: string;
     }[]
-  ).filter((t) =>
-    openingBalanceCategoryId === null ? true : t.category_id !== openingBalanceCategoryId,
-  );
+  ).filter((t) => {
+    if (openingBalanceCategoryId !== null && t.category_id === openingBalanceCategoryId) {
+      return false;
+    }
+    const accType = accountTypeById.get(t.account_id);
+    if (accType === undefined) return false;
+    return (SPENDING_ACCOUNT_TYPES as readonly string[]).includes(accType);
+  });
 
   // 2. Start balance — sum in-scope accounts in their original currency,
   //    convert each to base currency on today's date, then add.
@@ -342,7 +370,7 @@ async function computeStartBalance(
     (a) =>
       a.is_active &&
       !a.deleted_at &&
-      (FORECAST_ACCOUNT_TYPES as readonly string[]).includes(a.type),
+      (SPENDING_ACCOUNT_TYPES as readonly string[]).includes(a.type),
   );
   let total = 0n;
   for (const acc of inScope) {

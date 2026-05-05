@@ -410,14 +410,24 @@ function makeSupabase(opts: {
     transaction_date: string;
     base_amount_cents: number;
     category_id?: string | null;
+    /** Optional — defaults to the first account in `accounts` if any. */
+    account_id?: string;
   }[];
   openingBalanceCategoryId?: string | null;
 }) {
   const accounts = opts.accounts ?? [];
   const recurring = opts.recurring ?? [];
   const installments = opts.installments ?? [];
-  const history = opts.history ?? [];
   const obCatId = opts.openingBalanceCategoryId ?? null;
+  // Tests that don't bother specifying account_id on history rows are
+  // implicitly using the first spending-type account so the rows still
+  // pass the SPENDING_ACCOUNT_TYPES filter inside forecastCashflow.
+  const SPENDING = ['checking', 'cash', 'credit_card', 'revolut', 'wise', 'other'];
+  const defaultAcctId = accounts.find((a) => SPENDING.includes(a.type))?.id ?? 'default-acct';
+  const history = (opts.history ?? []).map((h) => ({
+    ...h,
+    account_id: h.account_id ?? defaultAcctId,
+  }));
 
   const fromMock = vi.fn((table: string) => {
     if (table === 'accounts') return fluent({ data: accounts, error: null });
@@ -439,7 +449,7 @@ const ACCOUNT_DEFAULTS: Pick<AccountRow, 'is_active' | 'include_in_net_worth' | 
 };
 
 describe('forecastCashflow (end-to-end)', () => {
-  it('aggregates start balance only from in-scope account types', async () => {
+  it('aggregates start balance only from spending account types (excludes savings, loan, investment)', async () => {
     const accounts: AccountRow[] = [
       {
         id: 'a1',
@@ -449,16 +459,24 @@ describe('forecastCashflow (end-to-end)', () => {
         ...ACCOUNT_DEFAULTS,
       },
       { id: 'a2', type: 'cash', currency: 'BAM', current_balance_cents: 1000, ...ACCOUNT_DEFAULTS },
-      // Loan and investment are out of scope.
+      // Savings, loan, investment are out of scope — savings money is
+      // saved (not spent), and the other two are modelled separately.
       {
         id: 'a3',
+        type: 'savings',
+        currency: 'BAM',
+        current_balance_cents: 200_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+      {
+        id: 'a4',
         type: 'loan',
         currency: 'BAM',
         current_balance_cents: -100_000,
         ...ACCOUNT_DEFAULTS,
       },
       {
-        id: 'a4',
+        id: 'a5',
         type: 'investment',
         currency: 'BAM',
         current_balance_cents: 50_000,
@@ -687,6 +705,99 @@ describe('forecastCashflow (opening_balance baseline exclusion)', () => {
 
     expect(result.startBalanceCents).toBe(50_000n);
     expect(result.projections).toHaveLength(30);
+  });
+});
+
+// ─── Spending-account scope (savings/loan/investment exclusion) ─────────────
+
+describe('forecastCashflow (savings/loan baseline exclusion)', () => {
+  it('drops history rows booked on a savings account from the baseline', async () => {
+    // Salary lands on savings; daily groceries on checking. Without the
+    // filter the salary would inflate dailyInflow even though that money
+    // isn't being spent.
+    const accounts: AccountRow[] = [
+      {
+        id: 'checking-1',
+        type: 'checking',
+        currency: 'BAM',
+        current_balance_cents: 100_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+      {
+        id: 'savings-1',
+        type: 'savings',
+        currency: 'BAM',
+        current_balance_cents: 500_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+    ];
+
+    const history = [
+      // 30 days of small spending on checking (-100 each)
+      ...Array.from({ length: 30 }, (_, i) => ({
+        transaction_date: format(addDays(NOW, -i - 1), 'yyyy-MM-dd'),
+        base_amount_cents: -100,
+        account_id: 'checking-1',
+      })),
+      // One huge salary deposit on savings — should be ignored.
+      {
+        transaction_date: format(addDays(NOW, -1), 'yyyy-MM-dd'),
+        base_amount_cents: 200_000,
+        account_id: 'savings-1',
+      },
+    ];
+
+    const result = await forecastCashflow(makeSupabase({ accounts, history }), 'u-1', 30, {
+      now: NOW,
+      skipFx: true,
+    });
+
+    // Start balance reflects only the spending account (no savings).
+    expect(result.startBalanceCents).toBe(100_000n);
+    // Day-30 should be roughly start - 30 * 100 = 97_000n. If the
+    // salary had leaked in, dailyInflow would be ~6_667/day and the
+    // forecast would actually grow — guard against that with a tight
+    // upper bound + a sane lower bound.
+    const day30 = result.projections[result.projections.length - 1];
+    expect(day30.balanceCents).toBeGreaterThanOrEqual(95_000n);
+    expect(day30.balanceCents).toBeLessThanOrEqual(100_000n);
+  });
+
+  it('drops history rows booked on loan/investment accounts from the baseline', async () => {
+    const accounts: AccountRow[] = [
+      {
+        id: 'checking-1',
+        type: 'checking',
+        currency: 'BAM',
+        current_balance_cents: 50_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+      {
+        id: 'loan-1',
+        type: 'loan',
+        currency: 'BAM',
+        current_balance_cents: -1_000_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+    ];
+    const history = [
+      // Manual loan principal posting on the loan account — must NOT
+      // count toward baseline daily flow.
+      {
+        transaction_date: format(addDays(NOW, -5), 'yyyy-MM-dd'),
+        base_amount_cents: -50_000,
+        account_id: 'loan-1',
+      },
+    ];
+    const result = await forecastCashflow(makeSupabase({ accounts, history }), 'u-1', 30, {
+      now: NOW,
+      skipFx: true,
+    });
+    // Only the checking account is in scope; the lone loan tx is
+    // filtered, so baseline outflow is 0 and balance stays flat.
+    expect(result.startBalanceCents).toBe(50_000n);
+    const day30 = result.projections[result.projections.length - 1];
+    expect(day30.balanceCents).toBe(50_000n);
   });
 });
 
