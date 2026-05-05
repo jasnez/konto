@@ -242,13 +242,92 @@ function serialiseForecast(f: ForecastResult): SerializedForecast {
     lowestPoint: f.lowestPoint
       ? { date: f.lowestPoint.date, balanceCents: f.lowestPoint.balanceCents.toString() }
       : null,
+    baselineInflowCents: f.baselineInflowCents.toString(),
+    baselineOutflowCents: f.baselineOutflowCents.toString(),
     warnings: f.warnings,
   };
 }
 
-async function ForecastSection({ forecastPromise }: { forecastPromise: Promise<ForecastResult> }) {
-  const result = await forecastPromise;
-  return <ForecastWidget forecast={serialiseForecast(result)} />;
+const PERIOD_LABEL_BS: Record<string, string> = {
+  weekly: 'sedmično',
+  'bi-weekly': 'svake 2 sedmice',
+  monthly: 'mjesečno',
+  quarterly: 'kvartalno',
+  yearly: 'godišnje',
+};
+
+interface ForecastInfluencesRow {
+  recurring: {
+    id: string;
+    description: string;
+    averageAmountCents: number;
+    currency: string;
+    periodLabel: string;
+    pausedUntil: string | null;
+  }[];
+  installments: {
+    id: string;
+    label: string;
+    totalCount: number;
+    installmentCents: number;
+    currency: string;
+    dayOfMonth: number;
+  }[];
+}
+
+async function ForecastSection({
+  forecastPromise,
+  influencesPromise,
+}: {
+  forecastPromise: Promise<ForecastResult>;
+  influencesPromise: Promise<ForecastInfluencesRow>;
+}) {
+  const [result, influences] = await Promise.all([forecastPromise, influencesPromise]);
+  return (
+    <ForecastWidget
+      forecast={serialiseForecast(result)}
+      recurring={influences.recurring}
+      installments={influences.installments}
+    />
+  );
+}
+
+async function loadForecastInfluences(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<ForecastInfluencesRow> {
+  const [recRes, instRes] = await Promise.all([
+    supabase
+      .from('recurring_transactions')
+      .select('id, description, average_amount_cents, currency, period, paused_until')
+      .eq('user_id', userId)
+      .eq('active', true)
+      .order('average_amount_cents', { ascending: true }),
+    supabase
+      .from('installment_plans')
+      .select('id, notes, installment_count, installment_cents, currency, day_of_month')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('day_of_month'),
+  ]);
+
+  const recurring = (recRes.data ?? []).map((r) => ({
+    id: r.id,
+    description: r.description,
+    averageAmountCents: r.average_amount_cents,
+    currency: r.currency,
+    periodLabel: PERIOD_LABEL_BS[r.period] ?? r.period,
+    pausedUntil: r.paused_until,
+  }));
+  const installments = (instRes.data ?? []).map((i) => ({
+    id: i.id,
+    label: i.notes ?? 'Plan otplate',
+    totalCount: i.installment_count,
+    installmentCents: i.installment_cents,
+    currency: i.currency,
+    dayOfMonth: i.day_of_month,
+  }));
+  return { recurring, installments };
 }
 
 /**
@@ -341,9 +420,7 @@ export default async function PocetnaPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select(
-      'display_name,base_currency,timezone,onboarding_completed_at,onboarding_completed',
-    )
+    .select('display_name,base_currency,timezone,onboarding_completed_at,onboarding_completed')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -401,6 +478,9 @@ export default async function PocetnaPage() {
   // Forecast: server fetches the 90-day window once; the widget client-
   // side toggles between 30/60/90 by slicing without a refetch.
   const forecastPromise = forecastCashflow(supabase, user.id, 90, { baseCurrency });
+  // Active recurring + installment summary so the widget can render the
+  // "Šta utiče na projekciju" section without a second client fetch.
+  const forecastInfluencesPromise = loadForecastInfluences(supabase, user.id);
   // Top 3 active insights for the dashboard widget. Engine writes nightly;
   // we just read the freshest active rows here.
   const insightsPromise = listInsights(supabase, user.id, { mode: 'active', limit: 3 });
@@ -436,7 +516,10 @@ export default async function PocetnaPage() {
       </Suspense>
 
       <Suspense fallback={<DashboardForecastSkeleton />}>
-        <ForecastSection forecastPromise={forecastPromise} />
+        <ForecastSection
+          forecastPromise={forecastPromise}
+          influencesPromise={forecastInfluencesPromise}
+        />
       </Suspense>
 
       <Suspense fallback={<DashboardRecentTransactionsSkeleton />}>

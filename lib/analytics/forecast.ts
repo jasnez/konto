@@ -74,6 +74,10 @@ export interface ForecastResult {
   lowestPoint: { date: string; balanceCents: bigint } | null;
   /** Days until balance first crosses 0. Null when balance never goes negative. */
   runwayDays: number | null;
+  /** Avg daily inflow component of the baseline (positive bigint, in base). */
+  baselineInflowCents: bigint;
+  /** Avg daily outflow component of the baseline (positive bigint, in base). */
+  baselineOutflowCents: bigint;
   /** UI-facing warnings (e.g. "Insufficient history"). */
   warnings: string[];
 }
@@ -320,6 +324,8 @@ export async function forecastCashflow(
     projections,
     lowestPoint: findLowestPoint(projections),
     runwayDays: findRunway(projections),
+    baselineInflowCents: baseline.inflowCents,
+    baselineOutflowCents: baseline.outflowCents,
     warnings,
   };
 }

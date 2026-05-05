@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { format, parseISO } from 'date-fns';
 import { bs } from 'date-fns/locale';
-import { AlertTriangle, ArrowRight, Check, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Check, ChevronDown, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
@@ -56,11 +56,40 @@ export interface SerializedForecast {
   daysAhead: number;
   projections: SerializedForecastDay[];
   lowestPoint: { date: string; balanceCents: string } | null;
+  /** Avg daily inflow / outflow components of the baseline, for the
+   *  "how is this computed" explainer. Strings to match RSC bigint policy. */
+  baselineInflowCents: string;
+  baselineOutflowCents: string;
   warnings: string[];
+}
+
+export interface RecurringSummary {
+  id: string;
+  description: string;
+  averageAmountCents: number;
+  currency: string;
+  /** Already localised period word (e.g. "mjesečno"). */
+  periodLabel: string;
+  /** ISO date — when set the subscription is paused until this day. */
+  pausedUntil: string | null;
+}
+
+export interface InstallmentSummary {
+  id: string;
+  label: string;
+  totalCount: number;
+  installmentCents: number;
+  currency: string;
+  dayOfMonth: number;
 }
 
 export interface ForecastWidgetProps {
   forecast: SerializedForecast;
+  /** Active recurring entries shown in the "what feeds the projection"
+   *  list. Optional so legacy callers keep working. */
+  recurring?: RecurringSummary[];
+  /** Active installment plans shown in the same list. */
+  installments?: InstallmentSummary[];
 }
 
 function deserialiseDay(d: SerializedForecastDay): ForecastDay {
@@ -107,7 +136,7 @@ function formatHumanDate(iso: string): string {
   return format(parseISO(iso), 'd. MMM yyyy.', { locale: bs });
 }
 
-export function ForecastWidget({ forecast }: ForecastWidgetProps) {
+export function ForecastWidget({ forecast, recurring, installments }: ForecastWidgetProps) {
   const [days, setDays] = useState<ForecastWindow>(30);
 
   const fullProjection = useMemo<ForecastDay[]>(
@@ -126,11 +155,17 @@ export function ForecastWidget({ forecast }: ForecastWidgetProps) {
   const endBalance = slice.length > 0 ? slice[slice.length - 1].balanceCents : startBalance;
   const trendDown = endBalance < startBalance;
 
+  const baselineInflow = BigInt(forecast.baselineInflowCents);
+  const baselineOutflow = BigInt(forecast.baselineOutflowCents);
+
   const insufficientHistoryWarning = forecast.warnings.find((w) => w.includes('istorije'));
   const isEmpty =
     slice.length === 0 ||
     (startBalance === 0n &&
       slice.every((d) => d.balanceCents === 0n && d.events.every((e) => e.type === 'baseline')));
+
+  const recurringList = recurring ?? [];
+  const installmentList = installments ?? [];
 
   return (
     <Card data-testid="forecast-widget">
@@ -183,8 +218,170 @@ export function ForecastWidget({ forecast }: ForecastWidgetProps) {
             currency={forecast.baseCurrency}
           />
         )}
+
+        {!isEmpty && (
+          <HowItWorks
+            startBalance={startBalance}
+            baselineInflow={baselineInflow}
+            baselineOutflow={baselineOutflow}
+            currency={forecast.baseCurrency}
+          />
+        )}
+
+        {!isEmpty && <InfluencesList recurring={recurringList} installments={installmentList} />}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Static-ish explainer of how the projection is computed. Renders the
+ * user's own `startBalance` and the avg baseline inflow/outflow pulled
+ * from the forecast result so the numbers feel personal rather than
+ * abstract documentation.
+ */
+function HowItWorks({
+  startBalance,
+  baselineInflow,
+  baselineOutflow,
+  currency,
+}: {
+  startBalance: bigint;
+  baselineInflow: bigint;
+  baselineOutflow: bigint;
+  currency: string;
+}) {
+  const fmt = (cents: bigint) => formatMoney(cents, currency, 'bs-BA', { showCurrency: true });
+  const net = baselineInflow - baselineOutflow;
+  return (
+    <details className="group rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground open:bg-muted/60">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-foreground">
+        <span>Kako se ovo računa?</span>
+        <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden />
+      </summary>
+      <div className="mt-2 space-y-1.5 leading-relaxed">
+        <p>
+          Polazna tačka: trenutno stanje svih tvojih računa —{' '}
+          <span className="font-mono tabular-nums text-foreground">{fmt(startBalance)}</span>.
+        </p>
+        <p>
+          Svaki dan dodajemo prosječan dnevni prihod (
+          <span className="font-mono tabular-nums">{fmt(baselineInflow)}</span>) i oduzimamo
+          prosječan dnevni trošak (
+          <span className="font-mono tabular-nums">{fmt(baselineOutflow)}</span>) izračunate iz
+          posljednjih 90 dana — to daje neto{' '}
+          <span
+            className={cn(
+              'font-mono tabular-nums',
+              net < 0n ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400',
+            )}
+          >
+            {fmt(net)}/dan
+          </span>
+          .
+        </p>
+        <p>Na konkretne datume dodajemo zakazane pretplate i rate (vidi listu ispod).</p>
+        <p className="text-[11px]">
+          Ne uračunavamo: kredite, investicije, početna stanja računa, prebacivanja između računa.
+        </p>
+      </div>
+    </details>
+  );
+}
+
+/** "Šta utiče na projekciju" — list of subscriptions + installment plans. */
+function InfluencesList({
+  recurring,
+  installments,
+}: {
+  recurring: RecurringSummary[];
+  installments: InstallmentSummary[];
+}) {
+  if (recurring.length === 0 && installments.length === 0) {
+    return (
+      <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+        Još nemaš zakazane uplate. Dodaj{' '}
+        <Link href="/pretplate" className="font-medium underline underline-offset-2">
+          pretplate
+        </Link>{' '}
+        ili{' '}
+        <Link href="/planovi" className="font-medium underline underline-offset-2">
+          planove otplate
+        </Link>{' '}
+        da budu uračunate u projekciju.
+      </p>
+    );
+  }
+
+  return (
+    <details className="group rounded-md border bg-muted/40 px-3 py-2 text-xs">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-foreground">
+        <span>
+          Šta utiče na projekciju
+          <span className="ml-1.5 text-muted-foreground">
+            ({String(recurring.length + installments.length)})
+          </span>
+        </span>
+        <ChevronDown
+          className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180"
+          aria-hidden
+        />
+      </summary>
+      <div className="mt-2 space-y-2">
+        {recurring.length > 0 && (
+          <ul className="space-y-1">
+            <li className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Pretplate
+            </li>
+            {recurring.map((r) => {
+              const isPaused =
+                r.pausedUntil !== null && parseISO(r.pausedUntil).getTime() > Date.now();
+              return (
+                <li key={r.id} className="flex items-center justify-between gap-2">
+                  <span className="truncate">
+                    {r.description}
+                    {isPaused && (
+                      <span className="ml-1.5 rounded-sm bg-amber-500/15 px-1 py-px text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                        pauzirano
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 font-mono tabular-nums text-muted-foreground">
+                    {formatMoney(BigInt(r.averageAmountCents), r.currency, 'bs-BA', {
+                      showCurrency: true,
+                    })}{' '}
+                    {r.periodLabel}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {installments.length > 0 && (
+          <ul className="space-y-1">
+            <li className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Planovi otplate
+            </li>
+            {installments.map((i) => (
+              <li key={i.id} className="flex items-center justify-between gap-2">
+                <span className="truncate">
+                  {i.label}
+                  <span className="ml-1.5 text-muted-foreground">
+                    {String(i.totalCount)} rata, {String(i.dayOfMonth)}. u mjesecu
+                  </span>
+                </span>
+                <span className="shrink-0 font-mono tabular-nums text-muted-foreground">
+                  {formatMoney(BigInt(-i.installmentCents), i.currency, 'bs-BA', {
+                    showCurrency: true,
+                  })}{' '}
+                  /rata
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </details>
   );
 }
 

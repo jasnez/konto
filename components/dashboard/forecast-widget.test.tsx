@@ -41,6 +41,8 @@ function makeForecast(opts: {
   projections?: SerializedForecastDay[];
   warnings?: string[];
   lowestPoint?: { date: string; balanceCents: bigint } | null;
+  baselineInflowCents?: bigint;
+  baselineOutflowCents?: bigint;
 }): SerializedForecast {
   return {
     baseCurrency: 'BAM',
@@ -57,6 +59,8 @@ function makeForecast(opts: {
               date: opts.lowestPoint.date,
               balanceCents: opts.lowestPoint.balanceCents.toString(),
             },
+    baselineInflowCents: (opts.baselineInflowCents ?? 0n).toString(),
+    baselineOutflowCents: (opts.baselineOutflowCents ?? 0n).toString(),
     warnings: opts.warnings ?? [],
   };
 }
@@ -157,5 +161,102 @@ describe('ForecastWidget', () => {
       />,
     );
     expect(screen.getByRole('alert')).toBeTruthy();
+  });
+
+  it('renders "Kako se ovo računa" explainer with the user\'s start balance', () => {
+    render(
+      <ForecastWidget
+        forecast={makeForecast({
+          startBalanceCents: 1_271_879n,
+          baselineInflowCents: 20_402n,
+          baselineOutflowCents: 22_871n,
+          projections: linearProjection(1_271_879n, -2_469n),
+        })}
+      />,
+    );
+    const summary = screen.getByText('Kako se ovo računa?');
+    expect(summary).toBeTruthy();
+    // The dynamic numbers from the explainer should render somewhere in the
+    // collapsible body. <details> in jsdom is closed by default but the
+    // content is in the DOM (just not visible) — querying still works.
+    expect(screen.getByText(/12. ?71[\d.,\s]*KM/u)).toBeTruthy();
+  });
+
+  it('shows the "Šta utiče na projekciju" empty-state link when no recurring or installments', () => {
+    render(
+      <ForecastWidget
+        forecast={makeForecast({
+          projections: linearProjection(100_000n, 0n),
+        })}
+        recurring={[]}
+        installments={[]}
+      />,
+    );
+    expect(screen.getByText(/Još nemaš zakazane uplate/u)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'pretplate' })).toBeTruthy();
+  });
+
+  it('lists active recurring entries with their period label and paused badge', async () => {
+    const user = userEvent.setup();
+    render(
+      <ForecastWidget
+        forecast={makeForecast({
+          projections: linearProjection(100_000n, 0n),
+        })}
+        recurring={[
+          {
+            id: 'r1',
+            description: 'Netflix',
+            averageAmountCents: -1_500,
+            currency: 'BAM',
+            periodLabel: 'mjesečno',
+            pausedUntil: null,
+          },
+          {
+            id: 'r2',
+            description: 'Stari servis',
+            averageAmountCents: -800,
+            currency: 'BAM',
+            periodLabel: 'mjesečno',
+            pausedUntil: '2099-12-31',
+          },
+        ]}
+        installments={[]}
+      />,
+    );
+
+    // Open the collapsible so the list contents are queryable by visible text.
+    await user.click(screen.getByText(/Šta utiče na projekciju/u));
+
+    expect(screen.getByText('Netflix')).toBeTruthy();
+    expect(screen.getByText('Stari servis')).toBeTruthy();
+    expect(screen.getByText('pauzirano')).toBeTruthy();
+  });
+
+  it('lists installment plans with remaining count and day-of-month', async () => {
+    const user = userEvent.setup();
+    render(
+      <ForecastWidget
+        forecast={makeForecast({
+          projections: linearProjection(100_000n, 0n),
+        })}
+        recurring={[]}
+        installments={[
+          {
+            id: 'i1',
+            label: 'Iphone 14',
+            totalCount: 6,
+            installmentCents: 25_000,
+            currency: 'BAM',
+            dayOfMonth: 10,
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByText(/Šta utiče na projekciju/u));
+
+    expect(screen.getByText('Iphone 14')).toBeTruthy();
+    expect(screen.getByText(/6 rata, 10. u mjesecu/u)).toBeTruthy();
   });
 });
