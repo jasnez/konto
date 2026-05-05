@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import { EmailOtpForm } from '@/components/auth/email-otp-form';
-import { invitesEnabled } from '@/lib/auth/invite-config';
+import { SigninForm } from '@/components/auth/signin-form';
 
 export const metadata: Metadata = {
   title: 'Prijava — Konto',
@@ -15,16 +14,5 @@ export default async function PrijavaPage({
   const callbackErrored = params.error === 'true';
   const sessionExpired = params.session === 'istekao';
 
-  return (
-    <EmailOtpForm
-      variant="signin"
-      callbackErrored={callbackErrored}
-      sessionExpired={sessionExpired}
-      // Sign-in only needs an invite for users who don't yet have an account.
-      // The Server Action detects existing users via the auth admin API and
-      // waives the gate for them — but we still render the field when invites
-      // are enabled so a brand-new visitor on /prijava can complete the flow.
-      requireInvite={invitesEnabled()}
-    />
-  );
+  return <SigninForm callbackErrored={callbackErrored} sessionExpired={sessionExpired} />;
 }
