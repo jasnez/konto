@@ -10,10 +10,7 @@ export type UpdateDashboardOrderResult =
   | { success: true }
   | { success: false; error: 'VALIDATION_ERROR' }
   | { success: false; error: 'UNAUTHORIZED' }
-  // DEBUG: `detail` is temporary diagnostic info while we track down why the
-  // RPC sometimes returns an error in production. Remove after the root cause
-  // is identified and fixed.
-  | { success: false; error: 'DATABASE_ERROR'; detail?: string };
+  | { success: false; error: 'DATABASE_ERROR' };
 
 const UpdateDashboardOrderSchema = z.object({
   order: z.array(z.enum(DASHBOARD_SECTION_KEYS)).max(DASHBOARD_SECTION_KEYS.length),
@@ -50,22 +47,17 @@ export async function updateDashboardOrder(input: {
     return true;
   });
 
-  // RPC instead of supabase.from('profiles').update() — direct PATCH was
-  // hitting a PostgREST schema-cache lag for the new jsonb column on
-  // production (silent 0-rows-affected). The RPC's function discovery
-  // is independent of the column cache and gives explicit raise-on-not-
-  // found semantics. See migration #00065 for the full rationale.
+  // RPC + UPSERT (see migration #00066): the function inserts a profile
+  // row if one is missing, otherwise updates dashboard_section_order.
+  // Self-healing because some legacy users were missing profile rows
+  // (handle_new_user trigger didn't fire for them at signup).
   const { error } = await supabase.rpc('set_dashboard_section_order', {
     p_order: cleaned,
   });
 
   if (error) {
     logSafe('update_dashboard_order_error', { userId: user.id, error: error.message });
-    // DEBUG: bubble the full error envelope up to the client so the toast can
-    // show it. Helps narrow down why the RPC is returning an error in prod.
-    // Remove once the root cause is fixed.
-    const detail = `code=${error.code} | msg=${error.message} | hint=${error.hint} | details=${error.details}`;
-    return { success: false, error: 'DATABASE_ERROR', detail };
+    return { success: false, error: 'DATABASE_ERROR' };
   }
 
   revalidatePath('/pocetna');
