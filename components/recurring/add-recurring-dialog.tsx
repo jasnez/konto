@@ -38,11 +38,13 @@ import { MoneyInput } from '@/components/money-input';
 import { confirmRecurring, type ConfirmRecurringResult } from '@/app/(app)/pretplate/actions';
 
 const NO_CATEGORY = '__none__';
+const NO_MERCHANT = '__none__';
 
 const FormSchema = z.object({
   description: z.string().min(1, 'Naziv je obavezan').max(200),
   accountId: z.uuid({ message: 'Odaberi račun' }),
   categoryId: z.string(),
+  merchantId: z.string(),
   period: z.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'yearly']),
   amountAbsString: z.string().min(1, 'Iznos je obavezan'),
   currency: z.string().length(3),
@@ -87,11 +89,17 @@ export interface CategoryOption {
   name: string;
 }
 
+export interface MerchantOption {
+  id: string;
+  name: string;
+}
+
 export interface AddRecurringDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   accounts: AccountOption[];
   categories: CategoryOption[];
+  merchants: MerchantOption[];
 }
 
 export function AddRecurringDialog({
@@ -99,6 +107,7 @@ export function AddRecurringDialog({
   onOpenChange,
   accounts,
   categories,
+  merchants,
 }: AddRecurringDialogProps) {
   const router = useRouter();
   const firstAccount: AccountOption | undefined = accounts.length > 0 ? accounts[0] : undefined;
@@ -109,6 +118,7 @@ export function AddRecurringDialog({
       description: '',
       accountId: firstAccount ? firstAccount.id : '',
       categoryId: NO_CATEGORY,
+      merchantId: NO_MERCHANT,
       period: 'monthly',
       amountAbsString: '0',
       currency: firstAccount ? firstAccount.currency : 'BAM',
@@ -138,6 +148,7 @@ export function AddRecurringDialog({
         description: '',
         accountId: firstAccount ? firstAccount.id : '',
         categoryId: NO_CATEGORY,
+        merchantId: NO_MERCHANT,
         period: 'monthly',
         amountAbsString: '0',
         currency: firstAccount ? firstAccount.currency : 'BAM',
@@ -165,7 +176,7 @@ export function AddRecurringDialog({
     const signedAmount = -amountCentsAbs;
 
     const result: ConfirmRecurringResult = await confirmRecurring({
-      merchantId: null,
+      merchantId: values.merchantId === NO_MERCHANT ? null : values.merchantId,
       categoryId: values.categoryId === NO_CATEGORY ? null : values.categoryId,
       accountId: values.accountId,
       description: values.description,
@@ -285,6 +296,35 @@ export function AddRecurringDialog({
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="merchantId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Trgovac (merchant)</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={NO_MERCHANT}>Bez trgovca</SelectItem>
+                        {merchants.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Pomaže grupisanje sa transakcijama na isti merchant.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
