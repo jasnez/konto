@@ -12,7 +12,8 @@
  * the hero would compete with dragging it.
  */
 
-import { useState, useTransition, type ReactNode } from 'react';
+import { useState, useTransition, type CSSProperties, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   DndContext,
   KeyboardSensor,
@@ -50,6 +51,7 @@ interface SortableDashboardProps {
 }
 
 export function SortableDashboard({ initialOrder, slots, children }: SortableDashboardProps) {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draftOrder, setDraftOrder] = useState<DashboardSectionKey[]>(initialOrder);
   const [isPending, startTransition] = useTransition();
@@ -99,6 +101,11 @@ export function SortableDashboard({ initialOrder, slots, children }: SortableDas
     startTransition(async () => {
       const res = await updateDashboardOrder({ order: draftOrder });
       if (res.success) {
+        // revalidatePath alone hasn't been reliable when the action is invoked
+        // via useTransition (see uvidi-client / budgets-client for the same
+        // pattern). router.refresh() forces the server component to re-fetch
+        // so the new initialOrder prop arrives before we leave edit mode.
+        router.refresh();
         setEditing(false);
         toast.success('Redoslijed sačuvan');
       } else {
@@ -208,9 +215,13 @@ function SortableItem({ id, children, onHide }: SortableItemProps) {
     id,
   });
 
-  const style = {
+  // touchAction: 'none' is essential on mobile — without it the browser claims
+  // the touch as a scroll gesture before the TouchSensor's 200ms long-press
+  // timer fires, so reorder never starts. dnd-kit docs flag this explicitly.
+  const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
+    touchAction: 'none',
   };
 
   return (

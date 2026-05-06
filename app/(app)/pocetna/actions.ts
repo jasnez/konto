@@ -47,13 +47,23 @@ export async function updateDashboardOrder(input: {
     return true;
   });
 
-  const { error } = await supabase
+  // .select() forces the update to RETURN the row, which makes a silent
+  // 0-rows-affected outcome (e.g. RLS policy mismatch, stale schema cache)
+  // surface as an error instead of being reported as success.
+  const { data, error } = await supabase
     .from('profiles')
     .update({ dashboard_section_order: { order: cleaned } })
-    .eq('id', user.id);
+    .eq('id', user.id)
+    .select('id')
+    .maybeSingle();
 
   if (error) {
     logSafe('update_dashboard_order_error', { userId: user.id, error: error.message });
+    return { success: false, error: 'DATABASE_ERROR' };
+  }
+
+  if (data === null) {
+    logSafe('update_dashboard_order_no_row', { userId: user.id });
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
