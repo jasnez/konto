@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { MoreVertical, PencilLine, Pause, Play, Trash2 } from 'lucide-react';
 import { formatMoney } from '@/lib/format/format-money';
 import { cn } from '@/lib/utils';
@@ -73,10 +74,18 @@ export function BudgetCard({ budget, onEdit, onToggleActive, onDelete }: BudgetC
 
   return (
     <Card
-      className={cn('flex flex-col gap-4 p-4 transition-opacity', isMuted && 'opacity-60')}
+      className={cn(
+        'relative flex flex-col gap-4 p-4 transition hover:bg-accent/40',
+        isMuted && 'opacity-60',
+      )}
       data-testid="budget-card"
       data-budget-id={budget.id}
     >
+      <Link
+        href={`/budzeti/${budget.id}`}
+        aria-label={`Pogledaj transakcije za ${budget.category.name}`}
+        className="absolute inset-0 rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      />
       <header className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <span className="text-2xl" aria-hidden>
@@ -100,7 +109,7 @@ export function BudgetCard({ budget, onEdit, onToggleActive, onDelete }: BudgetC
               variant="ghost"
               size="icon"
               aria-label="Meni za budžet"
-              className="h-11 w-11 shrink-0"
+              className="relative z-10 h-11 w-11 shrink-0"
             >
               <MoreVertical className="h-5 w-5" aria-hidden />
             </Button>
