@@ -10,7 +10,10 @@ export type UpdateDashboardOrderResult =
   | { success: true }
   | { success: false; error: 'VALIDATION_ERROR' }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'DATABASE_ERROR' };
+  // DEBUG: `detail` is temporary diagnostic info while we track down why the
+  // RPC sometimes returns an error in production. Remove after the root cause
+  // is identified and fixed.
+  | { success: false; error: 'DATABASE_ERROR'; detail?: string };
 
 const UpdateDashboardOrderSchema = z.object({
   order: z.array(z.enum(DASHBOARD_SECTION_KEYS)).max(DASHBOARD_SECTION_KEYS.length),
@@ -58,7 +61,11 @@ export async function updateDashboardOrder(input: {
 
   if (error) {
     logSafe('update_dashboard_order_error', { userId: user.id, error: error.message });
-    return { success: false, error: 'DATABASE_ERROR' };
+    // DEBUG: bubble the full error envelope up to the client so the toast can
+    // show it. Helps narrow down why the RPC is returning an error in prod.
+    // Remove once the root cause is fixed.
+    const detail = `code=${error.code} | msg=${error.message} | hint=${error.hint} | details=${error.details}`;
+    return { success: false, error: 'DATABASE_ERROR', detail };
   }
 
   revalidatePath('/pocetna');
