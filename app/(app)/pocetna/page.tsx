@@ -16,6 +16,7 @@ import {
   RecentTransactions,
   type RecentTransactionItem,
 } from '@/components/dashboard/recent-transactions';
+import { SpendingByCategoryWidget } from '@/components/dashboard/spending-by-category-widget';
 import {
   DashboardBudgetsSkeleton,
   DashboardForecastSkeleton,
@@ -23,6 +24,7 @@ import {
   DashboardInsightsSkeleton,
   DashboardMetricsSkeleton,
   DashboardRecentTransactionsSkeleton,
+  DashboardSpendingByCategorySkeleton,
 } from '@/components/dashboard/dashboard-skeletons';
 import { PullToRefreshWrapper } from '@/components/shell/pull-to-refresh-wrapper';
 import { fetchTransferCounterpartyAccountNames } from '@/lib/db/transfer-counterparty-names';
@@ -30,6 +32,7 @@ import { getTransactionPrimaryLabel } from '@/lib/format/transaction-primary-lab
 import { forecastCashflow, type ForecastResult } from '@/lib/analytics/forecast';
 import { listBudgetsWithSpent } from '@/lib/queries/budgets';
 import { listInsights } from '@/lib/queries/insights';
+import { getSpendingByCategory, type CategorySpendRow } from '@/lib/queries/spending-by-category';
 import {
   getMonthlySummary,
   resolveSummaryDateParts,
@@ -292,6 +295,25 @@ async function ForecastSection({
   );
 }
 
+async function SpendingByCategorySection({
+  spendingPromise,
+  summaryPromise,
+  baseCurrency,
+}: {
+  spendingPromise: Promise<CategorySpendRow[]>;
+  summaryPromise: Promise<MonthlySummary>;
+  baseCurrency: string;
+}) {
+  const [rows, summary] = await Promise.all([spendingPromise, summaryPromise]);
+  return (
+    <SpendingByCategoryWidget
+      spendingPromise={Promise.resolve(rows)}
+      baseCurrency={baseCurrency}
+      totalCents={summary.monthExpense}
+    />
+  );
+}
+
 async function loadForecastInfluences(
   supabase: SupabaseClient<Database>,
   userId: string,
@@ -464,12 +486,12 @@ export default async function PocetnaPage() {
     }
   }
 
-  const summaryPromise = getMonthlySummary(
-    supabase,
-    user.id,
-    baseCurrency,
-    resolveSummaryDateParts(profile?.timezone),
-  );
+  // Resolve once and reuse — `resolveSummaryDateParts` is pure but we
+  // also feed `todayDate` into `getSpendingByCategory` below to keep the
+  // RPC's day boundary aligned with `getMonthlySummary` for the same TZ.
+  const dateParts = resolveSummaryDateParts(profile?.timezone);
+
+  const summaryPromise = getMonthlySummary(supabase, user.id, baseCurrency, dateParts);
   const recentPromise = getRecentTransactions(supabase, user.id);
   // Fired in parallel with the other dashboard fetches; the widget awaits
   // it inside its own Suspense boundary so the rest of the page still
@@ -484,6 +506,15 @@ export default async function PocetnaPage() {
   // Top 3 active insights for the dashboard widget. Engine writes nightly;
   // we just read the freshest active rows here.
   const insightsPromise = listInsights(supabase, user.id, { mode: 'active', limit: 3 });
+  // Spending-by-category za "Pulse Donut" widget. Tekući kalendarski mjesec
+  // u korisničkoj TZ; `dateParts.todayDate` osigurava poklapanje prozora
+  // s `monthExpense`-om kojeg widget koristi za centar donut-a.
+  const spendingByCategoryPromise = getSpendingByCategory(supabase, {
+    period: 'monthly',
+    offset: 0,
+    baseCurrency,
+    todayDate: dateParts.todayDate,
+  });
 
   return (
     <PullToRefreshWrapper
@@ -519,6 +550,14 @@ export default async function PocetnaPage() {
         <ForecastSection
           forecastPromise={forecastPromise}
           influencesPromise={forecastInfluencesPromise}
+        />
+      </Suspense>
+
+      <Suspense fallback={<DashboardSpendingByCategorySkeleton />}>
+        <SpendingByCategorySection
+          spendingPromise={spendingByCategoryPromise}
+          summaryPromise={summaryPromise}
+          baseCurrency={baseCurrency}
         />
       </Suspense>
 

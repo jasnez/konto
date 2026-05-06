@@ -121,6 +121,35 @@ export function DashboardBudgetsSkeleton() {
 }
 
 /**
+ * Skeleton for the Spending-by-Category dashboard widget. Mirrors the
+ * donut + 5-row list layout (icon + name + sparkline + amount + delta).
+ */
+export function DashboardSpendingByCategorySkeleton() {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 p-4 sm:p-6">
+        <Skeleton className="h-6 w-44" />
+        <Skeleton className="h-9 w-20 rounded-md" />
+      </CardHeader>
+      <CardContent className="space-y-3 px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
+        <Skeleton className="mx-auto h-40 w-40 rounded-full" />
+        <ul className="space-y-2 pt-2">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <li key={String(index)} className="flex items-center gap-2">
+              <Skeleton className="h-5 w-5 shrink-0 rounded-full" />
+              <Skeleton className="h-4 w-28" />
+              <div className="flex-1" />
+              <Skeleton className="h-4 w-12 shrink-0" />
+              <Skeleton className="h-4 w-16 shrink-0" />
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
  * Skeleton for the Insights dashboard widget. Mirrors the 3-row layout
  * (severity dot + title line + 2-line body preview).
  */
@@ -154,6 +183,7 @@ export function DashboardPageSkeleton() {
       <DashboardMetricsSkeleton />
       <DashboardBudgetsSkeleton />
       <DashboardForecastSkeleton />
+      <DashboardSpendingByCategorySkeleton />
       <DashboardRecentTransactionsSkeleton />
       <DashboardTrendSkeleton />
     </div>
