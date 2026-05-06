@@ -1529,6 +1529,10 @@ export type Database = {
           transaction_count: number;
         }[];
       };
+      set_dashboard_section_order: {
+        Args: { p_order: string[] };
+        Returns: undefined;
+      };
       user_owns_account: { Args: { p_account_id: string }; Returns: boolean };
       user_owns_account_row: {
         Args: { p_account_id: string };
