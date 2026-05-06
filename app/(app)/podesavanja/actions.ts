@@ -102,6 +102,9 @@ export async function updateProfile(input: unknown): Promise<UpdateProfileResult
   }
 
   revalidatePath('/podesavanja');
+  // display_name is read by /pocetna for the greeting; without busting that
+  // route's cache, the user sees the old name on the dashboard after saving.
+  revalidatePath('/pocetna');
   return { success: true };
 }
 

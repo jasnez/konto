@@ -45,7 +45,7 @@ describe('settings actions', () => {
     expect(result).toEqual({ success: false, error: 'UNAUTHORIZED' });
   });
 
-  it('updateProfile succeeds and revalidates settings path', async () => {
+  it('updateProfile succeeds and revalidates settings + dashboard paths', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
     const result = await updateProfile({
       display_name: 'QA',
@@ -54,6 +54,7 @@ describe('settings actions', () => {
     });
     expect(result).toEqual({ success: true });
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/podesavanja');
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/pocetna');
   });
 
   it('signOut redirects to login', async () => {
