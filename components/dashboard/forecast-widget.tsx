@@ -308,7 +308,7 @@ function InfluencesList({
           pretplate
         </Link>{' '}
         ili{' '}
-        <Link href="/planovi" className="font-medium underline underline-offset-2">
+        <Link href="/kartice-rate" className="font-medium underline underline-offset-2">
           planove otplate
         </Link>{' '}
         da budu uračunate u projekciju.
