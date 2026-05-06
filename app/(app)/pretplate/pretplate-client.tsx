@@ -14,6 +14,7 @@ import {
   AddRecurringDialog,
   type AccountOption,
   type CategoryOption,
+  type MerchantOption,
 } from '@/components/recurring/add-recurring-dialog';
 import { RecurringEmptyState } from '@/components/recurring/empty-state';
 import { MonthlyEquivalentFooter } from '@/components/recurring/monthly-equivalent-footer';
@@ -33,13 +34,14 @@ export interface SerializedActiveRecurring extends Omit<ActiveRecurring, 'averag
   averageAmountCents: string;
 }
 
-export type { AccountOption, CategoryOption };
+export type { AccountOption, CategoryOption, MerchantOption };
 
 export interface PretplateClientProps {
   initialActive: SerializedActiveRecurring[];
   initialSuggestions: SuggestedCandidate[];
   accounts: AccountOption[];
   categories: CategoryOption[];
+  merchants: MerchantOption[];
 }
 
 const CANCEL_ERROR: Record<string, string> = {
@@ -62,6 +64,7 @@ export function PretplateClient({
   initialSuggestions,
   accounts,
   categories,
+  merchants,
 }: PretplateClientProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -321,7 +324,9 @@ export function PretplateClient({
             averageAmountCents: editingItem.averageAmountCents,
             currency: editingItem.currency,
             nextExpectedDate: editingItem.nextExpectedDate,
+            merchantId: editingItem.merchantId,
           }}
+          merchants={merchants}
         />
       )}
       {pausingId !== null && (
@@ -351,6 +356,7 @@ export function PretplateClient({
         onOpenChange={setIsAddOpen}
         accounts={accounts}
         categories={categories}
+        merchants={merchants}
       />
     </>
   );

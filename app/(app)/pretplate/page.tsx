@@ -3,12 +3,14 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { listActiveRecurring } from '@/lib/queries/recurring';
 import { listActiveAccounts } from '@/lib/db/accounts';
+import { listActiveMerchants } from '@/lib/db/merchants';
 import { detectAndSuggestRecurring } from './actions';
 import {
   PretplateClient,
   type SerializedActiveRecurring,
   type AccountOption,
   type CategoryOption,
+  type MerchantOption,
 } from './pretplate-client';
 
 export const metadata: Metadata = {
@@ -35,7 +37,7 @@ export default async function PretplatePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/prijava');
 
-  const [active, suggestion, accountsRes, categoriesRes] = await Promise.all([
+  const [active, suggestion, accountsRes, categoriesRes, merchantsRes] = await Promise.all([
     listActiveRecurring(supabase, user.id),
     detectAndSuggestRecurring(),
     listActiveAccounts(supabase, user.id),
@@ -46,6 +48,7 @@ export default async function PretplatePage() {
       .is('deleted_at', null)
       .in('kind', ['expense', 'saving'])
       .order('sort_order', { ascending: true }),
+    listActiveMerchants(supabase, user.id),
   ]);
 
   const accounts: AccountOption[] = (accountsRes.data ?? [])
@@ -60,6 +63,11 @@ export default async function PretplatePage() {
   const categories: CategoryOption[] = (categoriesRes.data ?? []).map((c) => ({
     id: c.id,
     name: c.name,
+  }));
+
+  const merchants: MerchantOption[] = (merchantsRes.data ?? []).map((m) => ({
+    id: m.id,
+    name: m.display_name,
   }));
 
   // Serialize bigints across the RSC boundary.
@@ -93,6 +101,7 @@ export default async function PretplatePage() {
         initialSuggestions={initialSuggestions}
         accounts={accounts}
         categories={categories}
+        merchants={merchants}
       />
     </div>
   );

@@ -34,7 +34,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { MoneyInput } from '@/components/money-input';
 import { editRecurring, type EditRecurringResult } from '@/app/(app)/pretplate/actions';
+import type { MerchantOption } from '@/components/recurring/add-recurring-dialog';
 import { z } from 'zod';
+
+const NO_MERCHANT = '__none__';
 
 /**
  * Local form schema — keeps the amount as a string for RHF, transforms
@@ -52,6 +55,7 @@ const FormSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/u)
     .or(z.literal('')),
+  merchantId: z.string(),
 });
 
 type FormValues = z.infer<typeof FormSchema>;
@@ -73,10 +77,17 @@ export interface EditRecurringDialogProps {
     averageAmountCents: bigint;
     currency: string;
     nextExpectedDate: string | null;
+    merchantId: string | null;
   };
+  merchants: MerchantOption[];
 }
 
-export function EditRecurringDialog({ open, onOpenChange, recurring }: EditRecurringDialogProps) {
+export function EditRecurringDialog({
+  open,
+  onOpenChange,
+  recurring,
+  merchants,
+}: EditRecurringDialogProps) {
   const router = useRouter();
   // The DB stores signed amounts (negative for outflows). The UI
   // exposes the absolute value so users don't enter a sign — we
@@ -94,6 +105,7 @@ export function EditRecurringDialog({ open, onOpenChange, recurring }: EditRecur
       amountAbsString: initialAbs,
       currency: recurring.currency,
       nextExpectedDate: recurring.nextExpectedDate ?? '',
+      merchantId: recurring.merchantId ?? NO_MERCHANT,
     },
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -121,6 +133,7 @@ export function EditRecurringDialog({ open, onOpenChange, recurring }: EditRecur
       averageAmountCents: amountCents.toString(),
       currency: values.currency,
       nextExpectedDate: values.nextExpectedDate === '' ? null : values.nextExpectedDate,
+      merchantId: values.merchantId === NO_MERCHANT ? null : values.merchantId,
     });
     if (result.success) {
       toast.success('Pretplata ažurirana.');
@@ -185,6 +198,34 @@ export function EditRecurringDialog({ open, onOpenChange, recurring }: EditRecur
                       <SelectItem value="yearly">Godišnje</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="merchantId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Trgovac (merchant)</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={NO_MERCHANT}>Bez trgovca</SelectItem>
+                      {merchants.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Pomaže grupisanje sa transakcijama na isti merchant.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
