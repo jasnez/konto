@@ -109,7 +109,14 @@ export function SortableDashboard({ initialOrder, slots, children }: SortableDas
         setEditing(false);
         toast.success('Redoslijed sačuvan');
       } else {
-        toast.error('Greška pri snimanju redoslijeda. Pokušaj ponovo.');
+        // DEBUG: show full diagnostic detail in the error toast while we
+        // investigate why the save sometimes fails in production. Remove the
+        // detail rendering once the root cause is fixed.
+        const detail = 'detail' in res ? res.detail : undefined;
+        toast.error('Greška pri snimanju redoslijeda', {
+          description: detail ?? `error=${res.error}`,
+          duration: 30_000,
+        });
       }
     });
   };
