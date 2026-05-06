@@ -10,6 +10,12 @@ interface PullToRefreshWrapperProps {
   className?: string;
   /** Toast message shown while the refresh is in flight. */
   refreshLabel?: string;
+  /**
+   * When true, the touch listeners are not attached. Used when a parent
+   * needs to suppress the gesture (e.g. dashboard edit mode where a
+   * top-of-page drag is reordering, not refreshing).
+   */
+  disabled?: boolean;
 }
 
 /**
@@ -26,6 +32,7 @@ export function PullToRefreshWrapper({
   children,
   className,
   refreshLabel = 'Osvježavam...',
+  disabled = false,
 }: PullToRefreshWrapperProps) {
   const router = useRouter();
   const { handlers } = usePullToRefresh({
@@ -36,7 +43,7 @@ export function PullToRefreshWrapper({
   });
 
   return (
-    <div className={className} {...handlers}>
+    <div className={className} {...(disabled ? {} : handlers)}>
       {children}
     </div>
   );

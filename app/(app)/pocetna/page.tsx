@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { DeletionCanceledToast } from '@/components/auth/deletion-canceled-toast';
 import { BalanceHero } from '@/components/dashboard/balance-hero';
@@ -16,6 +16,7 @@ import {
   RecentTransactions,
   type RecentTransactionItem,
 } from '@/components/dashboard/recent-transactions';
+import { SortableDashboard } from '@/components/dashboard/sortable-dashboard';
 import { SpendingByCategoryWidget } from '@/components/dashboard/spending-by-category-widget';
 import {
   DashboardBudgetsSkeleton,
@@ -26,7 +27,7 @@ import {
   DashboardRecentTransactionsSkeleton,
   DashboardSpendingByCategorySkeleton,
 } from '@/components/dashboard/dashboard-skeletons';
-import { PullToRefreshWrapper } from '@/components/shell/pull-to-refresh-wrapper';
+import { resolveSectionOrder, type DashboardSectionKey } from '@/lib/dashboard/sections';
 import { fetchTransferCounterpartyAccountNames } from '@/lib/db/transfer-counterparty-names';
 import { getTransactionPrimaryLabel } from '@/lib/format/transaction-primary-label';
 import { forecastCashflow, type ForecastResult } from '@/lib/analytics/forecast';
@@ -442,7 +443,9 @@ export default async function PocetnaPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name,base_currency,timezone,onboarding_completed_at,onboarding_completed')
+    .select(
+      'display_name,base_currency,timezone,onboarding_completed_at,onboarding_completed,dashboard_section_order',
+    )
     .eq('id', user.id)
     .maybeSingle();
 
@@ -516,15 +519,16 @@ export default async function PocetnaPage() {
     todayDate: dateParts.todayDate,
   });
 
-  return (
-    <PullToRefreshWrapper
-      className="mx-auto w-full max-w-6xl space-y-4 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6"
-      refreshLabel="Osvježavam dashboard..."
-    >
-      <Suspense fallback={null}>
-        <DeletionCanceledToast />
-      </Suspense>
+  const sectionOrder = resolveSectionOrder(profile?.dashboard_section_order);
 
+  // Slot map: server-rendered sections handed to the client wrapper as
+  // ReactNodes. The wrapper renders only those listed in `sectionOrder`
+  // (the rest go into the "Hidden" tray in edit mode). All data fetches
+  // above are dispatched in parallel regardless of visibility — the cost
+  // is one or two unused promises for hidden sections, which is fine
+  // since most users keep most widgets visible.
+  const slots: Record<DashboardSectionKey, ReactNode> = {
+    hero: (
       <Suspense fallback={<DashboardHeroSkeleton />}>
         <HeroSection
           summaryPromise={summaryPromise}
@@ -533,26 +537,8 @@ export default async function PocetnaPage() {
           firstName={firstName}
         />
       </Suspense>
-
-      <Suspense fallback={<DashboardMetricsSkeleton />}>
-        <MetricsSection summaryPromise={summaryPromise} baseCurrency={baseCurrency} />
-      </Suspense>
-
-      <Suspense fallback={<DashboardBudgetsSkeleton />}>
-        <BudgetsWidget budgetsPromise={budgetsPromise} />
-      </Suspense>
-
-      <Suspense fallback={<DashboardInsightsSkeleton />}>
-        <InsightsWidget insightsPromise={insightsPromise} />
-      </Suspense>
-
-      <Suspense fallback={<DashboardForecastSkeleton />}>
-        <ForecastSection
-          forecastPromise={forecastPromise}
-          influencesPromise={forecastInfluencesPromise}
-        />
-      </Suspense>
-
+    ),
+    donut: (
       <Suspense fallback={<DashboardSpendingByCategorySkeleton />}>
         <SpendingByCategorySection
           spendingPromise={spendingByCategoryPromise}
@@ -560,10 +546,42 @@ export default async function PocetnaPage() {
           baseCurrency={baseCurrency}
         />
       </Suspense>
-
+    ),
+    forecast: (
+      <Suspense fallback={<DashboardForecastSkeleton />}>
+        <ForecastSection
+          forecastPromise={forecastPromise}
+          influencesPromise={forecastInfluencesPromise}
+        />
+      </Suspense>
+    ),
+    budgets: (
+      <Suspense fallback={<DashboardBudgetsSkeleton />}>
+        <BudgetsWidget budgetsPromise={budgetsPromise} />
+      </Suspense>
+    ),
+    insights: (
+      <Suspense fallback={<DashboardInsightsSkeleton />}>
+        <InsightsWidget insightsPromise={insightsPromise} />
+      </Suspense>
+    ),
+    recent_tx: (
       <Suspense fallback={<DashboardRecentTransactionsSkeleton />}>
         <RecentTransactionsSection recentPromise={recentPromise} />
       </Suspense>
-    </PullToRefreshWrapper>
+    ),
+    metrics: (
+      <Suspense fallback={<DashboardMetricsSkeleton />}>
+        <MetricsSection summaryPromise={summaryPromise} baseCurrency={baseCurrency} />
+      </Suspense>
+    ),
+  };
+
+  return (
+    <SortableDashboard initialOrder={sectionOrder} slots={slots}>
+      <Suspense fallback={null}>
+        <DeletionCanceledToast />
+      </Suspense>
+    </SortableDashboard>
   );
 }

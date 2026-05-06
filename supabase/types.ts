@@ -954,6 +954,7 @@ export type Database = {
         Row: {
           base_currency: string;
           created_at: string;
+          dashboard_section_order: Json | null;
           deleted_at: string | null;
           display_name: string | null;
           id: string;
@@ -967,6 +968,7 @@ export type Database = {
         Insert: {
           base_currency?: string;
           created_at?: string;
+          dashboard_section_order?: Json | null;
           deleted_at?: string | null;
           display_name?: string | null;
           id: string;
@@ -980,6 +982,7 @@ export type Database = {
         Update: {
           base_currency?: string;
           created_at?: string;
+          dashboard_section_order?: Json | null;
           deleted_at?: string | null;
           display_name?: string | null;
           id?: string;
