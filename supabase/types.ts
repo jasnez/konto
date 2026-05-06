@@ -1473,6 +1473,24 @@ export type Database = {
         Args: { p_recurring_id: string };
         Returns: Json;
       };
+      get_spending_by_category: {
+        Args: {
+          p_base_currency?: string;
+          p_offset?: number;
+          p_period: string;
+          p_today_date?: string;
+        };
+        Returns: {
+          amount_cents: number;
+          category_color: string;
+          category_icon: string;
+          category_id: string;
+          category_name: string;
+          category_slug: string;
+          monthly_history: number[];
+          prev_amount_cents: number;
+        }[];
+      };
       import_dedup_filter: {
         Args: { p_account_id: string; p_rows: Json };
         Returns: number[];

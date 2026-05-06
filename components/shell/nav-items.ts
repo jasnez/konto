@@ -1,6 +1,7 @@
 import {
   BookOpen,
   Camera,
+  Coins,
   Home,
   Receipt,
   PieChart,
@@ -44,6 +45,13 @@ export const NAV_ITEMS: NavItem[] = [
     desktopOnly: true,
   },
   { href: '/transakcije', label: 'Transakcije', mobileLabel: 'Transakcije', icon: Receipt },
+  {
+    href: '/potrosnja',
+    label: 'Potrošnja',
+    mobileLabel: 'Potroš.',
+    icon: Coins,
+    desktopOnly: true,
+  },
   { href: '/budzeti', label: 'Budžeti', mobileLabel: 'Budž.', icon: PiggyBank, desktopOnly: true },
   { href: '/ciljevi', label: 'Ciljevi', mobileLabel: 'Cilj.', icon: Target, desktopOnly: true },
   { href: '/pretplate', label: 'Pretplate', mobileLabel: 'Pret.', icon: Repeat, desktopOnly: true },
