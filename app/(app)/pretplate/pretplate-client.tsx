@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
@@ -10,6 +10,11 @@ import { RecurringCard } from '@/components/recurring/recurring-card';
 import { SuggestedCard } from '@/components/recurring/suggested-card';
 import { EditRecurringDialog } from '@/components/recurring/edit-recurring-dialog';
 import { PauseRecurringDialog } from '@/components/recurring/pause-recurring-dialog';
+import {
+  AddRecurringDialog,
+  type AccountOption,
+  type CategoryOption,
+} from '@/components/recurring/add-recurring-dialog';
 import { RecurringEmptyState } from '@/components/recurring/empty-state';
 import { MonthlyEquivalentFooter } from '@/components/recurring/monthly-equivalent-footer';
 import type { ActiveRecurring } from '@/lib/queries/recurring';
@@ -28,9 +33,13 @@ export interface SerializedActiveRecurring extends Omit<ActiveRecurring, 'averag
   averageAmountCents: string;
 }
 
+export type { AccountOption, CategoryOption };
+
 export interface PretplateClientProps {
   initialActive: SerializedActiveRecurring[];
   initialSuggestions: SuggestedCandidate[];
+  accounts: AccountOption[];
+  categories: CategoryOption[];
 }
 
 const CANCEL_ERROR: Record<string, string> = {
@@ -48,7 +57,12 @@ const IGNORE_ERROR: Record<string, string> = {
   DATABASE_ERROR: 'Greška u bazi.',
 };
 
-export function PretplateClient({ initialActive, initialSuggestions }: PretplateClientProps) {
+export function PretplateClient({
+  initialActive,
+  initialSuggestions,
+  accounts,
+  categories,
+}: PretplateClientProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -56,6 +70,7 @@ export function PretplateClient({ initialActive, initialSuggestions }: Pretplate
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [busyCandidateKey, setBusyCandidateKey] = useState<string | null>(null);
   const [scanBusy, setScanBusy] = useState(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<SuggestedCandidate[]>(initialSuggestions);
 
   const active = useMemo<ActiveRecurring[]>(
@@ -189,17 +204,30 @@ export function PretplateClient({ initialActive, initialSuggestions }: Pretplate
           </p>
         </div>
         {!showEmptyHero && (
-          <Button
-            onClick={() => {
-              void handleScan();
-            }}
-            disabled={scanBusy}
-            size="lg"
-            className="self-start sm:self-auto"
-          >
-            <Search className="mr-2 h-5 w-5" aria-hidden />
-            {scanBusy ? 'Skeniram…' : 'Pronađi nove'}
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAddOpen(true);
+              }}
+              size="lg"
+              className="self-start sm:self-auto"
+            >
+              <Plus className="mr-2 h-5 w-5" aria-hidden />
+              Dodaj ručno
+            </Button>
+            <Button
+              onClick={() => {
+                void handleScan();
+              }}
+              disabled={scanBusy}
+              size="lg"
+              className="self-start sm:self-auto"
+            >
+              <Search className="mr-2 h-5 w-5" aria-hidden />
+              {scanBusy ? 'Skeniram…' : 'Pronađi nove'}
+            </Button>
+          </div>
         )}
       </header>
 
@@ -207,6 +235,9 @@ export function PretplateClient({ initialActive, initialSuggestions }: Pretplate
         <RecurringEmptyState
           onScan={() => {
             void handleScan();
+          }}
+          onAddManual={() => {
+            setIsAddOpen(true);
           }}
           busy={scanBusy}
         />
@@ -314,6 +345,12 @@ export function PretplateClient({ initialActive, initialSuggestions }: Pretplate
         onConfirm={async () => {
           if (cancellingId) await handleCancelConfirmed(cancellingId);
         }}
+      />
+      <AddRecurringDialog
+        open={isAddOpen}
+        onOpenChange={setIsAddOpen}
+        accounts={accounts}
+        categories={categories}
       />
     </>
   );
