@@ -222,11 +222,20 @@ enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
+# SE-12: tightened from "1s" so a malicious browser can't spam-send magic-link
+# emails. The client UI's resend button cools down for 60s anyway, so this is a
+# server-side backstop. NOTE: production value lives in Supabase Dashboard →
+# Authentication → Providers → Email → "Email rate limit"; this TOML governs
+# only the local dev stack (`supabase start`).
+max_frequency = "30s"
 # Number of characters used in the email OTP.
 otp_length = 6
-# Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+# Number of seconds before the email OTP expires.
+# SE-12: tightened from 3600 (1h) to 900 (15min) to narrow the phishing window.
+# 15min comfortably covers email-delivery latency; well within industry norms
+# for one-time codes (10–15min). Mirror in Supabase Dashboard → Authentication
+# → Providers → Email → "Email OTP Expiration".
+otp_expiry = 900
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]
