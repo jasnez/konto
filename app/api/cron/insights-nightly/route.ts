@@ -36,6 +36,25 @@ export async function GET(request: Request) {
   const today = new Date();
   const supabase = createAdminClient();
 
+  // SE-11: server-side replay protection. Vercel Cron uses a static Bearer
+  // header; we can't rely on per-request nonces from the sender, so we lock
+  // execution per cron name in the DB. 22h interval matches our daily
+  // schedule with 2h slack for Vercel's scheduling jitter. A leaked
+  // CRON_SECRET cannot be replayed within 22h of the legitimate run.
+  // See migration 00068 + audit PR #151 SE-11.
+  const lock = await supabase.rpc('acquire_cron_lock', {
+    p_cron_name: 'insights_nightly',
+    p_min_interval_seconds: 22 * 60 * 60,
+  });
+  if (lock.error) {
+    logSafe('insights_nightly_lock_error', { error: lock.error.message });
+    return NextResponse.json({ error: 'Lock RPC failed' }, { status: 500 });
+  }
+  if (!lock.data) {
+    logSafe('insights_nightly_replay_rejected', {});
+    return NextResponse.json({ error: 'Replay rejected' }, { status: 409 });
+  }
+
   // Discover active users via recent transaction activity. This dodges
   // pagination over `auth.users` (which we can't filter by activity anyway)
   // and keeps the cron focused on the people who would actually benefit.

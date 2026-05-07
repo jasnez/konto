@@ -74,8 +74,12 @@ describe('POST /api/cron/post-due-installments — auth', () => {
         }),
       }),
     });
+    // SE-11: route also calls supabase.rpc('acquire_cron_lock', ...) before
+    // the data fetch. Mock it to grant the lock so the handler proceeds to
+    // the (empty) occurrences fetch and returns posted=0.
     vi.mocked(createAdminClient).mockReturnValue({
       from: vi.fn().mockReturnValue({ select: selectMock }),
+      rpc: vi.fn().mockResolvedValue({ data: true, error: null }),
     } as never);
 
     const res = await GET(makeRequest('Bearer correct-secret'));
@@ -85,5 +89,30 @@ describe('POST /api/cron/post-due-installments — auth', () => {
     const body = (await res.json()) as { posted: number; failed: number };
     expect(body.posted).toBe(0);
     expect(body.failed).toBe(0);
+  });
+
+  it('returns 409 when acquire_cron_lock rejects (SE-11 replay protection)', async () => {
+    vi.stubEnv('CRON_SECRET', 'correct-secret');
+
+    // SE-11 regression guard: even with a valid Bearer, if the lock RPC
+    // returns false (replay rejected), the handler must return 409 and
+    // NOT proceed to fetch occurrences. The from() mock is intentionally
+    // set up to throw if called, so this test fails noisily if the lock
+    // gate is ever bypassed.
+    const fromMock = vi.fn(() => {
+      throw new Error('SE-11 violation: from() called after lock rejected');
+    });
+    vi.mocked(createAdminClient).mockReturnValue({
+      from: fromMock,
+      rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
+    } as never);
+
+    const res = await GET(makeRequest('Bearer correct-secret'));
+
+    expect(res.status).toBe(409);
+    expect(fromMock).not.toHaveBeenCalled();
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toContain('Replay rejected');
+    expect(vi.mocked(logSafe)).toHaveBeenCalledWith('post_due_installments_replay_rejected', {});
   });
 });
