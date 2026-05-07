@@ -1,5 +1,6 @@
 import { revalidatePath } from 'next/cache';
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { KarticeRateClient, type OccurrenceRow, type PlanRow } from './kartice-rate-client';
 import { logSafe } from '@/lib/logger';
@@ -92,7 +93,10 @@ export default async function KarticeRatePage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return null;
+  // SE-9: was `return null` — silently rendered a blank page for
+  // unauthenticated users instead of bouncing to /prijava. Match the
+  // canonical pattern used by the 5 sibling Phase 3 pages.
+  if (!user) redirect('/prijava');
 
   const plans = await fetchPlans(user.id);
 

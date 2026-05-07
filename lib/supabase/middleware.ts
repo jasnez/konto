@@ -4,11 +4,19 @@ import { mustExist } from '@/lib/env';
 import type { Database } from '@/supabase/types';
 import { logSafe } from '@/lib/logger';
 
-// Keep this list aligned with directories under app/(app)/. Adding an entry
-// for a route that doesn't exist causes Next's 404 to render inside the authed
-// shell (and an unauthenticated bounce to /prijava before the 404), which is
-// worse UX than a plain 404.
-const PROTECTED_PATHS = [
+// Every directory under app/(app)/ that requires an authenticated user MUST
+// be listed here. Pages handle their own getUser() + redirect('/prijava')
+// at render time as defense-in-depth, but middleware is the first gate —
+// without an entry here, an unauthenticated request reaches the page (or
+// the route group's not-found) instead of bouncing to /prijava early. SE-9
+// regression: __tests__/lib/supabase/protected-paths.test.ts asserts that
+// every app/(app)/X directory either appears here or is on the explicit
+// PUBLIC_CONTENT_PAGES allow-list.
+//
+// DO NOT add a route that doesn't exist as a real directory — Next's 404
+// would then render inside the authed shell after a /prijava bounce, which
+// is worse UX than a plain 404.
+export const PROTECTED_PATHS = [
   '/pocetna',
   '/transakcije',
   '/racuni',
@@ -16,6 +24,14 @@ const PROTECTED_PATHS = [
   '/podesavanja',
   '/kategorije',
   '/merchants',
+  // Phase 3 routes (added by SE-9):
+  '/budzeti',
+  '/ciljevi',
+  '/import',
+  '/kartice-rate',
+  '/potrosnja',
+  '/pretplate',
+  '/skeniraj',
 ];
 
 export async function updateSession(request: NextRequest, extraRequestHeaders?: Headers) {
