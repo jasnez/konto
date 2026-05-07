@@ -27,7 +27,10 @@ import {
   DashboardRecentTransactionsSkeleton,
   DashboardSpendingByCategorySkeleton,
 } from '@/components/dashboard/dashboard-skeletons';
+import { SectionBoundary } from '@/components/dashboard/section-boundary';
+import { WidgetErrorCard } from '@/components/dashboard/widget-error-card';
 import { resolveSectionOrder, type DashboardSectionKey } from '@/lib/dashboard/sections';
+import { withTimeout } from '@/lib/with-timeout';
 import { fetchTransferCounterpartyAccountNames } from '@/lib/db/transfer-counterparty-names';
 import { getTransactionPrimaryLabel } from '@/lib/format/transaction-primary-label';
 import { forecastCashflow, type ForecastResult } from '@/lib/analytics/forecast';
@@ -494,30 +497,69 @@ export default async function PocetnaPage() {
   // RPC's day boundary aligned with `getMonthlySummary` for the same TZ.
   const dateParts = resolveSummaryDateParts(profile?.timezone);
 
-  const summaryPromise = getMonthlySummary(supabase, user.id, baseCurrency, dateParts);
-  const recentPromise = getRecentTransactions(supabase, user.id);
+  // AV-9: every dashboard query is wrapped in `withTimeout` so a hung query
+  // can't keep its Suspense boundary in skeleton state forever. 5000ms is
+  // 10× the typical Supabase query latency (most resolve in <500ms); a
+  // timeout that fires here is a real signal of a stuck query, not a
+  // false positive. The TimeoutError propagates to the section's
+  // `<SectionBoundary>` which renders a `<WidgetErrorCard>` fallback —
+  // sibling widgets keep streaming in unaffected. Sentry (PR-2) captures
+  // the error with `tags.sectionId` so we can grep "which widget hangs
+  // most often" in the Issues view.
+  const QUERY_TIMEOUT_MS = 5000;
+
+  const summaryPromise = withTimeout(
+    getMonthlySummary(supabase, user.id, baseCurrency, dateParts),
+    QUERY_TIMEOUT_MS,
+    'summary',
+  );
+  const recentPromise = withTimeout(
+    getRecentTransactions(supabase, user.id),
+    QUERY_TIMEOUT_MS,
+    'recent_transactions',
+  );
   // Fired in parallel with the other dashboard fetches; the widget awaits
   // it inside its own Suspense boundary so the rest of the page still
   // streams in independently.
-  const budgetsPromise = listBudgetsWithSpent(supabase, user.id, { onlyActive: true });
+  const budgetsPromise = withTimeout(
+    listBudgetsWithSpent(supabase, user.id, { onlyActive: true }),
+    QUERY_TIMEOUT_MS,
+    'budgets',
+  );
   // Forecast: server fetches the 90-day window once; the widget client-
   // side toggles between 30/60/90 by slicing without a refetch.
-  const forecastPromise = forecastCashflow(supabase, user.id, 90, { baseCurrency });
+  const forecastPromise = withTimeout(
+    forecastCashflow(supabase, user.id, 90, { baseCurrency }),
+    QUERY_TIMEOUT_MS,
+    'forecast',
+  );
   // Active recurring + installment summary so the widget can render the
   // "Šta utiče na projekciju" section without a second client fetch.
-  const forecastInfluencesPromise = loadForecastInfluences(supabase, user.id);
+  const forecastInfluencesPromise = withTimeout(
+    loadForecastInfluences(supabase, user.id),
+    QUERY_TIMEOUT_MS,
+    'forecast_influences',
+  );
   // Top 3 active insights for the dashboard widget. Engine writes nightly;
   // we just read the freshest active rows here.
-  const insightsPromise = listInsights(supabase, user.id, { mode: 'active', limit: 3 });
+  const insightsPromise = withTimeout(
+    listInsights(supabase, user.id, { mode: 'active', limit: 3 }),
+    QUERY_TIMEOUT_MS,
+    'insights',
+  );
   // Spending-by-category za "Pulse Donut" widget. Tekući kalendarski mjesec
   // u korisničkoj TZ; `dateParts.todayDate` osigurava poklapanje prozora
   // s `monthExpense`-om kojeg widget koristi za centar donut-a.
-  const spendingByCategoryPromise = getSpendingByCategory(supabase, {
-    period: 'monthly',
-    offset: 0,
-    baseCurrency,
-    todayDate: dateParts.todayDate,
-  });
+  const spendingByCategoryPromise = withTimeout(
+    getSpendingByCategory(supabase, {
+      period: 'monthly',
+      offset: 0,
+      baseCurrency,
+      todayDate: dateParts.todayDate,
+    }),
+    QUERY_TIMEOUT_MS,
+    'spending_by_category',
+  );
 
   const sectionOrder = resolveSectionOrder(profile?.dashboard_section_order);
 
@@ -527,53 +569,78 @@ export default async function PocetnaPage() {
   // above are dispatched in parallel regardless of visibility — the cost
   // is one or two unused promises for hidden sections, which is fine
   // since most users keep most widgets visible.
+  //
+  // AV-9: each Suspense is wrapped in a <SectionBoundary> that catches
+  // the timeout/rejection and renders <WidgetErrorCard> in place — the
+  // section breaks gracefully instead of escalating to the segment-level
+  // error.tsx (which would tear down every other widget too).
   const slots: Record<DashboardSectionKey, ReactNode> = {
     hero: (
-      <Suspense fallback={<DashboardHeroSkeleton />}>
-        <HeroSection
-          summaryPromise={summaryPromise}
-          baseCurrency={baseCurrency}
-          greeting={greeting}
-          firstName={firstName}
-        />
-      </Suspense>
+      <SectionBoundary sectionId="hero" fallback={<WidgetErrorCard label="Saldo" />}>
+        <Suspense fallback={<DashboardHeroSkeleton />}>
+          <HeroSection
+            summaryPromise={summaryPromise}
+            baseCurrency={baseCurrency}
+            greeting={greeting}
+            firstName={firstName}
+          />
+        </Suspense>
+      </SectionBoundary>
     ),
     donut: (
-      <Suspense fallback={<DashboardSpendingByCategorySkeleton />}>
-        <SpendingByCategorySection
-          spendingPromise={spendingByCategoryPromise}
-          summaryPromise={summaryPromise}
-          baseCurrency={baseCurrency}
-        />
-      </Suspense>
+      <SectionBoundary
+        sectionId="donut"
+        fallback={<WidgetErrorCard label="Potrošnja po kategorijama" />}
+      >
+        <Suspense fallback={<DashboardSpendingByCategorySkeleton />}>
+          <SpendingByCategorySection
+            spendingPromise={spendingByCategoryPromise}
+            summaryPromise={summaryPromise}
+            baseCurrency={baseCurrency}
+          />
+        </Suspense>
+      </SectionBoundary>
     ),
     forecast: (
-      <Suspense fallback={<DashboardForecastSkeleton />}>
-        <ForecastSection
-          forecastPromise={forecastPromise}
-          influencesPromise={forecastInfluencesPromise}
-        />
-      </Suspense>
+      <SectionBoundary sectionId="forecast" fallback={<WidgetErrorCard label="Projekcija" />}>
+        <Suspense fallback={<DashboardForecastSkeleton />}>
+          <ForecastSection
+            forecastPromise={forecastPromise}
+            influencesPromise={forecastInfluencesPromise}
+          />
+        </Suspense>
+      </SectionBoundary>
     ),
     budgets: (
-      <Suspense fallback={<DashboardBudgetsSkeleton />}>
-        <BudgetsWidget budgetsPromise={budgetsPromise} />
-      </Suspense>
+      <SectionBoundary sectionId="budgets" fallback={<WidgetErrorCard label="Budžeti" />}>
+        <Suspense fallback={<DashboardBudgetsSkeleton />}>
+          <BudgetsWidget budgetsPromise={budgetsPromise} />
+        </Suspense>
+      </SectionBoundary>
     ),
     insights: (
-      <Suspense fallback={<DashboardInsightsSkeleton />}>
-        <InsightsWidget insightsPromise={insightsPromise} />
-      </Suspense>
+      <SectionBoundary sectionId="insights" fallback={<WidgetErrorCard label="Uvidi" />}>
+        <Suspense fallback={<DashboardInsightsSkeleton />}>
+          <InsightsWidget insightsPromise={insightsPromise} />
+        </Suspense>
+      </SectionBoundary>
     ),
     recent_tx: (
-      <Suspense fallback={<DashboardRecentTransactionsSkeleton />}>
-        <RecentTransactionsSection recentPromise={recentPromise} />
-      </Suspense>
+      <SectionBoundary
+        sectionId="recent_tx"
+        fallback={<WidgetErrorCard label="Posljednje transakcije" />}
+      >
+        <Suspense fallback={<DashboardRecentTransactionsSkeleton />}>
+          <RecentTransactionsSection recentPromise={recentPromise} />
+        </Suspense>
+      </SectionBoundary>
     ),
     metrics: (
-      <Suspense fallback={<DashboardMetricsSkeleton />}>
-        <MetricsSection summaryPromise={summaryPromise} baseCurrency={baseCurrency} />
-      </Suspense>
+      <SectionBoundary sectionId="metrics" fallback={<WidgetErrorCard label="Mjesečni pregled" />}>
+        <Suspense fallback={<DashboardMetricsSkeleton />}>
+          <MetricsSection summaryPromise={summaryPromise} baseCurrency={baseCurrency} />
+        </Suspense>
+      </SectionBoundary>
     ),
   };
 
