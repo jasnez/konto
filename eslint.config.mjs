@@ -22,6 +22,10 @@ export default tseslint.config(
       'next-env.d.ts',
       '*.config.mjs',
       '*.config.ts',
+      // PR-2: Sentry's Next 15 instrumentation hook lives at the root.
+      // It's a thin re-export + runtime-aware import; lint ergonomics
+      // suffer from `process.env.NEXT_RUNTIME` access patterns.
+      'instrumentation.ts',
       'components/ui/**',
       'supabase/types.ts',
       'scripts/**',

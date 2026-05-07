@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { Button } from '@/components/ui/button';
 
 interface ErrorProps {
@@ -42,6 +43,11 @@ export default function AppSegmentError({ error, reset }: ErrorProps) {
     console.error('app_segment_error', {
       digest: error.digest,
       message: error.message,
+    });
+    // PR-2: forward to Sentry. No-op without NEXT_PUBLIC_SENTRY_DSN.
+    Sentry.captureException(error, {
+      tags: { boundary: 'app' },
+      extra: { digest: error.digest },
     });
   }, [error]);
 
