@@ -103,7 +103,7 @@ export function OtpStep({ email, onResend, onChangeEmail }: OtpStepProps) {
         <CardDescription>
           Poslali smo 6-cifreni kod na <span className="font-medium text-foreground">{email}</span>.
           <br />
-          Provjeri i spam folder. Kod važi 1 sat.
+          Provjeri i spam folder. Kod važi 15 minuta.
         </CardDescription>
       </CardHeader>
       <CardContent>
