@@ -18,6 +18,14 @@ function buildCsp(nonce: string): string {
   const supabaseWsUrl = supabaseUrl.replace(/^https:/u, 'wss:').replace(/^http:/u, 'ws:');
   const supabaseSrcs = supabaseUrl ? `${supabaseUrl} ${supabaseWsUrl} ` : '';
 
+  // PR-2 / Sentry: regional ingest endpoints for error capture. Wildcard
+  // is safe because the SDK only initiates requests when
+  // NEXT_PUBLIC_SENTRY_DSN is set (see sentry.client.config.ts). Listing
+  // all three regions (us / eu / de) avoids needing to redeploy if the
+  // user moves the project between Sentry regions.
+  const sentryIngest =
+    'https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io';
+
   return [
     "default-src 'self'",
     // 'strict-dynamic' lets chunks loaded by the nonced bootstrap inherit trust.
@@ -26,7 +34,7 @@ function buildCsp(nonce: string): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
-    `connect-src 'self' ${supabaseSrcs}https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://api.frankfurter.app`,
+    `connect-src 'self' ${supabaseSrcs}https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://api.frankfurter.app ${sentryIngest}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

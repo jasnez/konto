@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -77,4 +78,19 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// PR-2: Sentry wrapper. Build-time hooks (route instrumentation, source map
+// upload) are no-ops when SENTRY_AUTH_TOKEN is unset — see Sentry docs.
+// Runtime SDK (sentry.{client,server,edge}.config.ts) is gated on
+// NEXT_PUBLIC_SENTRY_DSN, so this wrapper is fully inert until the user
+// sets at least the DSN env var.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Quiet build output when source map upload is skipped (no auth token).
+  silent: !process.env.SENTRY_AUTH_TOKEN,
+  // Tunnel through `/monitoring` to bypass ad-blockers; safe even without
+  // DSN since the SDK only initiates requests when DSN is present.
+  tunnelRoute: '/monitoring',
+  // Disable telemetry pings to Sentry from the build itself.
+  telemetry: false,
+});

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import * as Sentry from '@sentry/nextjs';
 import { Button } from '@/components/ui/button';
 
 interface ErrorProps {
@@ -97,6 +98,12 @@ export default function Error({ error, reset }: ErrorProps) {
       digest: error.digest,
       message: error.message,
       type: classification.type,
+    });
+    // PR-2: forward to Sentry for grouping + breadcrumbs. No-op without
+    // NEXT_PUBLIC_SENTRY_DSN. PII scrubbed in beforeSend (sentry-scrub.ts).
+    Sentry.captureException(error, {
+      tags: { boundary: 'root', errorType: classification.type },
+      extra: { digest: error.digest },
     });
   }, [error, classification]);
 

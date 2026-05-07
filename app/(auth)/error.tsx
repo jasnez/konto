@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import * as Sentry from '@sentry/nextjs';
 import { Button } from '@/components/ui/button';
 
 interface ErrorProps {
@@ -14,6 +15,11 @@ export default function AuthSegmentError({ error, reset }: ErrorProps) {
     console.error('auth_segment_error', {
       digest: error.digest,
       message: error.message,
+    });
+    // PR-2: forward to Sentry. No-op without NEXT_PUBLIC_SENTRY_DSN.
+    Sentry.captureException(error, {
+      tags: { boundary: 'auth' },
+      extra: { digest: error.digest },
     });
   }, [error]);
 
