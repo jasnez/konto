@@ -1016,6 +1016,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      rate_limits_anon: {
+        Row: {
+          action: string;
+          bucket_key: string;
+          created_at: string;
+          id: string;
+        };
+        Insert: {
+          action: string;
+          bucket_key: string;
+          created_at?: string;
+          id?: string;
+        };
+        Update: {
+          action?: string;
+          bucket_key?: string;
+          created_at?: string;
+          id?: string;
+        };
+        Relationships: [];
+      };
       receipt_scans: {
         Row: {
           created_at: string;
@@ -1401,6 +1422,15 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      check_anon_rate_limit_and_record: {
+        Args: {
+          p_action: string;
+          p_bucket_key: string;
+          p_limit: number;
+          p_window_seconds: number;
+        };
+        Returns: boolean;
+      };
       check_rate_limit_and_record: {
         Args: {
           p_action: string;
