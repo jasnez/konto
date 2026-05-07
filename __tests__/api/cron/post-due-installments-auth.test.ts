@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock dependencies before importing the route handler.
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(),
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: vi.fn(),
 }));
 
 vi.mock('@/lib/fx/convert', () => ({
@@ -18,7 +18,7 @@ vi.mock('@/lib/logger', () => ({
 }));
 
 import { GET } from '@/app/api/cron/post-due-installments/route';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { logSafe } from '@/lib/logger';
 
 function makeRequest(bearer?: string): Request {
@@ -59,10 +59,14 @@ describe('POST /api/cron/post-due-installments — auth', () => {
     expect(body.error).toBe('Unauthorized');
   });
 
-  it('passes auth with correct bearer token', async () => {
+  it('uses createAdminClient (PR-1 regression guard) and returns 200 on auth success', async () => {
     vi.stubEnv('CRON_SECRET', 'correct-secret');
 
     // Mock supabase to return empty occurrences so the handler finishes quickly.
+    // createAdminClient is sync (returns SupabaseClient directly), unlike the
+    // cookie-based createClient that this route used before PR-1 — a sync
+    // mockReturnValue here is intentional and protects against accidental
+    // re-introduction of the broken async pattern.
     const selectMock = vi.fn().mockReturnValue({
       eq: vi.fn().mockReturnValue({
         lte: vi.fn().mockReturnValue({
@@ -70,13 +74,14 @@ describe('POST /api/cron/post-due-installments — auth', () => {
         }),
       }),
     });
-    vi.mocked(createClient).mockResolvedValue({
+    vi.mocked(createAdminClient).mockReturnValue({
       from: vi.fn().mockReturnValue({ select: selectMock }),
     } as never);
 
     const res = await GET(makeRequest('Bearer correct-secret'));
 
     expect(res.status).toBe(200);
+    expect(vi.mocked(createAdminClient)).toHaveBeenCalledTimes(1);
     const body = (await res.json()) as { posted: number; failed: number };
     expect(body.posted).toBe(0);
     expect(body.failed).toBe(0);

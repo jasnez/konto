@@ -2,7 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { computeAccountLedgerCents } from '@/lib/fx/account-ledger';
 import { convertToBase } from '@/lib/fx/convert';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { logSafe } from '@/lib/logger';
 
 /**
@@ -29,7 +29,12 @@ export async function GET(request: Request) {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const supabase = await createClient();
+  // Service role: cron runs without a user session (no cookies), so a
+  // cookie-based createClient() falls back to anon and RLS on
+  // installment_occurrences (FK -> installment_plans.user_id) returns 0
+  // rows. createAdminClient bypasses RLS via service-role JWT — same
+  // pattern as /api/cron/insights-nightly. (PR-1)
+  const supabase = createAdminClient();
 
   // Fetch pending occurrences due today or earlier.
   const { data: occurrences, error: fetchErr } = await supabase
