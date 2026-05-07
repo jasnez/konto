@@ -315,6 +315,21 @@ export type Database = {
           },
         ];
       };
+      cron_executions: {
+        Row: {
+          cron_name: string;
+          last_run_at: string;
+        };
+        Insert: {
+          cron_name: string;
+          last_run_at?: string;
+        };
+        Update: {
+          cron_name?: string;
+          last_run_at?: string;
+        };
+        Relationships: [];
+      };
       deletion_cancel_tokens: {
         Row: {
           consumed_at: string;
@@ -1422,6 +1437,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      acquire_cron_lock: {
+        Args: { p_cron_name: string; p_min_interval_seconds: number };
+        Returns: boolean;
+      };
       check_anon_rate_limit_and_record: {
         Args: {
           p_action: string;

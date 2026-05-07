@@ -36,6 +36,24 @@ export async function GET(request: Request) {
   // pattern as /api/cron/insights-nightly. (PR-1)
   const supabase = createAdminClient();
 
+  // SE-11: server-side replay protection. Same rationale as insights-nightly
+  // — Vercel Cron sender can't inject per-request nonces, so we lock per
+  // cron name in the DB. 22h interval matches the daily 06:00 UTC schedule
+  // with 2h slack. Without this, a leaked CRON_SECRET could replay this
+  // endpoint to post duplicate installment transactions on every replay.
+  const lock = await supabase.rpc('acquire_cron_lock', {
+    p_cron_name: 'post_due_installments',
+    p_min_interval_seconds: 22 * 60 * 60,
+  });
+  if (lock.error) {
+    logSafe('post_due_installments_lock_error', { error: lock.error.message });
+    return NextResponse.json({ error: 'Lock RPC failed' }, { status: 500 });
+  }
+  if (!lock.data) {
+    logSafe('post_due_installments_replay_rejected', {});
+    return NextResponse.json({ error: 'Replay rejected' }, { status: 409 });
+  }
+
   // Fetch pending occurrences due today or earlier.
   const { data: occurrences, error: fetchErr } = await supabase
     .from('installment_occurrences')
