@@ -1,8 +1,7 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { addDays, format } from 'date-fns';
 import {
-  _resetEventDateMap,
   aggregateHistoryStats,
   computeBaseline,
   findLowestPoint,
@@ -139,10 +138,6 @@ describe('findRunway', () => {
 
 // ─── Recurring + installment generators ─────────────────────────────────────
 
-afterEach(() => {
-  _resetEventDateMap();
-});
-
 describe('generateRecurringEvents', () => {
   it('emits one event per occurrence inside the horizon for monthly cadence', async () => {
     const recurring: RecurringRow[] = [
@@ -162,10 +157,10 @@ describe('generateRecurringEvents', () => {
     // Monthly cadence anchored at 2026-05-01 → events at 05-01, 06-01, 07-01.
     const events = await generateRecurringEvents(recurring, NOW, 90, 'BAM', TODAY_ISO, true);
     expect(events).toHaveLength(3);
-    for (const e of events) {
-      expect(e.type).toBe('recurring');
-      expect(e.amountCents).toBe(-1500n);
-      expect(e.sourceId).toBe('r1');
+    for (const { event } of events) {
+      expect(event.type).toBe('recurring');
+      expect(event.amountCents).toBe(-1500n);
+      expect(event.sourceId).toBe('r1');
     }
   });
 
@@ -272,10 +267,10 @@ describe('generateInstallmentEvents', () => {
     // 05-20, 06-20, 07-20 (last one is past horizon).
     const events = await generateInstallmentEvents(installments, NOW, 90, 'BAM', TODAY_ISO, true);
     expect(events).toHaveLength(3);
-    for (const e of events) {
-      expect(e.type).toBe('installment');
-      expect(e.amountCents).toBe(-50000n);
-      expect(e.sourceId).toBe('ip1');
+    for (const { event } of events) {
+      expect(event.type).toBe('installment');
+      expect(event.amountCents).toBe(-50000n);
+      expect(event.sourceId).toBe('ip1');
     }
   });
 
@@ -1041,5 +1036,155 @@ describe('forecastCashflow (performance)', () => {
 
     expect(elapsed).toBeLessThan(500);
     expect(result.projections).toHaveLength(90);
+  });
+});
+
+// ─── AV-7 regression: dated-event pipeline integrity ────────────────────────
+//
+// Pre-fix the projection pipeline tracked event dates in a module-local
+// `Map<index, dateIso>` populated by `generateRecurringEvents` and
+// `generateInstallmentEvents` using their own `out.length - 1` keys. Both
+// generators wrote into the same Map, so installment writes overwrote
+// recurring writes at colliding indices (recurring events ended up on
+// installment dates), and the trailing M − N events read `undefined`
+// dates and were silently dropped. The performance test above happens
+// to exercise both streams but only measures duration; it never asserted
+// "this event lands on the day it should". These tests fill the gap.
+describe('forecastCashflow (AV-7 regression: recurring + installments)', () => {
+  it('places recurring + installment events on their own dates when both exist', async () => {
+    const accounts: AccountRow[] = [
+      {
+        id: 'a1',
+        type: 'checking',
+        currency: 'BAM',
+        current_balance_cents: 100_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+    ];
+    const recurring: RecurringRow[] = [
+      {
+        id: 'r1',
+        description: 'Netflix',
+        period: 'monthly',
+        average_amount_cents: -1500,
+        currency: 'BAM',
+        next_expected_date: '2026-04-20', // 5 days after NOW
+        last_seen_date: null,
+        paused_until: null,
+        active: true,
+      },
+    ];
+    const installments: InstallmentRow[] = [
+      {
+        id: 'ip1',
+        notes: 'iPhone rata',
+        account_id: 'a1',
+        currency: 'BAM',
+        installment_count: 1,
+        installment_cents: 50_000,
+        start_date: '2026-04-15',
+        day_of_month: 25, // emits on 2026-04-25
+        status: 'active',
+        posted_count: 0,
+      },
+    ];
+    const result = await forecastCashflow(
+      makeSupabase({ accounts, recurring, installments }),
+      'u-1',
+      30,
+      { now: NOW, skipFx: true },
+    );
+
+    const dayApr20 = result.projections.find((d) => d.date === '2026-04-20');
+    expect(dayApr20).toBeDefined();
+    expect(dayApr20?.events.some((e) => e.type === 'recurring' && e.sourceId === 'r1')).toBe(true);
+    // Pre-fix: recurring's slot in the Map got overwritten with the installment date,
+    // so the recurring event would erroneously land on 2026-04-25 instead of 2026-04-20.
+    expect(dayApr20?.events.some((e) => e.type === 'installment')).toBe(false);
+
+    const dayApr25 = result.projections.find((d) => d.date === '2026-04-25');
+    expect(dayApr25).toBeDefined();
+    expect(dayApr25?.events.some((e) => e.type === 'installment' && e.sourceId === 'ip1')).toBe(
+      true,
+    );
+    // Pre-fix: the installment at idx-in-events 1 (after the recurring) read
+    // `undefined` from the Map (only key 0 was set after the overwrite), so
+    // it would silently be dropped from every day.
+    expect(dayApr25?.events.some((e) => e.type === 'recurring')).toBe(false);
+  });
+
+  it('two parallel forecastCashflow calls do not corrupt each other', async () => {
+    // Two distinct user fixtures — different accounts, different recurring
+    // sourceIds, different next_expected_date. Pre-fix, the shared module-
+    // local eventDateMap meant whichever forecast called projectDayByDay
+    // last would clear the Map mid-pipeline of the other call (or worse,
+    // overwrite entries). Post-fix each call owns its own state inline.
+    const accountsA: AccountRow[] = [
+      {
+        id: 'a-A',
+        type: 'checking',
+        currency: 'BAM',
+        current_balance_cents: 50_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+    ];
+    const recurringA: RecurringRow[] = [
+      {
+        id: 'r-A',
+        description: 'User A subscription',
+        period: 'monthly',
+        average_amount_cents: -2000,
+        currency: 'BAM',
+        next_expected_date: '2026-04-22',
+        last_seen_date: null,
+        paused_until: null,
+        active: true,
+      },
+    ];
+    const accountsB: AccountRow[] = [
+      {
+        id: 'a-B',
+        type: 'checking',
+        currency: 'BAM',
+        current_balance_cents: 80_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+    ];
+    const recurringB: RecurringRow[] = [
+      {
+        id: 'r-B',
+        description: 'User B subscription',
+        period: 'monthly',
+        average_amount_cents: -3000,
+        currency: 'BAM',
+        next_expected_date: '2026-04-28',
+        last_seen_date: null,
+        paused_until: null,
+        active: true,
+      },
+    ];
+
+    const [resA, resB] = await Promise.all([
+      forecastCashflow(makeSupabase({ accounts: accountsA, recurring: recurringA }), 'u-A', 30, {
+        now: NOW,
+        skipFx: true,
+      }),
+      forecastCashflow(makeSupabase({ accounts: accountsB, recurring: recurringB }), 'u-B', 30, {
+        now: NOW,
+        skipFx: true,
+      }),
+    ]);
+
+    // User A sees r-A on 2026-04-22 and never sees r-B anywhere.
+    const aDay22 = resA.projections.find((d) => d.date === '2026-04-22');
+    expect(aDay22?.events.some((e) => e.sourceId === 'r-A')).toBe(true);
+    const aAllSourceIds = resA.projections.flatMap((d) => d.events.map((e) => e.sourceId));
+    expect(aAllSourceIds).not.toContain('r-B');
+
+    // User B sees r-B on 2026-04-28 and never sees r-A anywhere.
+    const bDay28 = resB.projections.find((d) => d.date === '2026-04-28');
+    expect(bDay28?.events.some((e) => e.sourceId === 'r-B')).toBe(true);
+    const bAllSourceIds = resB.projections.flatMap((d) => d.events.map((e) => e.sourceId));
+    expect(bAllSourceIds).not.toContain('r-A');
   });
 });

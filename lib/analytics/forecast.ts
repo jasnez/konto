@@ -61,6 +61,21 @@ export interface ForecastEvent {
   sourceId?: string;
 }
 
+/**
+ * Internal pairing of a `ForecastEvent` with the calendar day it lands on.
+ * The public `ForecastEvent` shape stays date-free (the day is implicit
+ * from `ForecastDay.date` in the final result), but the projection
+ * pipeline needs the date attached to each event so that recurring +
+ * installment streams can be concatenated and bucketed without sharing
+ * out-of-band index state. Predates this type was tracked in a
+ * module-local `Map<index, dateIso>` which collided across generators
+ * (AV-7 in pre-release-audit-2026-05-07.md).
+ */
+export interface DatedForecastEvent {
+  event: ForecastEvent;
+  dateIso: string;
+}
+
 export interface ForecastDay {
   /** YYYY-MM-DD. */
   date: string;
@@ -391,7 +406,10 @@ export async function forecastCashflow(
     monthlyEquivalent(recurringEvents) + monthlyEquivalent(installmentEvents),
   );
 
-  // 5. Project day-by-day.
+  // 5. Project day-by-day. Each generator returns DatedForecastEvent[]
+  //    (event paired with its calendar day inline) so concatenation here
+  //    is safe — the projector reads dates per-item and never relies on
+  //    array-position lookups against a shared Map.
   const projections = projectDayByDay(
     startBalanceCents,
     today,
@@ -472,8 +490,8 @@ export async function generateRecurringEvents(
   baseCurrency: string,
   todayIso: string,
   skipFx: boolean,
-): Promise<ForecastEvent[]> {
-  const out: ForecastEvent[] = [];
+): Promise<DatedForecastEvent[]> {
+  const out: DatedForecastEvent[] = [];
   const horizon = addDays(today, daysAhead);
 
   for (const r of recurring) {
@@ -517,36 +535,20 @@ export async function generateRecurringEvents(
       // Skip while paused.
       if (!(pausedUntil && cursor.getTime() <= pausedUntil.getTime())) {
         out.push({
-          type: 'recurring',
-          description: r.description,
-          amountCents: amountInBase,
-          sourceId: r.id,
-          // Date is encoded into the projection key during projectDayByDay
-          // by the order events are pushed; we tag the iso here too via a
-          // closure on the bucket below.
-          // (see ForecastEvent — date isn't on it; the per-day map carries it.)
+          event: {
+            type: 'recurring',
+            description: r.description,
+            amountCents: amountInBase,
+            sourceId: r.id,
+          },
+          dateIso: cursorIso,
         });
-        // Tagging via bucket:
-        eventDateMap.set(out.length - 1, cursorIso);
       }
       cursor = stepPeriod(cursor, r.period);
     }
   }
   return out;
 }
-
-/**
- * The recurring/installment generators emit events in a flat array but
- * the projector needs to know which day each one hits. We carry that
- * mapping out-of-band so `ForecastEvent` (the public shape) stays free
- * of internal scheduling fields.
- *
- * NB: this is module-local mutable state — callers must not interleave
- * `generateRecurringEvents` and `generateInstallmentEvents` calls
- * across different forecasts. The pipeline always runs both for one
- * user before reading the map, so that constraint is implicit.
- */
-const eventDateMap = new Map<number, string>();
 
 function anchorDate(r: RecurringRow, today: Date): Date | null {
   if (r.next_expected_date) {
@@ -596,8 +598,8 @@ export async function generateInstallmentEvents(
   baseCurrency: string,
   todayIso: string,
   skipFx: boolean,
-): Promise<ForecastEvent[]> {
-  const out: ForecastEvent[] = [];
+): Promise<DatedForecastEvent[]> {
+  const out: DatedForecastEvent[] = [];
   const horizon = addDays(today, daysAhead);
 
   for (const ip of installments) {
@@ -635,12 +637,14 @@ export async function generateInstallmentEvents(
       if (due.getTime() <= today.getTime()) continue;
       if (due.getTime() > horizon.getTime()) break;
       out.push({
-        type: 'installment',
-        description: ip.notes ?? 'Rata',
-        amountCents: signed,
-        sourceId: ip.id,
+        event: {
+          type: 'installment',
+          description: ip.notes ?? 'Rata',
+          amountCents: signed,
+          sourceId: ip.id,
+        },
+        dateIso: format(due, 'yyyy-MM-dd'),
       });
-      eventDateMap.set(out.length - 1, format(due, 'yyyy-MM-dd'));
     }
   }
   return out;
@@ -736,11 +740,11 @@ export function computeBaseline(
  *  Naive — assumes events are roughly uniform across the window. Good
  *  enough for offsetting the baseline (the projection itself uses the
  *  exact dates). */
-function monthlyEquivalent(events: readonly ForecastEvent[]): bigint {
+function monthlyEquivalent(events: readonly DatedForecastEvent[]): bigint {
   if (events.length === 0) return 0n;
   let absSum = 0n;
-  for (const e of events) {
-    absSum += e.amountCents < 0n ? -e.amountCents : e.amountCents;
+  for (const { event } of events) {
+    absSum += event.amountCents < 0n ? -event.amountCents : event.amountCents;
   }
   // Events live across the whole window; we don't know the window
   // length in here, so we use a 90-day proxy → /3 for monthly. Caller
@@ -755,20 +759,19 @@ export function projectDayByDay(
   startBalanceCents: bigint,
   today: Date,
   daysAhead: number,
-  events: readonly ForecastEvent[],
+  events: readonly DatedForecastEvent[],
   baseline: BaselineDailyFlow,
 ): ForecastDay[] {
-  // Bucket events by date.
+  // Bucket events by date. Each event carries its own dateIso, so
+  // concatenated streams from generateRecurringEvents +
+  // generateInstallmentEvents are safe to merge — no shared positional
+  // state, no possibility of cross-stream collision (AV-7 fix).
   const buckets = new Map<string, ForecastEvent[]>();
-  events.forEach((e, idx) => {
-    const date = eventDateMap.get(idx);
-    if (!date) return;
-    const bucket = buckets.get(date);
-    if (bucket) bucket.push(e);
-    else buckets.set(date, [e]);
-  });
-  // Once consumed, clear the index so the next forecast starts clean.
-  eventDateMap.clear();
+  for (const { event, dateIso } of events) {
+    const bucket = buckets.get(dateIso);
+    if (bucket) bucket.push(event);
+    else buckets.set(dateIso, [event]);
+  }
 
   const days: ForecastDay[] = [];
   let balance = startBalanceCents;
@@ -848,16 +851,4 @@ export function findRunway(projections: readonly ForecastDay[]): number | null {
  */
 export function daysBetween(a: string, b: string): number {
   return differenceInCalendarDays(parseISO(b), parseISO(a));
-}
-
-/**
- * Test-only: clear the internal event-date map so back-to-back
- * forecasts in a single test process don't bleed events between
- * runs. Production code never needs this — projectDayByDay clears
- * the map after consuming it.
- *
- * @internal
- */
-export function _resetEventDateMap(): void {
-  eventDateMap.clear();
 }
