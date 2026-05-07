@@ -24,7 +24,8 @@ export type PreviewInviteResult =
     }
   | { success: false; error: 'INVITE_INVALID' }
   | { success: false; error: 'INVITE_USED' }
-  | { success: false; error: 'INVITE_EXPIRED' };
+  | { success: false; error: 'INVITE_EXPIRED' }
+  | { success: false; error: 'RATE_LIMITED' };
 
 /**
  * Validates an invite code against the `preview_invite_code` RPC without
@@ -53,6 +54,12 @@ export async function previewInvite(input: unknown): Promise<PreviewInviteResult
     .single<string>();
 
   if (error) {
+    // SE-10: preview_invite_code raises 'RATE_LIMITED' (P0001) when the
+    // caller IP exceeds 30 lookups/min. Map it here so the form can
+    // surface a friendly retry message instead of generic INVITE_INVALID.
+    if (error.message.includes('RATE_LIMITED')) {
+      return { success: false, error: 'RATE_LIMITED' };
+    }
     logSafe('preview_invite_error', { error: error.message });
     return { success: false, error: 'INVITE_INVALID' };
   }
@@ -124,6 +131,7 @@ export type SendSignupOtpResult =
   | { success: false; error: 'INVITE_INVALID' }
   | { success: false; error: 'INVITE_USED' }
   | { success: false; error: 'INVITE_EXPIRED' }
+  | { success: false; error: 'RATE_LIMITED' }
   | { success: false; error: 'EMAIL_SEND_FAILED' };
 
 /**
@@ -167,6 +175,13 @@ export async function sendSignupOtp(input: unknown): Promise<SendSignupOtpResult
       .single<string>();
 
     if (previewErr) {
+      // SE-10: same rate-limit mapping as previewInvite. Reaching here
+      // means the user already passed Step 1 (so their IP previously
+      // had quota), but the per-IP bucket has since exhausted —
+      // surface RATE_LIMITED so the email step can show a retry hint.
+      if (previewErr.message.includes('RATE_LIMITED')) {
+        return { success: false, error: 'RATE_LIMITED' };
+      }
       logSafe('send_signup_invite_preview_error', { error: previewErr.message });
       return { success: false, error: 'INVITE_INVALID' };
     }

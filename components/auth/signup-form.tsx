@@ -43,6 +43,10 @@ const INVITE_ERROR_COPY: Record<string, string> = {
   INVITE_INVALID: 'Pozivnica ne postoji. Provjeri da nije s razmakom ili pogrešnim slovom.',
   INVITE_USED: 'Ova pozivnica je već iskorištena.',
   INVITE_EXPIRED: 'Ova pozivnica je istekla. Zatraži novu.',
+  // SE-10: server-side rate-limit hit (30 lookups/min/IP). InviteStep falls
+  // back to the COPY map automatically; EmailStep matches RATE_LIMITED in
+  // its switch below.
+  RATE_LIMITED: 'Previše brzih pokušaja. Sačekaj minutu i pokušaj ponovo.',
 };
 
 type Step = 'invite' | 'email' | 'otp';
@@ -278,10 +282,12 @@ function EmailStep({
       result.error === 'INVITE_REQUIRED' ||
       result.error === 'INVITE_INVALID' ||
       result.error === 'INVITE_USED' ||
-      result.error === 'INVITE_EXPIRED'
+      result.error === 'INVITE_EXPIRED' ||
+      result.error === 'RATE_LIMITED'
     ) {
-      // Invite became invalid between Step 1 and Step 2 (race or expiry).
-      // Bounce back to invite step with a message via toast.
+      // Invite became invalid between Step 1 and Step 2 (race / expiry /
+      // rate-limit on the per-IP bucket). Bounce back to invite step
+      // with a message via toast.
       toast.error(INVITE_ERROR_COPY[result.error] ?? 'Pozivnica nije valjana.');
       onBack?.();
       return;
