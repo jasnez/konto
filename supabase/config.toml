@@ -79,7 +79,14 @@ allowed_cidrs_v6 = ["::/0"]
 # enabled = true
 
 [realtime]
-enabled = true
+# Konto does not subscribe to any Realtime channel — verified 2026-05-08
+# (audit C.2 / RT.1). The only "live" subscription is supabase.auth.
+# onAuthStateChange (SDK-level event emitter, not Realtime protocol).
+# Disable to drop ~50MB of dev-stack RAM and cut local cold-start time.
+# Re-enable when Realtime is actually used (e.g. live insights bell, live
+# transaction stream). When re-enabled, scope channels per-user and add
+# .unsubscribe() in component cleanup to avoid connection leaks.
+enabled = false
 # Bind realtime via either IPv4 or IPv6. (default: IPv4)
 # ip_version = "IPv6"
 # The maximum length in bytes of HTTP request headers. (default: 4096)
