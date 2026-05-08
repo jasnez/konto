@@ -7,6 +7,16 @@
 -- soft-deleted, or if split/transfer references pointed at already-deleted rows.
 -- INSERT still uses the strict helpers so you cannot *create* new rows against
 -- soft-deleted accounts. UPDATE uses relaxed "row exists and same user" checks.
+--
+-- ⚠ DO NOT REVERT THIS MIGRATION TO 00002's STRICTER POLICY.
+-- ─────────────────────────────────────────────────────────
+-- A future "tighten RLS" PR may be tempted to re-apply 00002's policy that
+-- uses `user_owns_account` (strict) instead of `user_owns_account_row`
+-- (relaxed).  That breaks the soft-delete UX: a user who soft-deletes an
+-- account can no longer soft-delete the orphaned transactions in it,
+-- because the strict helper rejects the deleted account.  Verified during
+-- RLS.3 audit 2026-05-08.  See `__tests__/rls/transactions.test.ts` for
+-- the exact UX flow this protects.
 -- =============================================================================
 
 create or replace function public.user_owns_account_row(p_account_id uuid)

@@ -14,9 +14,35 @@
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     await import('./sentry.server.config');
+    await assertGeminiKeyConfigured();
   }
   if (process.env.NEXT_RUNTIME === 'edge') {
     await import('./sentry.edge.config');
+  }
+}
+
+/**
+ * S.4 (Supabase architecture audit 2026-05-08): surface a missing
+ * GEMINI_API_KEY at server cold-start so a misconfigured Vercel deploy
+ * fails loudly via Sentry rather than only when the first user tries to
+ * import a PDF. Soft failure — does NOT crash the app, because users who
+ * never touch the import flow should keep working. Sentry de-dupes
+ * identical captureMessage calls so cold-start spam is bounded.
+ */
+async function assertGeminiKeyConfigured(): Promise<void> {
+  const isProd = process.env.NODE_ENV === 'production';
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!isProd || (geminiKey && geminiKey.length > 0)) return;
+
+  try {
+    const Sentry = await import('@sentry/nextjs');
+    Sentry.captureMessage(
+      'GEMINI_API_KEY is missing in production. PDF import + LLM categorization will fail when invoked. Set the env var in Vercel and redeploy.',
+      'error',
+    );
+  } catch {
+    // Sentry not configured — fall through; the parse route still throws
+    // a clear "GEMINI_API_KEY nije konfigurisan" at first invocation.
   }
 }
 

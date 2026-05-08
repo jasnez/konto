@@ -73,7 +73,23 @@ export async function updateSession(request: NextRequest, extraRequestHeaders?: 
       .maybeSingle();
 
     if (profileError) {
+      // S.5 (audit 2026-05-08): the lenient fall-through here is intentional
+      // — a transient DB blip should not log every authed user out. But the
+      // event needs explicit visibility: page-level getUser() will re-check,
+      // and the user keeps moving, so the only signal that middleware fell
+      // back is this breadcrumb + Sentry message. logSafe alone goes to
+      // console, which the Edge runtime Sentry config (integrations: []) does
+      // not auto-capture.
       logSafe('middleware_profile_deleted_check_error', { error: profileError.message });
+      try {
+        const Sentry = await import('@sentry/nextjs');
+        Sentry.captureMessage(
+          `middleware_profile_deleted_check_error: ${profileError.message}`,
+          'warning',
+        );
+      } catch {
+        // Sentry not configured — logSafe already logged; nothing more to do.
+      }
     } else if (profile?.deleted_at) {
       const path = request.nextUrl.pathname;
       const allowedWhenDeleted =
