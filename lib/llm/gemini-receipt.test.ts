@@ -134,6 +134,64 @@ describe('extractReceiptFields', () => {
     expect(result.error).toBe('ENETDOWN');
   });
 
+  it('includes today date as a temporal anchor in the prompt (regression)', async () => {
+    // Locks in B1: the prompt MUST tell Gemini what "today" is, plus the
+    // anti-hallucination rule about dates more than a year old. Without
+    // this, Gemini is happy to return e.g. 2008-05-26 from a Swedish
+    // receipt printed in 2026 — see audit 2026-05-08.
+    const payload = JSON.stringify({
+      total_amount: 1,
+      currency: 'SEK',
+      date: '2026-05-08',
+      merchant_name: 'X',
+      items: [],
+    });
+    const fetchMock = vi.fn().mockResolvedValue(mockGeminiResponse(payload));
+    global.fetch = fetchMock;
+
+    await extractReceiptFields(fakeImage, 'image/jpeg', '2026-05-08');
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    // The implementation passes a `JSON.stringify(...)` string here; the
+    // assertion is so eslint doesn't fall back to {}-stringification.
+    const body = JSON.parse(init.body as string) as {
+      contents: { parts: { text?: string }[] }[];
+    };
+    const promptText = body.contents[0].parts.find((p) => typeof p.text === 'string')?.text ?? '';
+
+    expect(promptText).toContain('DANAŠNJI DATUM: 2026-05-08');
+    // Anti-hallucination guard: must explicitly call out the digit-order
+    // ambiguity that produced the 2008/2020 misreads.
+    expect(promptText).toMatch(/godinu dana/u);
+    expect(promptText).toContain('MM/DD/YYYY');
+  });
+
+  it('falls back to server UTC today when no anchor is passed', async () => {
+    const payload = JSON.stringify({
+      total_amount: 1,
+      currency: 'EUR',
+      date: '2026-05-09',
+      merchant_name: 'X',
+      items: [],
+    });
+    const fetchMock = vi.fn().mockResolvedValue(mockGeminiResponse(payload));
+    global.fetch = fetchMock;
+
+    await extractReceiptFields(fakeImage, 'image/jpeg');
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    // The implementation passes a `JSON.stringify(...)` string here; the
+    // assertion is so eslint doesn't fall back to {}-stringification.
+    const body = JSON.parse(init.body as string) as {
+      contents: { parts: { text?: string }[] }[];
+    };
+    const promptText = body.contents[0].parts.find((p) => typeof p.text === 'string')?.text ?? '';
+
+    // Whatever today is on the test runner, the prompt should embed an
+    // ISO YYYY-MM-DD — not be empty / not be the literal placeholder.
+    expect(promptText).toMatch(/DANAŠNJI DATUM: \d{4}-\d{2}-\d{2}/u);
+  });
+
   it('returns ok=false with timeout message when fetch aborts', async () => {
     // Simulate Gemini hanging: fetch rejects with AbortError when the signal fires.
     global.fetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {

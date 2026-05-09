@@ -1,6 +1,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { CategorizationSource } from '@/lib/categorization/cascade';
+import { revalidateAfterTransactionWrite } from '@/lib/server/revalidate-views';
 import { createClient } from '@/lib/supabase/server';
 import { logSafe } from '@/lib/logger';
 
@@ -25,12 +26,8 @@ export function buildValidationDetails(error: z.ZodError): ValidationDetails {
 }
 
 export function revalidateImportViews(accountId: string | null): void {
+  revalidateAfterTransactionWrite(accountId ? [accountId] : []);
   revalidatePath('/import');
-  revalidatePath('/transakcije');
-  revalidatePath('/pocetna');
-  if (accountId) {
-    revalidatePath(`/racuni/${accountId}`);
-  }
 }
 
 export function bigintToDbInt(value: bigint): number {

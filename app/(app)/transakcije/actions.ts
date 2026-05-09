@@ -18,6 +18,7 @@ import {
   ensureOwnedCategory,
   ensureOwnedMerchant,
 } from '@/lib/server/db/ensure-owned';
+import { revalidateAfterTransactionWrite } from '@/lib/server/revalidate-views';
 import type { Database } from '@/supabase/types';
 import { logSafe } from '@/lib/logger';
 
@@ -230,14 +231,6 @@ async function findDuplicateTransaction(
   return { id: data.id };
 }
 
-function revalidateTransactionViews(accountIds: string[]): void {
-  revalidatePath('/transakcije');
-  revalidatePath('/pocetna');
-  for (const accountId of new Set(accountIds)) {
-    revalidatePath(`/racuni/${accountId}`);
-  }
-}
-
 export async function createTransaction(input: unknown): Promise<CreateTransactionResult> {
   const parsed = CreateTransactionSchema.safeParse(input);
   if (!parsed.success) {
@@ -368,7 +361,7 @@ export async function createTransaction(input: unknown): Promise<CreateTransacti
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidateTransactionViews([parsedData.account_id]);
+  revalidateAfterTransactionWrite([parsedData.account_id]);
   return { success: true, data: { id: tx.id } };
 }
 
@@ -453,7 +446,7 @@ async function createTransferPair(
   }
 
   const result = rpcData as unknown as RpcResult;
-  revalidateTransactionViews([parsedData.account_id, toAccountId]);
+  revalidateAfterTransactionWrite([parsedData.account_id, toAccountId]);
   return { success: true, data: { id: result.from_id, transferPairId: result.to_id } };
 }
 
@@ -615,7 +608,7 @@ export async function updateTransaction(
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidateTransactionViews([existingRow.account_id, finalInput.account_id]);
+  revalidateAfterTransactionWrite([existingRow.account_id, finalInput.account_id]);
   return { success: true };
 }
 
@@ -701,7 +694,7 @@ export async function updateTransactionCategory(
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidateTransactionViews([existing.account_id]);
+  revalidateAfterTransactionWrite([existing.account_id]);
   return { success: true };
 }
 
@@ -777,7 +770,7 @@ export async function deleteTransaction(id: unknown): Promise<DeleteTransactionR
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidateTransactionViews(affectedAccountIds);
+  revalidateAfterTransactionWrite(affectedAccountIds);
   return { success: true };
 }
 
@@ -826,7 +819,7 @@ export async function restoreTransaction(id: unknown): Promise<RestoreTransactio
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidateTransactionViews([existing.account_id]);
+  revalidateAfterTransactionWrite([existing.account_id]);
   return { success: true };
 }
 
@@ -897,7 +890,7 @@ export async function bulkDeleteTransactions(ids: unknown): Promise<BulkDeleteTr
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidateTransactionViews(allAccountIds);
+  revalidateAfterTransactionWrite(allAccountIds);
   return { success: true, data: { count: txIds.length } };
 }
 
@@ -987,7 +980,7 @@ export async function convertTransactionToTransfer(
   const result = data as unknown as ConvertRpcResult;
   // The two new transfer rows are on the original + counterparty account, so
   // both account views need to refresh.
-  revalidateTransactionViews([parsed.data.counterparty_account_id]);
+  revalidateAfterTransactionWrite([parsed.data.counterparty_account_id]);
   revalidatePath(`/transakcije/${parsed.data.transaction_id}`);
   revalidatePath(`/transakcije/${result.from_id}`);
   revalidatePath(`/transakcije/${result.to_id}`);

@@ -8,9 +8,23 @@ const GEMINI_MODEL = 'gemini-2.5-flash-lite';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const GEMINI_TIMEOUT_MS = 25_000;
 
-const PROMPT = `Ti si asistent za ekstrakciju podataka sa fiskalnih računa.
+/**
+ * Build the prompt with today's date as a temporal anchor.
+ *
+ * Earlier the prompt was a constant with no date context. Gemini was
+ * happy to return e.g. `2008-05-26` from a Swedish receipt where the
+ * printed date had Y2K-truncated digits ("26-05-08") or American-style
+ * "MM/DD/YYYY" — leading to receipts saved with implausibly old dates
+ * (audit 2026-05-08). Anchoring to today + naming the American format
+ * + an explicit "if it looks more than a year old, double-check digit
+ * order" rule cuts that whole class.
+ */
+function buildPrompt(todayIso: string): string {
+  return `Ti si asistent za ekstrakciju podataka sa fiskalnih računa.
 Primarni region je Bosna i Hercegovina (BiH), Hrvatska i Srbija, ali podrži i račune iz EU i Skandinavije (Švedska, Norveška, Danska) i drugih zemalja.
 Analiziraj priloženu sliku računa i vrati ISKLJUČIVO JSON objekat — bez markdown code blockova, bez komentara, bez objašnjenja.
+
+DANAŠNJI DATUM: ${todayIso}. Datum na računu mora biti realan — gotovo uvijek u zadnjih 90 dana, vrlo rijetko stariji od godinu dana.
 
 JSON shema:
 {
@@ -34,12 +48,29 @@ Pravila:
 - "total_amount" mora biti POZITIVAN broj sa UKUPNO PLAĆENO (sa PDV-om). Nemoj koristiti subtotal.
 - Ako račun koristi oznaku "KM", mapiraj currency na "BAM".
 - Ako račun koristi oznaku "kr" bez jasne države, pokušaj prepoznati jezik/lokaciju (švedski jezik → SEK, norveški → NOK, danski → DKK).
-- Datumi su često "DD.MM.YYYY.", "DD/MM/YYYY", "YYYY-MM-DD" — konvertuj u "YYYY-MM-DD".
-- Ako datum fali, vrati null (NE današnji datum).
+- Podržani formati datuma:
+  · "DD.MM.YYYY" / "DD.MM.YYYY." (BiH, HR, RS — najčešći)
+  · "DD/MM/YYYY" / "DD-MM-YYYY" (EU)
+  · "YYYY-MM-DD" (ISO, švedski standard)
+  · "MM/DD/YYYY" (AMERIČKI — često na međunarodnim/turističkim računima; primijeti zemlju izdavanja)
+  Konvertuj u "YYYY-MM-DD".
+- KRITIČNO: Ako bi izvučeni datum bio više od godinu dana stariji od današnjeg datuma, gotovo sigurno si pogrešno protumačio redoslijed cifara dan/mjesec/godina. Provjeri ponovo — npr. "26-05-08" sa današnjim datumom ${todayIso} skoro sigurno znači 2026-05-08, NE 2008-05-26.
+- NIKAD ne vraćaj datum više od 5 godina u prošlosti osim ako je godina jasno čitljiva sa slike u 4-cifrenom obliku (npr. "2021").
+- Ako datum fali ili je nečitljiv, vrati null (NE današnji datum, NE pogađaj).
 - "merchant_name" je ime prodavnice/firme, NE adresa niti JIB/PDV broj.
 - Decimalni zarez i tačka su ekvivalentni — vrati broj sa decimalnom tačkom.
 - Vraćaj samo JSON. Bez ikakvog drugog teksta.
 `;
+}
+
+/** Server clock as YYYY-MM-DD. Used as a default temporal anchor in the
+ * prompt — drift between server UTC and user's IANA timezone is at
+ * most ±24 h, which is well within the "is this date plausible?"
+ * tolerance the anchor exists for. Callers that need a tighter anchor
+ * may pass `todayIso` explicitly. */
+function utcTodayIso(now: Date = new Date()): string {
+  return now.toISOString().slice(0, 10);
+}
 
 export interface GeminiExtractionResult {
   extracted: ExtractedReceipt;
@@ -54,10 +85,17 @@ export interface GeminiExtractionResult {
  *
  * Returns a safe fallback (empty extracted + ok=false) on any failure so the
  * UI can still render the manual-correction form.
+ *
+ * @param todayIso  Optional `YYYY-MM-DD` anchor used inside the prompt so
+ *                  Gemini doesn't hallucinate dates from years ago. Defaults
+ *                  to the server's UTC date — accurate within ±24 h of the
+ *                  user's local clock, which is fine for sanity-checking
+ *                  receipt dates.
  */
 export async function extractReceiptFields(
   imageBytes: Uint8Array | ArrayBuffer | Buffer,
   mimeType: string,
+  todayIso: string = utcTodayIso(),
 ): Promise<GeminiExtractionResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -89,7 +127,7 @@ export async function extractReceiptFields(
       {
         role: 'user',
         parts: [
-          { text: PROMPT },
+          { text: buildPrompt(todayIso) },
           {
             inline_data: {
               mime_type: mimeType,

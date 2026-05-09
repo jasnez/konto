@@ -1,8 +1,8 @@
 import { cache } from 'react';
 import type { Metadata } from 'next';
-import { endOfMonth, format, startOfMonth } from 'date-fns';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { fetchTransferCounterpartyAccountNames } from '@/lib/db/transfer-counterparty-names';
+import { resolveSummaryDateParts } from '@/lib/queries/summary';
 import { createClient } from '@/lib/supabase/server';
 import { TransactionsClient } from './transactions-client';
 import type { TransactionListItem, TransactionsFilters } from './types';
@@ -98,20 +98,25 @@ function escapeLike(input: string): string {
 async function fetchTransactionsUncached(
   userId: string,
   filters: TransactionsFilters,
+  timezone: string | null | undefined,
 ): Promise<FetchTransactionsResult> {
   const supabase = await createClient();
   const fromIndex = (filters.page - 1) * PAGE_SIZE;
   const toIndex = fromIndex + PAGE_SIZE - 1;
 
-  // Default range = current month. We apply it here (not in `parseFilters`)
-  // so that when `filters.from`/`to` are empty the UI knows the user has not
-  // set a date filter (no chip renders, "Očisti sve" actually clears) while
-  // the SQL still gets a sensible bounded window instead of a full-table
-  // scan.
-  const now = new Date();
-  const effectiveFrom =
-    filters.from.length > 0 ? filters.from : format(startOfMonth(now), 'yyyy-MM-dd');
-  const effectiveTo = filters.to.length > 0 ? filters.to : format(endOfMonth(now), 'yyyy-MM-dd');
+  // Default range = current month in the user's IANA timezone. Using
+  // server UTC (`new Date()` directly) would shift the boundary for users
+  // in CEST/EET around midnight on the 1st — a freshly-saved transaction
+  // dated locally as "today" could land outside the default window. The
+  // dashboard already solves this via `resolveSummaryDateParts`; we mirror
+  // it here. We apply the default in the query (not in `parseFilters`) so
+  // that empty `filters.from`/`to` still let the UI recognise that the
+  // user hasn't pinned a custom range (no chip renders, "Očisti sve"
+  // actually clears) while the SQL still gets a sensible bounded window
+  // instead of a full-table scan.
+  const { monthStart, monthEnd } = resolveSummaryDateParts(timezone);
+  const effectiveFrom = filters.from.length > 0 ? filters.from : monthStart;
+  const effectiveTo = filters.to.length > 0 ? filters.to : monthEnd;
 
   let countQuery = supabase
     .from('transactions')
@@ -249,6 +254,16 @@ export default async function TransakcijePage({ searchParams }: PageProps) {
     return null;
   }
 
+  // Fetch profile.timezone first so the default month range used by
+  // `fetchTransactions` honours the user's local clock (not the server's
+  // UTC). Single PK lookup — a few ms of extra latency vs. silently
+  // hiding transactions on month-turn for non-UTC users.
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('timezone')
+    .eq('id', user.id)
+    .maybeSingle();
+
   const [{ data: accountsRaw }, { data: categoriesRaw }, txData] = await Promise.all([
     supabase
       .from('accounts')
@@ -264,7 +279,7 @@ export default async function TransakcijePage({ searchParams }: PageProps) {
       .is('deleted_at', null)
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true }),
-    fetchTransactions(user.id, filters),
+    fetchTransactions(user.id, filters, profile?.timezone),
   ]);
 
   const accounts: AccountOption[] = (accountsRaw ?? []).map((account) => ({

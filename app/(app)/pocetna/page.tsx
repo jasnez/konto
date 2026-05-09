@@ -88,6 +88,14 @@ async function getRecentTransactions(
   supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<RecentTransactionItem[]> {
+  // Sort by `created_at` first so the widget genuinely answers "what did
+  // I last record?" — not "what's the most recent transaction by date?".
+  // The original (transaction_date DESC, created_at DESC) order silently
+  // hid OCR-misdated saves: a receipt the user just scanned but whose
+  // date Gemini extracted as 2008-05-26 ranked below every 2026-dated
+  // row, dropping it past position 10 (audit 2026-05-08). With this
+  // order, a freshly-saved transaction is always at the top and the
+  // wrong date is immediately visible — the user can spot and fix it.
   const { data } = await supabase
     .from('transactions')
     .select(
@@ -95,8 +103,8 @@ async function getRecentTransactions(
     )
     .eq('user_id', userId)
     .is('deleted_at', null)
-    .order('transaction_date', { ascending: false })
     .order('created_at', { ascending: false })
+    .order('transaction_date', { ascending: false })
     .limit(10);
 
   const rows = (data as RecentTxRow[] | null) ?? [];
