@@ -132,7 +132,17 @@ describe('createBudget', () => {
     }
   });
 
+  // SE-13: ensureOwnedCategory makes a from('categories').select(...).maybeSingle()
+  // call BEFORE the budgets insert. Each happy-path test below mocks that pre-call
+  // first (returns the category row), then mocks the budgets insert.
+  const mockOwnedCategoryOk = (): void => {
+    from.mockImplementationOnce(() =>
+      fluent({ data: { id: 'b1f9c7e4-3f1a-4d92-9c2e-aabbccddeeff' }, error: null }),
+    );
+  };
+
   it('happy path → returns id and revalidates', async () => {
+    mockOwnedCategoryOk();
     from.mockImplementationOnce(() => fluent({ data: { id: 'budget-1' }, error: null }));
 
     const result = await createBudget(VALID_INPUT);
@@ -141,7 +151,16 @@ describe('createBudget', () => {
     expect(revalidatePath).toHaveBeenCalledWith('/pocetna');
   });
 
+  it('SE-13: returns NOT_FOUND when category is not owned by user', async () => {
+    // ensureOwnedCategory finds no row (foreign or non-existent category).
+    from.mockImplementationOnce(() => fluent({ data: null, error: null }));
+
+    const result = await createBudget(VALID_INPUT);
+    expect(result).toEqual({ success: false, error: 'NOT_FOUND' });
+  });
+
   it('maps unique violation (23505) → DUPLICATE_ACTIVE', async () => {
+    mockOwnedCategoryOk();
     from.mockImplementationOnce(() =>
       fluent({
         data: null,
@@ -153,6 +172,7 @@ describe('createBudget', () => {
   });
 
   it('maps RLS WITH CHECK failure (42501) → CATEGORY_NOT_BUDGETABLE', async () => {
+    mockOwnedCategoryOk();
     from.mockImplementationOnce(() =>
       fluent({
         data: null,
@@ -167,6 +187,7 @@ describe('createBudget', () => {
   });
 
   it('falls back to DATABASE_ERROR for unknown PG codes', async () => {
+    mockOwnedCategoryOk();
     from.mockImplementationOnce(() =>
       fluent({
         data: null,

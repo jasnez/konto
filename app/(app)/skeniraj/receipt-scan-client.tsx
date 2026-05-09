@@ -110,8 +110,7 @@ function translateError(code: string): string {
       return 'Greška pri uploadu slike. Pokušaj ponovo.';
     case 'UNAUTHORIZED':
       return 'Morate biti prijavljeni.';
-    case 'FORBIDDEN':
-      return 'Nemate pristup ovom resursu.';
+    // SE-14: ownership-fail collapsed to NOT_FOUND so we don't leak existence.
     case 'NOT_FOUND':
       return 'Skeniranje nije pronađeno.';
     case 'VALIDATION_ERROR':

@@ -108,7 +108,8 @@ export type BulkDeleteAccountsResult =
   | { success: true; data: { accountsCount: number; transactionsCount: number } }
   | { success: false; error: 'VALIDATION_ERROR'; details: { _root: string[] } }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'FORBIDDEN' }
+  // SE-14: ownership-fail (any ID in the bulk not owned) returns NOT_FOUND.
+  | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'DATABASE_ERROR' };
 
 export type ReorderAccountsResult =
@@ -620,7 +621,7 @@ export async function bulkDeleteAccounts(ids: unknown): Promise<BulkDeleteAccoun
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (ownedRows.length !== accountIds.length) {
-    return { success: false, error: 'FORBIDDEN' };
+    return { success: false, error: 'NOT_FOUND' };
   }
 
   const deletedAt = new Date().toISOString();

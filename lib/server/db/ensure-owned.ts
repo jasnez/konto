@@ -4,7 +4,12 @@
  * Each helper SELECT-s a row by both its own `id` and `user_id` so ownership
  * is enforced at the query level rather than by a post-fetch manual check.
  * If the row doesn't exist or belongs to a different user the function returns
- * `{ ok: false, error: 'FORBIDDEN' }`.
+ * `{ ok: false, error: 'NOT_FOUND' }`.
+ *
+ * **SE-14 (2026-05-08):** Standardized on `NOT_FOUND` (was `FORBIDDEN`) so
+ * we don't leak the "ID exists but isn't yours" signal vs. "ID doesn't
+ * exist at all". `FORBIDDEN` is reserved for explicit business-rule
+ * denials (e.g. "account is locked").
  *
  * These are SELECT-only helpers (no mutation), so they are NOT subject to the
  * local/no-unguarded-mutation ESLint rule.
@@ -16,7 +21,7 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 interface OwnedError {
   ok: false;
-  error: 'FORBIDDEN' | 'DATABASE_ERROR';
+  error: 'NOT_FOUND' | 'DATABASE_ERROR';
 }
 
 /**
@@ -38,7 +43,7 @@ export async function ensureOwnedAccount(
     .maybeSingle();
 
   if (error) return { ok: false, error: 'DATABASE_ERROR' };
-  if (!account) return { ok: false, error: 'FORBIDDEN' };
+  if (!account) return { ok: false, error: 'NOT_FOUND' };
 
   return { ok: true, currency: account.currency, type: account.type };
 }
@@ -63,7 +68,7 @@ export async function ensureOwnedCategory(
     .maybeSingle();
 
   if (error) return { ok: false, error: 'DATABASE_ERROR' };
-  if (!category) return { ok: false, error: 'FORBIDDEN' };
+  if (!category) return { ok: false, error: 'NOT_FOUND' };
 
   return { ok: true };
 }
@@ -88,7 +93,7 @@ export async function ensureOwnedMerchant(
     .maybeSingle();
 
   if (error) return { ok: false, error: 'DATABASE_ERROR' };
-  if (!merchant) return { ok: false, error: 'FORBIDDEN' };
+  if (!merchant) return { ok: false, error: 'NOT_FOUND' };
 
   return { ok: true };
 }

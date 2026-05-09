@@ -9,6 +9,7 @@ import {
   ToggleBudgetActiveSchema,
   UpdateBudgetSchema,
 } from '@/lib/budgets/validation';
+import { ensureOwnedCategory } from '@/lib/server/db/ensure-owned';
 import type { Database } from '@/supabase/types';
 import { logSafe } from '@/lib/logger';
 
@@ -115,6 +116,9 @@ export type CreateBudgetResult =
       details: ReturnType<typeof buildCreateBudgetErrorDetails>;
     }
   | { success: false; error: 'UNAUTHORIZED' }
+  // SE-13: explicit ownership pre-check on category_id (was relying solely
+  // on RLS WITH CHECK; now defense-in-depth with explicit verification).
+  | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'CATEGORY_NOT_BUDGETABLE' }
   | { success: false; error: 'DUPLICATE_ACTIVE' }
   | { success: false; error: 'DATABASE_ERROR' };
@@ -220,6 +224,14 @@ export async function createBudget(input: unknown): Promise<CreateBudgetResult> 
   }
 
   const { category_id, amount_cents, currency, period, rollover } = parsed.data;
+
+  // SE-13: explicit ownership pre-check on category_id (was relying solely on
+  // RLS WITH CHECK via user_owns_budgetable_category(category_id)). Defense
+  // -in-depth — if RLS were ever misconfigured, the INSERT would be blocked here.
+  const ownedCategory = await ensureOwnedCategory(supabase, user.id, category_id);
+  if (!ownedCategory.ok) {
+    return { success: false, error: ownedCategory.error };
+  }
 
   const { data: row, error: insertErr } = await supabase
     .from('budgets')

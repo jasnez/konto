@@ -60,7 +60,7 @@ export type UploadReceiptResult =
 export type AnalyzeReceiptResult =
   | { success: true; data: { scanId: string; extracted: ExtractedReceipt } }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'FORBIDDEN' }
+  // SE-14: ownership-fail returns NOT_FOUND (no longer FORBIDDEN).
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'STORAGE_ERROR' }
   | { success: false; error: 'DATABASE_ERROR' }
@@ -72,7 +72,7 @@ export type CreateTransactionFromReceiptResult =
       data: { transactionId: string; merchantId: string | null; merchantCreated: boolean };
     }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'FORBIDDEN' }
+  // SE-14: ownership-fail returns NOT_FOUND (no longer FORBIDDEN).
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
   | { success: false; error: 'DATABASE_ERROR' }
@@ -81,7 +81,7 @@ export type CreateTransactionFromReceiptResult =
 export type GetSignedReceiptUrlResult =
   | { success: true; data: { url: string; expiresAt: string } }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'FORBIDDEN' }
+  // SE-14: ownership-fail returns NOT_FOUND (no longer FORBIDDEN).
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'STORAGE_ERROR' };
 
@@ -233,7 +233,7 @@ export async function analyzeReceipt(input: unknown): Promise<AnalyzeReceiptResu
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!scan) return { success: false, error: 'NOT_FOUND' };
-  if (scan.user_id !== user.id) return { success: false, error: 'FORBIDDEN' };
+  if (scan.user_id !== user.id) return { success: false, error: 'NOT_FOUND' };
 
   // Idempotent short-circuit: already extracted → just return cached payload.
   if (scan.status === 'extracted' && scan.extracted_json) {
@@ -335,7 +335,7 @@ export async function createTransactionFromReceipt(
     .maybeSingle();
   if (scanErr) return { success: false, error: 'DATABASE_ERROR' };
   if (!scan) return { success: false, error: 'NOT_FOUND' };
-  if (scan.user_id !== user.id) return { success: false, error: 'FORBIDDEN' };
+  if (scan.user_id !== user.id) return { success: false, error: 'NOT_FOUND' };
   if (scan.transaction_id) {
     // Already linked — return that transaction for idempotency. We don't refetch
     // the merchant link here; the second call gets a benign null + false.
@@ -353,7 +353,7 @@ export async function createTransactionFromReceipt(
     .maybeSingle();
   if (acctErr) return { success: false, error: 'DATABASE_ERROR' };
   if (account?.user_id !== user.id) {
-    return { success: false, error: 'FORBIDDEN' };
+    return { success: false, error: 'NOT_FOUND' };
   }
 
   if (data.category_id) {
@@ -363,7 +363,7 @@ export async function createTransactionFromReceipt(
       .eq('id', data.category_id)
       .maybeSingle();
     if (catErr) return { success: false, error: 'DATABASE_ERROR' };
-    if (cat?.user_id !== user.id) return { success: false, error: 'FORBIDDEN' };
+    if (cat?.user_id !== user.id) return { success: false, error: 'NOT_FOUND' };
   }
 
   // Base currency for FX.
@@ -495,7 +495,7 @@ export async function getSignedReceiptUrl(
     .maybeSingle();
   if (error) return { success: false, error: 'STORAGE_ERROR' };
   if (!scan) return { success: false, error: 'NOT_FOUND' };
-  if (scan.user_id !== user.id) return { success: false, error: 'FORBIDDEN' };
+  if (scan.user_id !== user.id) return { success: false, error: 'NOT_FOUND' };
 
   const { data: signed, error: signErr } = await supabase.storage
     .from('receipts')

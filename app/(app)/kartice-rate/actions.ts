@@ -75,7 +75,8 @@ export type CreateInstallmentPlanResult =
   | { success: true; data: { planId: string } }
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'FORBIDDEN' }
+  // SE-14: ownership-fail returns NOT_FOUND.
+  | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'NOT_CREDIT_CARD' }
   | { success: false; error: 'DATABASE_ERROR' }
   | { success: false; error: 'EXTERNAL_SERVICE_ERROR' };
@@ -84,7 +85,7 @@ export type CancelInstallmentPlanResult =
   | { success: true }
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'FORBIDDEN' }
+  // SE-14: ownership-fail returns NOT_FOUND (no longer FORBIDDEN).
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'DATABASE_ERROR' };
 
@@ -92,7 +93,7 @@ export type MarkOccurrencePaidResult =
   | { success: true }
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'FORBIDDEN' }
+  // SE-14: ownership-fail returns NOT_FOUND (no longer FORBIDDEN).
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'ALREADY_POSTED' }
   | { success: false; error: 'DATABASE_ERROR' }
@@ -128,7 +129,7 @@ export async function createInstallmentPlan(input: unknown): Promise<CreateInsta
     .maybeSingle();
 
   if (acctErr) return { success: false, error: 'DATABASE_ERROR' };
-  if (!account) return { success: false, error: 'FORBIDDEN' };
+  if (!account) return { success: false, error: 'NOT_FOUND' };
   if (account.type !== 'credit_card') return { success: false, error: 'NOT_CREDIT_CARD' };
 
   // Determine base currency.
@@ -302,7 +303,7 @@ export async function cancelInstallmentPlan(id: unknown): Promise<CancelInstallm
     .maybeSingle();
 
   if (fetchErr) return { success: false, error: 'DATABASE_ERROR' };
-  if (!plan) return { success: false, error: 'FORBIDDEN' };
+  if (!plan) return { success: false, error: 'NOT_FOUND' };
   if (plan.status !== 'active') return { success: false, error: 'NOT_FOUND' };
 
   const { error: updateErr } = await supabase
@@ -343,7 +344,7 @@ export async function markOccurrencePaid(occurrenceId: unknown): Promise<MarkOcc
     .maybeSingle();
 
   if (occErr) return { success: false, error: 'DATABASE_ERROR' };
-  if (!occ) return { success: false, error: 'FORBIDDEN' };
+  if (!occ) return { success: false, error: 'NOT_FOUND' };
   if (occ.state === 'posted') return { success: false, error: 'ALREADY_POSTED' };
   if (occ.state === 'skipped') return { success: false, error: 'NOT_FOUND' };
 
@@ -357,7 +358,7 @@ export async function markOccurrencePaid(occurrenceId: unknown): Promise<MarkOcc
     .maybeSingle();
 
   if (planErr) return { success: false, error: 'DATABASE_ERROR' };
-  if (!plan) return { success: false, error: 'FORBIDDEN' };
+  if (!plan) return { success: false, error: 'NOT_FOUND' };
 
   const [profileResult, accountResult] = await Promise.all([
     supabase.from('profiles').select('base_currency').eq('id', user.id).maybeSingle(),

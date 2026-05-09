@@ -101,7 +101,10 @@ export type CreateTransactionResult =
   | { success: true; data: { id: string; transferPairId: string } }
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'FORBIDDEN' }
+  // SE-14: ownership-fail returns NOT_FOUND so we don't leak "ID exists but
+  // isn't yours" vs. "ID doesn't exist". Reserved FORBIDDEN for explicit
+  // business-rule denials (none in this action — see INCOME_NOT_ALLOWED_ON_PASIVA).
+  | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'DUPLICATE'; duplicateId: string }
   | { success: false; error: 'DATABASE_ERROR' }
   | { success: false; error: 'EXTERNAL_SERVICE_ERROR' }
@@ -113,7 +116,7 @@ export type UpdateTransactionResult =
   | { success: true }
   | { success: false; error: 'VALIDATION_ERROR'; details: TransactionFieldErrorDetails }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'FORBIDDEN' }
+  // SE-14: ownership-fail returns NOT_FOUND.
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'DUPLICATE'; duplicateId: string }
   | { success: false; error: 'DATABASE_ERROR' }
@@ -125,7 +128,8 @@ export type DeleteTransactionResult =
   | { success: true }
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'FORBIDDEN' }
+  // SE-14: ownership-fail returns NOT_FOUND.
+  | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'DATABASE_ERROR' };
 
 export type RestoreTransactionResult = DeleteTransactionResult;
@@ -134,14 +138,17 @@ export type BulkDeleteTransactionsResult =
   | { success: true; data: { count: number } }
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'FORBIDDEN' }
+  // SE-14: ownership-fail (any ID in the bulk not owned) returns NOT_FOUND.
+  | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'DATABASE_ERROR' };
 
 export type ConvertToTransferResult =
   | { success: true; data: { fromId: string; toId: string } }
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'FORBIDDEN' }
+  // SE-14: ownership-fail returns NOT_FOUND. The RPC may also raise
+  // 'FORBIDDEN: from_account/to_account' (migration 00049) — those are
+  // mapped to NOT_FOUND below for the same reason.
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'ALREADY_TRANSFER' }
   | { success: false; error: 'SAME_ACCOUNT' }
@@ -493,7 +500,7 @@ export async function updateTransaction(
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!existing) {
-    return { success: false, error: 'FORBIDDEN' };
+    return { success: false, error: 'NOT_FOUND' };
   }
   if (existing.deleted_at) {
     return { success: false, error: 'NOT_FOUND' };
@@ -616,7 +623,7 @@ export type UpdateTransactionCategoryResult =
   | { success: true }
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
   | { success: false; error: 'UNAUTHORIZED' }
-  | { success: false; error: 'FORBIDDEN' }
+  // SE-14: ownership-fail returns NOT_FOUND.
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'DATABASE_ERROR' };
 
@@ -669,7 +676,7 @@ export async function updateTransactionCategory(
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!existing) {
-    return { success: false, error: 'FORBIDDEN' };
+    return { success: false, error: 'NOT_FOUND' };
   }
   if (existing.deleted_at) {
     return { success: false, error: 'NOT_FOUND' };
@@ -727,7 +734,7 @@ export async function deleteTransaction(id: unknown): Promise<DeleteTransactionR
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!existing) {
-    return { success: false, error: 'FORBIDDEN' };
+    return { success: false, error: 'NOT_FOUND' };
   }
   if (existing.deleted_at) {
     return { success: true };
@@ -803,7 +810,7 @@ export async function restoreTransaction(id: unknown): Promise<RestoreTransactio
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (!existing) {
-    return { success: false, error: 'FORBIDDEN' };
+    return { success: false, error: 'NOT_FOUND' };
   }
   if (!existing.deleted_at) {
     return { success: true };
@@ -853,7 +860,7 @@ export async function bulkDeleteTransactions(ids: unknown): Promise<BulkDeleteTr
     return { success: false, error: 'DATABASE_ERROR' };
   }
   if (ownedRows.length !== txIds.length) {
-    return { success: false, error: 'FORBIDDEN' };
+    return { success: false, error: 'NOT_FOUND' };
   }
 
   // Expand bulk delete to include paired transfer legs not already in the selection.
@@ -967,8 +974,11 @@ export async function convertTransactionToTransfer(
     if (message.includes('CROSS_CURRENCY_NOT_SUPPORTED')) {
       return { success: false, error: 'CROSS_CURRENCY_NOT_SUPPORTED' };
     }
+    // SE-14: RPC raises 'FORBIDDEN: from_account/to_account' (migration 00049)
+    // for ownership-fail. Mapped to NOT_FOUND on the action surface so we don't
+    // leak "ID exists but isn't yours" vs. "ID doesn't exist at all".
     if (message.includes('FORBIDDEN')) {
-      return { success: false, error: 'FORBIDDEN' };
+      return { success: false, error: 'NOT_FOUND' };
     }
     logSafe('convert_transaction_to_transfer_rpc_error', {
       userId: user.id,

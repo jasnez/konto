@@ -185,7 +185,7 @@ describe('transaction actions', () => {
       notes: null,
     });
 
-    expect(result).toEqual({ success: false, error: 'FORBIDDEN' });
+    expect(result).toEqual({ success: false, error: 'NOT_FOUND' });
   });
 
   it('FX conversion BAM->BAM keeps base equal original', async () => {
