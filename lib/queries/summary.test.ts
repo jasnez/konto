@@ -254,7 +254,13 @@ describe('getMonthlySummary', () => {
     // Naive UTC-based derivation would report March; timezone-aware must report April.
     const utcInstant = new Date('2026-03-31T22:30:00Z');
     const parts = resolveSummaryDateParts('Europe/Sarajevo', utcInstant);
-    expect(parts).toEqual({ year: 2026, month: 4, todayDate: '2026-04-01' });
+    expect(parts).toEqual({
+      year: 2026,
+      month: 4,
+      todayDate: '2026-04-01',
+      monthStart: '2026-04-01',
+      monthEnd: '2026-04-30',
+    });
   });
 
   it('resolveSummaryDateParts falls back to default timezone on invalid input', () => {
@@ -263,6 +269,58 @@ describe('getMonthlySummary', () => {
     expect(parts.year).toBe(2026);
     expect(parts.month).toBe(4);
     expect(parts.todayDate).toBe('2026-04-24');
+    expect(parts.monthStart).toBe('2026-04-01');
+    expect(parts.monthEnd).toBe('2026-04-30');
+  });
+
+  it('resolveSummaryDateParts produces the right monthEnd for 31-day months', () => {
+    // Mid-May 2026 in any IANA TZ: monthEnd must be the 31st, not the 30th.
+    const utcInstant = new Date('2026-05-15T12:00:00Z');
+    const parts = resolveSummaryDateParts('Europe/Sarajevo', utcInstant);
+    expect(parts.monthStart).toBe('2026-05-01');
+    expect(parts.monthEnd).toBe('2026-05-31');
+  });
+
+  it('resolveSummaryDateParts handles February in a leap year', () => {
+    // 2024 is a leap year — February has 29 days.
+    const utcInstant = new Date('2024-02-15T12:00:00Z');
+    const parts = resolveSummaryDateParts('Europe/Sarajevo', utcInstant);
+    expect(parts.monthStart).toBe('2024-02-01');
+    expect(parts.monthEnd).toBe('2024-02-29');
+  });
+
+  it('resolveSummaryDateParts handles February in a non-leap year', () => {
+    const utcInstant = new Date('2026-02-15T12:00:00Z');
+    const parts = resolveSummaryDateParts('Europe/Sarajevo', utcInstant);
+    expect(parts.monthStart).toBe('2026-02-01');
+    expect(parts.monthEnd).toBe('2026-02-28');
+  });
+
+  it('resolveSummaryDateParts handles December (year-end edge)', () => {
+    // The Date.UTC trick wraps day=0 of "month 12" into Dec 31 of the
+    // *current* year — never silently spilling into next year.
+    const utcInstant = new Date('2026-12-15T12:00:00Z');
+    const parts = resolveSummaryDateParts('Europe/Sarajevo', utcInstant);
+    expect(parts).toEqual({
+      year: 2026,
+      month: 12,
+      todayDate: '2026-12-15',
+      monthStart: '2026-12-01',
+      monthEnd: '2026-12-31',
+    });
+  });
+
+  it('resolveSummaryDateParts crosses month boundary forward in TZ ahead of UTC (regression)', () => {
+    // 2026-05-01T00:30 in Europe/Sarajevo == 2026-04-30T22:30 UTC.
+    // The /transakcije page used to compute "current month" from server
+    // UTC and would have shown April 1–30 here; user's freshly-saved
+    // transaction dated 2026-05-01 (their local "today") would not
+    // appear. With the timezone-aware default, monthStart/monthEnd land
+    // in May correctly.
+    const utcInstant = new Date('2026-04-30T22:30:00Z');
+    const parts = resolveSummaryDateParts('Europe/Sarajevo', utcInstant);
+    expect(parts.monthStart).toBe('2026-05-01');
+    expect(parts.monthEnd).toBe('2026-05-31');
   });
 
   it('throws when userId is empty', async () => {

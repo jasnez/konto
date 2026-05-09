@@ -13,6 +13,7 @@ import {
   emptyExtractedReceipt,
   type ExtractedReceipt,
 } from '@/lib/schemas/receipt';
+import { revalidateAfterTransactionWrite } from '@/lib/server/revalidate-views';
 import { createClient } from '@/lib/supabase/server';
 import type { Json } from '@/supabase/types';
 import { logSafe } from '@/lib/logger';
@@ -460,10 +461,8 @@ export async function createTransactionFromReceipt(
     .eq('id', data.scan_id)
     .eq('user_id', user.id);
 
-  revalidatePath('/transakcije');
-  revalidatePath(`/racuni/${data.account_id}`);
+  revalidateAfterTransactionWrite([data.account_id]);
   revalidatePath('/skeniraj');
-  revalidatePath('/');
   if (merchantCreated) revalidatePath('/merchants');
 
   return {

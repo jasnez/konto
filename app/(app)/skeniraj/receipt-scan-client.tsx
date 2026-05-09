@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { getTodayIsoDate, readLastUsed } from '@/components/quick-add-transaction-draft';
 import { resizeForUpload } from '@/lib/image/resize-for-upload';
+import { assessReceiptDate, describePlausibility } from '@/lib/receipt/date-plausibility';
 import type { ExtractedReceipt } from '@/lib/schemas/receipt';
 import { analyzeReceipt, createTransactionFromReceipt, uploadReceipt } from './actions';
 
@@ -54,6 +55,15 @@ function defaultAccountId(accounts: AccountOption[]): string {
     return lastUsed.account_id;
   }
   return accounts.at(0)?.id ?? '';
+}
+
+/** Bosnian-style display date `DD.MM.YYYY.` for the warning banner copy.
+ * Inline because it's the only place this format is used and pulling
+ * date-fns just for `format(d, 'dd.MM.yyyy.')` would be overkill. */
+function formatBosnianDate(iso: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(iso)) return iso;
+  const [y, m, d] = iso.split('-');
+  return `${d}.${m}.${y}.`;
 }
 
 // Audit N18: first-use guidance. Visible only in the upload phase — see
@@ -433,6 +443,17 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
   if (phase.name === 'review') {
     const confidence = phase.extracted.confidence ?? null;
 
+    // Re-evaluated on every render so the banner clears the moment the
+    // user fixes the date in the input. The threshold logic + Bosnian
+    // copy live in `lib/receipt/date-plausibility` so they're testable
+    // without React (audit 2026-05-08 — OCR misread receipt year as
+    // 2008/2020 and the user had no visual cue before saving).
+    const datePlausibility = assessReceiptDate(transactionDate, getTodayIsoDate());
+    const dateWarningCopy = describePlausibility(
+      datePlausibility,
+      formatBosnianDate(transactionDate),
+    );
+
     return (
       <div className="space-y-4">
         <div className="rounded-xl border p-4">
@@ -481,7 +502,22 @@ export function ReceiptScanClient({ accounts, categories }: ReceiptScanClientPro
                 setTransactionDate(e.target.value);
               }}
               className="h-11"
+              aria-describedby={dateWarningCopy ? 'skeniraj-date-warning' : undefined}
+              aria-invalid={dateWarningCopy ? true : undefined}
             />
+            {dateWarningCopy ? (
+              <p
+                id="skeniraj-date-warning"
+                role="alert"
+                className={`rounded-md border px-3 py-2 text-sm ${
+                  datePlausibility.kind === 'future'
+                    ? 'border-destructive/50 bg-destructive/10 text-destructive'
+                    : 'border-amber-500/50 bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200'
+                }`}
+              >
+                {dateWarningCopy}
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-2">

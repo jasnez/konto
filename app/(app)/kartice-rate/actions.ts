@@ -10,6 +10,7 @@ import {
   MarkOccurrencePaidSchema,
   type CreateInstallmentPlanInput,
 } from '@/lib/schemas/installment';
+import { revalidateAfterTransactionWrite } from '@/lib/server/revalidate-views';
 import { createClient } from '@/lib/supabase/server';
 import { logSafe } from '@/lib/logger';
 
@@ -270,9 +271,8 @@ export async function createInstallmentPlan(input: unknown): Promise<CreateInsta
     }
   }
 
+  revalidateAfterTransactionWrite([data.account_id]);
   revalidatePath('/kartice-rate');
-  revalidatePath(`/racuni/${data.account_id}`);
-  revalidatePath('/transakcije');
   return { success: true, data: { planId: plan.id } };
 }
 
@@ -437,8 +437,7 @@ export async function markOccurrencePaid(occurrenceId: unknown): Promise<MarkOcc
 
   if (stateErr) return { success: false, error: 'DATABASE_ERROR' };
 
+  revalidateAfterTransactionWrite([plan.account_id]);
   revalidatePath('/kartice-rate');
-  revalidatePath(`/racuni/${plan.account_id}`);
-  revalidatePath('/transakcije');
   return { success: true };
 }

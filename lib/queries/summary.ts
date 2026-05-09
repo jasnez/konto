@@ -281,14 +281,33 @@ export interface GetMonthlySummaryOptions {
   todayDate?: string;
 }
 
+export interface SummaryDateParts {
+  year: number;
+  /** 1-indexed (1 = January). */
+  month: number;
+  /** ISO `YYYY-MM-DD` for the user's "today" in their timezone. */
+  todayDate: string;
+  /** ISO `YYYY-MM-DD` for the first day of the user's current month. */
+  monthStart: string;
+  /** ISO `YYYY-MM-DD` for the last day of the user's current month. */
+  monthEnd: string;
+}
+
 /**
- * Compute year/month/todayDate in a given IANA timezone. Use this at the
- * call site so we never pass the server's UTC clock to the RPC.
+ * Compute year/month/todayDate/monthStart/monthEnd in a given IANA timezone.
+ * Use this at the call site so we never pass the server's UTC clock to the
+ * RPC, nor compute date-range filters in server-local time.
+ *
+ * `monthStart`/`monthEnd` are derived without leaving UTC for safety: they
+ * are pure string concatenation off the Intl-resolved year/month, plus a
+ * Date.UTC trick to find the last day of the calendar month. No local-TZ
+ * `Date` arithmetic is involved, so /transakcije/budgets/etc. never see a
+ * server clock that drifted into the next/prev month at the boundary.
  */
 export function resolveSummaryDateParts(
   timezone: string | null | undefined,
   now: Date = new Date(),
-): { year: number; month: number; todayDate: string } {
+): SummaryDateParts {
   const tz = safeIanaTimeZone(timezone);
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: tz,
@@ -301,7 +320,19 @@ export function resolveSummaryDateParts(
   const year = Number(get('year'));
   const month = Number(get('month'));
   const day = get('day');
-  return { year, month, todayDate: `${String(year)}-${String(month).padStart(2, '0')}-${day}` };
+  const yearStr = String(year);
+  const monthPadded = String(month).padStart(2, '0');
+  // `month` is 1-indexed; `Date.UTC`'s second arg is 0-indexed. Passing
+  // `month` therefore points to the month *after* the target, and `day=0`
+  // wraps back to the last day of `month`. Pure UTC — no TZ drift.
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return {
+    year,
+    month,
+    todayDate: `${yearStr}-${monthPadded}-${day}`,
+    monthStart: `${yearStr}-${monthPadded}-01`,
+    monthEnd: `${yearStr}-${monthPadded}-${String(lastDay).padStart(2, '0')}`,
+  };
 }
 
 export async function getMonthlySummary(
