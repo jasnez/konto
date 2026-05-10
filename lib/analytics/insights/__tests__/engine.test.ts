@@ -75,6 +75,7 @@ interface FluentChain {
   select: () => FluentChain;
   eq: () => FluentChain;
   is: () => FluentChain;
+  in: () => FluentChain;
   or: () => FluentChain;
   gte: () => FluentChain;
   lt: () => FluentChain;
@@ -90,6 +91,7 @@ function makeFluent(terminal: Terminal): FluentChain {
     select: () => chain,
     eq: () => chain,
     is: () => chain,
+    in: () => chain,
     or: () => chain,
     gte: () => chain,
     lt: () => chain,
@@ -123,6 +125,10 @@ function makeSupabaseStub(calls: FromCalls): SupabaseClient<Database> {
             calls.insightInsertPayload = rows;
             return makeFluent(calls.insightInsertResult);
           },
+          // MT-12 (Low): engine pre-deletes expired-with-same-key before
+          // batch insert. Mock just returns no-op success — none of these
+          // tests are asserting on the preclean call shape.
+          delete: () => makeFluent({ data: null, error: null }),
         };
       }
       throw new Error(`unexpected table: ${table}`);
