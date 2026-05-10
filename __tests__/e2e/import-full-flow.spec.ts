@@ -90,7 +90,7 @@ test('F2: cijeli import flow @slow', async ({ page }, testInfo) => {
   });
 
   try {
-    await page.goto('/import', { waitUntil: 'domcontentloaded' });
+    await page.goto('/uvezi', { waitUntil: 'domcontentloaded' });
 
     // 3. Račun (dva računa nakon ensureTwo* — otvori select i potvrdi odabir)
     const accountTrigger = page.locator('#import-account');
@@ -102,9 +102,9 @@ test('F2: cijeli import flow @slow', async ({ page }, testInfo) => {
     await expect(page.getByTestId('import-selected-file')).toBeVisible({ timeout: 30_000 });
     await page.getByRole('button', { name: 'Pošalji' }).click();
 
-    await expect(page).toHaveURL(/\/import\/[0-9a-f-]{36}/u, { timeout: 60_000 });
+    await expect(page).toHaveURL(/\/uvezi\/[0-9a-f-]{36}/u, { timeout: 60_000 });
     const u = new URL(page.url());
-    const idMatch = /\/import\/([0-9a-f-]{36})/iu.exec(u.pathname);
+    const idMatch = /\/uvezi\/([0-9a-f-]{36})/iu.exec(u.pathname);
     if (idMatch) batchIdForCleanup = idMatch[1];
 
     // 6. Stanje "ready" = Pregled uvoza s tabelom (mock postavlja `ready` u handleru; max 90s).

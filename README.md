@@ -17,7 +17,7 @@ Detaljna arhitektura i odluke: [dokumentacija u `/docs/`](./docs/00-README.md) i
 Kratki pregled korisničkih mogućnosti u toku (PFM, bez direktne bankovne konekcije u ovom obimu):
 
 - **Uvoz bankarskog PDF-a** — upload u zaštićeno skladište, ekstrakcija teksta, PII redakcija, parsiranje preko **Gemini 2.5 Flash-Lite** (Google Generative Language API), ručni pregled i uvođenje transakcija u nalog. Zadržavanje PDF-a u skladištu usklađeno s ograničenjem (npr. 24h) i obris nakon uvođenja.
-- **Pomoć u aplikaciji** — rute `/help` (FAQ) i `/sigurnost` (sigurnost i privatnost, uključujući uvoz PDF-a).
+- **Pomoć u aplikaciji** — rute `/pomoc` (FAQ) i `/sigurnost` (sigurnost i privatnost, uključujući uvoz PDF-a).
 
 ## Faza 3 (finansijska inteligencija)
 

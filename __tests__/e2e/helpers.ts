@@ -334,7 +334,7 @@ export async function e2eSeedImportBatchReady(input: {
 }
 
 /**
- * Dva računa na /import da odabir računa bude stvaran (E2E import flow).
+ * Dva računa na /uvezi da odabir računa bude stvaran (E2E import flow).
  * Idempotentno: ne radi ništa ako korisnik već ima ≥2 neobrisanih računa.
  */
 export async function ensureTwoE2EAccountsForImport(userId: string): Promise<void> {
