@@ -92,9 +92,13 @@ export async function dismissInsight(id: unknown): Promise<DismissInsightResult>
 
   // Ownership pre-check. Dismissed-already-dismissed is a no-op success;
   // we don't punish the user for a double-click.
+  // IN-1: also fetch `dismissed_at` so a rage-click / hold-down on the
+  // dismiss button short-circuits before the UPDATE runs (defeats the
+  // 50-dismisses-per-second pattern at the DB without needing a separate
+  // rate-limit table).
   const { data: existing, error: selErr } = await supabase
     .from('insights')
-    .select('id')
+    .select('id, dismissed_at')
     .eq('id', idParse.data)
     .eq('user_id', user.id)
     .maybeSingle();
@@ -105,6 +109,13 @@ export async function dismissInsight(id: unknown): Promise<DismissInsightResult>
   }
   if (!existing) {
     return { success: false, error: 'NOT_FOUND' };
+  }
+  // IN-1 short-circuit — already dismissed (timestamp string set), skip the
+  // UPDATE entirely. We narrow on `typeof === 'string'` rather than `!== null`
+  // so test fixtures that omit the field (undefined) still hit the UPDATE
+  // path; DB never returns undefined, only null or a timestamp string.
+  if (typeof existing.dismissed_at === 'string') {
+    return { success: true };
   }
 
   const { error: upErr } = await supabase

@@ -46,6 +46,12 @@ export function AddGoalDialog({ open, onOpenChange, accounts, baseCurrency }: Ad
             const result: CreateGoalResult = await createGoal(values);
             if (result.success) {
               toast.success('Cilj kreiran.');
+              // GL-1: warn if balance sync failed — UI shows zero until refresh.
+              if (result.recomputeFailed) {
+                toast.warning(
+                  'Balans cilja se nije sinhronizovao. Osvježi stranicu za par sekundi.',
+                );
+              }
               onOpenChange(false);
               router.refresh();
               return null;

@@ -60,7 +60,12 @@ function buildUpdateGoalErrorDetails(error: z.ZodError) {
 // ─── Result types ─────────────────────────────────────────────────────────────
 
 export type CreateGoalResult =
-  | { success: true; data: { id: string } }
+  // GL-1: success branch carries an optional `recomputeFailed` flag. When
+  // the goal is linked to an account, we run `recompute_goal_from_account`
+  // RPC to seed `current_amount_cents` from the live balance. If that RPC
+  // fails the goal IS saved (not a hard error) but the displayed balance
+  // will be stale until the next refresh — the UI should toast a warning.
+  | { success: true; data: { id: string }; recomputeFailed?: boolean }
   | {
       success: false;
       error: 'VALIDATION_ERROR';
@@ -71,7 +76,8 @@ export type CreateGoalResult =
   | { success: false; error: 'DATABASE_ERROR' };
 
 export type UpdateGoalResult =
-  | { success: true }
+  // GL-1: see CreateGoalResult comment.
+  | { success: true; recomputeFailed?: boolean }
   | {
       success: false;
       error: 'VALIDATION_ERROR';
@@ -109,7 +115,8 @@ export type DeleteGoalResult =
   | { success: false; error: 'DATABASE_ERROR' };
 
 export type LinkAccountResult =
-  | { success: true }
+  // GL-1: see CreateGoalResult comment.
+  | { success: true; recomputeFailed?: boolean }
   | { success: false; error: 'VALIDATION_ERROR'; details: { _root: string[] } }
   | { success: false; error: 'UNAUTHORIZED' }
   | { success: false; error: 'NOT_FOUND' }
@@ -119,6 +126,13 @@ export type LinkAccountResult =
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function centsToDbInt(c: bigint): number {
+  // MT-10: guard the bigint→number narrowing. Above 2^53 the conversion
+  // silently rounds — a malicious or accidentally-large amount would write
+  // a corrupted value to the DB. Throw early with a clear error instead;
+  // the Zod schema is the first line of defence but this is belt + braces.
+  if (c > BigInt(Number.MAX_SAFE_INTEGER) || c < BigInt(Number.MIN_SAFE_INTEGER)) {
+    throw new Error(`centsToDbInt: bigint ${c.toString()} exceeds Number.MAX_SAFE_INTEGER`);
+  }
   return Number(c);
 }
 
@@ -197,18 +211,21 @@ export async function createGoal(input: unknown): Promise<CreateGoalResult> {
 
   // If linked to an account, sync current balance immediately so the UI shows
   // a non-zero starting point right away.
+  let recomputeFailed = false;
   if (account_id) {
     const { error: rpcErr } = await supabase.rpc('recompute_goal_from_account', {
       p_goal_id: row.id,
     });
     if (rpcErr) {
-      // Non-fatal: goal is created, balance sync failed. Log and carry on.
+      // GL-1: non-fatal but no longer silent — surface a flag so the UI
+      // can warn the user that the displayed balance is stale.
       logSafe('create_goal_recompute', { userId: user.id, goalId: row.id, error: rpcErr.message });
+      recomputeFailed = true;
     }
   }
 
   revalidateGoalPaths();
-  return { success: true, data: { id: row.id } };
+  return { success: true, data: { id: row.id }, recomputeFailed };
 }
 
 /**
@@ -297,7 +314,9 @@ export async function updateGoal(id: unknown, input: unknown): Promise<UpdateGoa
 
   if (Object.keys(patch).length === 0) {
     revalidateGoalPaths(idParse.data);
-    return { success: true };
+    // GL-1: include recomputeFailed for consistency — no UPDATE = no recompute
+    // attempt = no failure possible.
+    return { success: true, recomputeFailed: false };
   }
 
   const { error: upErr } = await supabase
@@ -318,6 +337,7 @@ export async function updateGoal(id: unknown, input: unknown): Promise<UpdateGoa
   // Re-sync balance if account_id is set (either newly linked or was already
   // linked and some other field changed that warrants a refresh).
   const effectiveAccountId = 'account_id' in p ? (p.account_id ?? null) : existing.account_id;
+  let recomputeFailed = false;
   if (effectiveAccountId) {
     const { error: rpcErr } = await supabase.rpc('recompute_goal_from_account', {
       p_goal_id: idParse.data,
@@ -328,12 +348,13 @@ export async function updateGoal(id: unknown, input: unknown): Promise<UpdateGoa
         goalId: idParse.data,
         error: rpcErr.message,
       });
-      // Non-fatal — goal was updated, balance sync is best-effort.
+      // GL-1: non-fatal but no longer silent — surface flag for UI toast.
+      recomputeFailed = true;
     }
   }
 
   revalidateGoalPaths(idParse.data);
-  return { success: true };
+  return { success: true, recomputeFailed };
 }
 
 /**
@@ -569,6 +590,7 @@ export async function linkAccount(id: unknown, input: unknown): Promise<LinkAcco
   }
 
   // Sync balance after linking.
+  let recomputeFailed = false;
   if (account_id !== null) {
     const { error: rpcErr } = await supabase.rpc('recompute_goal_from_account', {
       p_goal_id: idParse.data,
@@ -579,10 +601,11 @@ export async function linkAccount(id: unknown, input: unknown): Promise<LinkAcco
         goalId: idParse.data,
         error: rpcErr.message,
       });
-      // Non-fatal — link was set, balance sync is best-effort.
+      // GL-1: non-fatal but no longer silent — surface flag for UI toast.
+      recomputeFailed = true;
     }
   }
 
   revalidateGoalPaths(idParse.data);
-  return { success: true };
+  return { success: true, recomputeFailed };
 }

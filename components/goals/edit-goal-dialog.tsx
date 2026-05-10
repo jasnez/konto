@@ -74,6 +74,12 @@ export function EditGoalDialog({ open, onOpenChange, goal, accounts }: EditGoalD
             });
             if (result.success) {
               toast.success('Cilj ažuriran.');
+              // GL-1: warn if balance sync failed — UI shows stale until refresh.
+              if (result.recomputeFailed) {
+                toast.warning(
+                  'Balans cilja se nije sinhronizovao. Osvježi stranicu za par sekundi.',
+                );
+              }
               onOpenChange(false);
               router.refresh();
               return null;

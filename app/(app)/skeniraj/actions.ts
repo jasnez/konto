@@ -398,11 +398,18 @@ export async function createTransactionFromReceipt(
       data.transaction_date,
     );
   } catch (err) {
-    logSafe('receipt_ledger_fx_error', {
+    // EH-1: was EXTERNAL_SERVICE_ERROR which misled operators (they'd
+    // check Frankfurter / FX provider) when the more likely cause is a
+    // currency-normalization edge case or a bug in lib/fx/account-ledger.ts.
+    // The first FX failure is already caught above with EXTERNAL_SERVICE_ERROR
+    // (line ~387). Anything past that is internal: surface DATABASE_ERROR so
+    // the user-facing copy is generic and operators look at app code first.
+    logSafe('receipt_ledger_compute_error', {
       userId: user.id,
       error: err instanceof Error ? err.message : 'unknown',
+      stack: err instanceof Error ? err.stack : undefined,
     });
-    return { success: false, error: 'EXTERNAL_SERVICE_ERROR' };
+    return { success: false, error: 'DATABASE_ERROR' };
   }
 
   // Auto-link or auto-create the merchant from the OCR'd / user-edited name.
