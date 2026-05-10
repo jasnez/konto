@@ -22,7 +22,7 @@ import { pauseRecurring, type PauseRecurringResult } from '@/app/(app)/pretplate
 const ERROR_COPY: Record<string, string> = {
   NOT_FOUND: 'Pretplata više ne postoji. Osvježi stranicu.',
   UNAUTHORIZED: 'Sesija je istekla. Prijavi se ponovo.',
-  DATABASE_ERROR: 'Greška u bazi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 interface Preset {

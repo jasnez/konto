@@ -13,7 +13,7 @@ import { createGoal } from '@/app/(app)/ciljevi/actions';
 const ERROR_COPY: Record<string, string> = {
   ACCOUNT_NOT_FOUND: 'Odabrani račun nije pronađen.',
   UNAUTHORIZED: 'Sesija je istekla.',
-  DATABASE_ERROR: 'Greška u bazi. Pokušaj ponovo.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 export interface WizardStepGoalProps {

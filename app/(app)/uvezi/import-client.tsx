@@ -38,7 +38,7 @@ function translateResult(result: UploadStatementResult): string {
     case 'DUPLICATE':
       return 'Ovaj izvod je već uvezen.';
     case 'RATE_LIMITED':
-      return 'Dnevni limit uploada je dostignut. Pokušaj sutra.';
+      return 'Današnji limit otpremanja je dostignut. Reset je u ponoć.';
     case 'VALIDATION_ERROR':
       return result.details._root[0] ?? 'Podaci nisu validni.';
     default:

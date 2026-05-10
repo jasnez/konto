@@ -50,7 +50,7 @@ export interface GoalsClientProps {
 const DELETE_ERROR_COPY: Record<string, string> = {
   NOT_FOUND: 'Cilj više ne postoji.',
   UNAUTHORIZED: 'Sesija je istekla.',
-  DATABASE_ERROR: 'Greška u bazi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 export function GoalsClient({ initialGoals, accounts, baseCurrency }: GoalsClientProps) {

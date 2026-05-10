@@ -36,7 +36,7 @@ const ERROR_COPY: Record<string, string> = {
   NOT_FOUND: 'Cilj nije pronađen. Možda je obrisan.',
   ACCOUNT_NOT_FOUND: 'Odabrani račun nije pronađen.',
   UNAUTHORIZED: 'Sesija je istekla. Prijavi se ponovo.',
-  DATABASE_ERROR: 'Greška u bazi. Pokušaj opet za par sekundi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 export function EditGoalDialog({ open, onOpenChange, goal, accounts }: EditGoalDialogProps) {

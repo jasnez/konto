@@ -50,13 +50,13 @@ const TOGGLE_ERROR_COPY: Record<string, string> = {
   DUPLICATE_ACTIVE: 'Već postoji aktivan budžet za ovu kategoriju i period.',
   NOT_FOUND: 'Budžet više ne postoji. Osvježi stranicu.',
   UNAUTHORIZED: 'Sesija je istekla.',
-  DATABASE_ERROR: 'Greška u bazi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 const DELETE_ERROR_COPY: Record<string, string> = {
   NOT_FOUND: 'Budžet više ne postoji.',
   UNAUTHORIZED: 'Sesija je istekla.',
-  DATABASE_ERROR: 'Greška u bazi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 export function BudgetsClient({ initialBudgets, categories, baseCurrency }: BudgetsClientProps) {

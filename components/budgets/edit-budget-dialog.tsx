@@ -31,7 +31,7 @@ const ERROR_COPY: Record<string, string> = {
   DUPLICATE_ACTIVE: 'Već postoji aktivan budžet za ovu kategoriju i period.',
   NOT_FOUND: 'Budžet više ne postoji. Osvježi stranicu.',
   UNAUTHORIZED: 'Sesija je istekla. Prijavi se ponovo.',
-  DATABASE_ERROR: 'Greška u bazi. Pokušaj opet za par sekundi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
   // BG-1: server rejects period change without explicit new amount.
   // 1000 KM/mjesec ≠ 1000 KM/sedmicu — auto-scaling bi tiho promijenio
   // baseline po kojem se mjeri potrošnja. Korisnik mora unijeti novi

@@ -56,7 +56,7 @@ type FormValues = z.infer<typeof FormSchema>;
 const ERROR_COPY: Record<string, string> = {
   REFERENCED_NOT_OWNED: 'Kategorija/račun mora biti tvoj.',
   UNAUTHORIZED: 'Sesija je istekla. Prijavi se ponovo.',
-  DATABASE_ERROR: 'Greška u bazi. Pokušaj opet za par sekundi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 function todayIso(): string {
@@ -385,7 +385,7 @@ export function AddRecurringDialog({
                         />
                       </FormControl>
                       <FormDescription>
-                        Unesi pozitivan iznos — sistem ga sprema kao odliv.
+                        Unesi pozitivan iznos. Konto ga prati kao odliv.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

@@ -18,13 +18,13 @@ export function GoalsEmptyState({ onCreate }: GoalsEmptyStateProps) {
         <Target className="h-8 w-8" />
       </div>
       <div className="max-w-sm space-y-1">
-        <h2 className="text-lg font-semibold">Postavi prvi cilj štednje</h2>
+        <h2 className="text-lg font-semibold">Postavi prvi cilj štednje.</h2>
         <p className="text-sm text-muted-foreground">
-          Definiši koliko želiš skupiti i do kad. Prati napredak i slavi kad dostignuješ ciljeve.
+          Ljetovanje, novi telefon, hitna rezerva — postavi iznos i rok.
         </p>
       </div>
       <Button onClick={onCreate} size="lg">
-        Novi cilj
+        Postavi novi cilj
       </Button>
     </Card>
   );

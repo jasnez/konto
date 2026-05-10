@@ -34,8 +34,8 @@ function classifyError(err: Error): {
     return {
       type: 'auth',
       label: 'Pristup odbijen',
-      title: 'Trebam da se prijaviš',
-      message: 'Tvoja sesija je istekla. Prijavi se ponovo da bi nastavio rad sa Kontom.',
+      title: 'Prijavi se ponovo',
+      message: 'Tvoja sesija je istekla. Prijavi se ponovo da nastaviš rad sa Kontom.',
     };
   }
 

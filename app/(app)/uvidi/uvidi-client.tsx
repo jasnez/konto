@@ -19,15 +19,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InsightCard } from '@/components/insights/insight-card';
 import { useInsightDismiss } from '@/hooks/use-insight-dismiss';
 import { regenerateInsights } from './actions';
-import type {
-  InsightRow,
-  InsightSeverity,
-  InsightType,
-} from '@/lib/queries/insights';
-import {
-  SEVERITIES_DISPLAY_ORDER,
-  severityClasses,
-} from '@/lib/insights/severity-palette';
+import type { InsightRow, InsightSeverity, InsightType } from '@/lib/queries/insights';
+import { SEVERITIES_DISPLAY_ORDER, severityClasses } from '@/lib/insights/severity-palette';
 import { TYPES_DISPLAY_ORDER, typeLabel } from '@/lib/insights/type-labels';
 
 export interface UvidiClientProps {
@@ -41,7 +34,7 @@ type TabValue = 'active' | 'archived';
 const REGENERATE_ERROR_COPY: Record<string, string> = {
   UNAUTHORIZED: 'Sesija je istekla.',
   RATE_LIMITED: 'Pričekaj malo prije ponovnog pokretanja.',
-  DATABASE_ERROR: 'Greška u bazi. Pokušaj ponovo.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 export function UvidiClient({ active, archived, isDev }: UvidiClientProps) {
@@ -49,9 +42,7 @@ export function UvidiClient({ active, archived, isDev }: UvidiClientProps) {
   const [severityFilters, setSeverityFilters] = useState<Set<InsightSeverity>>(
     () => new Set<InsightSeverity>(),
   );
-  const [typeFilters, setTypeFilters] = useState<Set<InsightType>>(
-    () => new Set<InsightType>(),
-  );
+  const [typeFilters, setTypeFilters] = useState<Set<InsightType>>(() => new Set<InsightType>());
 
   // Optimistic state for the active tab. Archive tab doesn't optimistically
   // update because there's no "vanishing" UX there (the row stays visible
@@ -155,12 +146,7 @@ export function UvidiClient({ active, archived, isDev }: UvidiClientProps) {
           ))}
         </FilterRow>
         {filtersActive && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-xs"
-            onClick={clearFilters}
-          >
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={clearFilters}>
             Poništi filtere
           </Button>
         )}
