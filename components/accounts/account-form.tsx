@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { useFormDraft } from '@/lib/hooks/use-form-draft';
 import { cn } from '@/lib/utils';
 
 const defaultCreate: CreateAccountFormValues = {
@@ -63,6 +64,15 @@ type AccountFormProps =
       onSuccess?: (accountId: string) => void;
       /** Override the success toast (e.g. wizard says "Korak 1 gotov"). */
       successToast?: string;
+      /**
+       * OB-1: opt-in localStorage draft persistence. Pass a stable key
+       * (e.g. `'onboarding-step1-account'`) and the form will hydrate from
+       * + save to localStorage on every change (debounced 500 ms). The
+       * draft is cleared automatically on successful submit. Forms used
+       * outside the wizard (e.g. `/racuni/novi`) can omit this and behave
+       * as before.
+       */
+      draftKey?: string;
     }
   | {
       mode: 'edit';
@@ -73,7 +83,13 @@ type AccountFormProps =
 
 export function AccountForm(props: AccountFormProps) {
   if (props.mode === 'create') {
-    return <CreateAccountForm onSuccess={props.onSuccess} successToast={props.successToast} />;
+    return (
+      <CreateAccountForm
+        onSuccess={props.onSuccess}
+        successToast={props.successToast}
+        draftKey={props.draftKey}
+      />
+    );
   }
   return (
     <EditAccountForm
@@ -87,21 +103,27 @@ export function AccountForm(props: AccountFormProps) {
 interface CreateAccountFormProps {
   onSuccess?: (accountId: string) => void;
   successToast?: string;
+  draftKey?: string;
 }
 
-function CreateAccountForm({ onSuccess, successToast }: CreateAccountFormProps) {
+function CreateAccountForm({ onSuccess, successToast, draftKey }: CreateAccountFormProps) {
   const router = useRouter();
   const form = useForm<CreateAccountFormValues>({
     resolver: zodResolver(CreateAccountFormSchema) as never,
     defaultValues: defaultCreate,
     mode: 'onSubmit',
   });
+  // OB-1: opt-in draft persistence (no-op when draftKey is undefined).
+  const { clearDraft } = useFormDraft(draftKey, form);
   const isSubmitting = form.formState.isSubmitting;
   const accountType = form.watch('type');
 
   async function onSubmit(values: CreateAccountFormValues) {
     const result: CreateAccountResult = await createAccount(values);
     if (result.success) {
+      // OB-1: clear persisted draft on success so the next mount doesn't
+      // re-hydrate stale values. No-op when draftKey is undefined.
+      clearDraft();
       toast.success(successToast ?? 'Račun je kreiran.');
       if (onSuccess) {
         // Caller drives the next step (e.g. wizard). Skip the default redirect.
