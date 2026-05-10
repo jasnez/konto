@@ -388,6 +388,7 @@ function fluent<T>(terminal: ChainResult<T>) {
     select: () => chain,
     eq: () => chain,
     is: () => chain,
+    in: () => chain, // DL-10: forecast missing-pair fetch uses .in('id', ids)
     gte: () => chain,
     maybeSingle: () => Promise.resolve(terminal),
     then: (resolve: (v: ChainResult<T>) => void) => {
@@ -952,7 +953,7 @@ describe('forecastCashflow (transfer-aware baseline)', () => {
     expect(result.baselineOutflowCents).toBe(0n);
   });
 
-  it('skips a transfer when the pair leg is missing from the 90d window', async () => {
+  it('skips a transfer when the pair leg is missing AND missing-pair fetch returns nothing (truly orphaned)', async () => {
     const accounts: AccountRow[] = [
       {
         id: 'checking-1',
@@ -962,9 +963,9 @@ describe('forecastCashflow (transfer-aware baseline)', () => {
         ...ACCOUNT_DEFAULTS,
       },
     ];
-    // Orphaned transfer leg: pair_id points to a tx that's not in the
-    // history we just fetched (out-of-window or deleted). Filter must
-    // skip it conservatively rather than guess what the pair was.
+    // Orphaned transfer leg: pair_id points to a tx that doesn't exist
+    // anywhere (deleted hard, never was). Even after the DL-10 second
+    // fetch, the pair still doesn't resolve → filter skips conservatively.
     const history = [
       {
         id: 'orphan-leg',
@@ -972,7 +973,7 @@ describe('forecastCashflow (transfer-aware baseline)', () => {
         base_amount_cents: -25_000,
         account_id: 'checking-1',
         is_transfer: true,
-        transfer_pair_id: 'tx-out-of-window',
+        transfer_pair_id: 'tx-truly-deleted',
       },
     ];
     const result = await forecastCashflow(makeSupabase({ accounts, history }), 'u-1', 30, {
@@ -981,6 +982,83 @@ describe('forecastCashflow (transfer-aware baseline)', () => {
     });
     expect(result.baselineOutflowCents).toBe(0n);
     expect(result.baselineInflowCents).toBe(0n);
+  });
+
+  it('DL-10: resolves a transfer pair leg older than the 90d window via second fetch', async () => {
+    // Pre-fix behaviour: this transfer would be silently dropped from the
+    // baseline because txAccountById doesn't include the pair_id (it's
+    // out of the 90d window). Projected baseline would artificially miss
+    // a real outflow → inflated balance forecast.
+    //
+    // Post-fix behaviour: forecastCashflow does a second fetch for missing
+    // pair_ids (no date filter) and resolves the pair leg, so the transfer
+    // contributes to baseline correctly.
+    const accounts: AccountRow[] = [
+      {
+        id: 'checking-1',
+        type: 'checking',
+        currency: 'BAM',
+        current_balance_cents: 100_000,
+        ...ACCOUNT_DEFAULTS,
+      },
+      {
+        id: 'savings-1',
+        type: 'savings',
+        currency: 'BAM',
+        current_balance_cents: 0,
+        ...ACCOUNT_DEFAULTS,
+      },
+    ];
+    // The in-window leg sits on `checking-1` (a spending account); the
+    // pair leg `tx-old-pair` sits on `savings-1` (non-spending). Boundary
+    // crossing → should count as outflow from spending pool.
+    const history = [
+      {
+        id: 'in-window-leg',
+        transaction_date: format(addDays(NOW, -10), 'yyyy-MM-dd'),
+        base_amount_cents: 50_000,
+        original_amount_cents: -50_000, // signed; outflow from spending side
+        account_id: 'checking-1',
+        is_transfer: true,
+        transfer_pair_id: 'tx-old-pair',
+      },
+    ];
+    // Custom supabase mock: returns history on first transactions fetch,
+    // returns the resolved old pair row on the second (DL-10) fetch.
+    let txCallCount = 0;
+    const customSupabase = {
+      from: (table: string) => {
+        if (table === 'accounts') return fluent({ data: accounts, error: null });
+        if (table === 'recurring_transactions')
+          return fluent({ data: [] as RecurringRow[], error: null });
+        if (table === 'installment_plans')
+          return fluent({ data: [] as InstallmentRow[], error: null });
+        if (table === 'categories') return fluent({ data: null, error: null });
+        if (table === 'transactions') {
+          txCallCount += 1;
+          if (txCallCount === 1) {
+            // First call: 90d history fetch.
+            return fluent({ data: history, error: null });
+          }
+          // Second call (DL-10): missing-pair fetch. Return the old pair
+          // row so the transfer can resolve.
+          return fluent({
+            data: [{ id: 'tx-old-pair', account_id: 'savings-1' }],
+            error: null,
+          });
+        }
+        throw new Error(`Unmocked table: ${table}`);
+      },
+    } as never;
+
+    const result = await forecastCashflow(customSupabase, 'u-1', 30, {
+      now: NOW,
+      skipFx: true,
+    });
+    // Transfer was resolved → contributes to baseline. Pre-fix this would
+    // have been 0 (silently dropped).
+    expect(result.baselineOutflowCents).toBeGreaterThan(0n);
+    expect(txCallCount).toBe(2); // confirms the second fetch fired
   });
 });
 

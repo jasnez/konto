@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { computeDateRange } from '@/lib/dates/compute-period-range';
 import { createClient } from '@/lib/supabase/server';
 import {
   getSpendingByCategory,
@@ -20,66 +21,10 @@ function isValidPeriod(value: unknown): value is SpendingPeriod {
   return typeof value === 'string' && (VALID_PERIODS as string[]).includes(value);
 }
 
-/**
- * Date range whose bounds match the SQL RPC's period window. Kept in lock-
- * step with `get_spending_by_category` (00062 migration) so drill-down
- * links land on /transakcije pre-filtered to exactly the period whose
- * rows the user just clicked on.
- *
- * Returns ISO YYYY-MM-DD strings; both bounds are inclusive on the UI
- * side (the SQL is half-open but the transakcije page treats `to` as
- * inclusive — see app/(app)/transakcije/page.tsx parseFilters).
- */
-function computeDateRange(
-  period: SpendingPeriod,
-  todayIso: string,
-): { from: string; to: string; label: string } {
-  // Parse YYYY-MM-DD as a UTC date so we don't pull in the host TZ here.
-  const [yStr, mStr, dStr] = todayIso.split('-');
-  const y = Number(yStr);
-  const m = Number(mStr);
-  const d = Number(dStr);
-  const today = new Date(Date.UTC(y, m - 1, d));
-
-  const fmt = (date: Date): string => date.toISOString().slice(0, 10);
-  const human = (date: Date): string =>
-    new Intl.DateTimeFormat('bs-BA', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(date);
-
-  let start: Date;
-  let endExclusive: Date;
-
-  if (period === 'weekly') {
-    // ISO week: Monday = 1; date_trunc('week', …) lands on Monday.
-    const dow = today.getUTCDay() === 0 ? 7 : today.getUTCDay();
-    start = new Date(Date.UTC(y, m - 1, d - (dow - 1)));
-    endExclusive = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
-  } else if (period === 'monthly') {
-    start = new Date(Date.UTC(y, m - 1, 1));
-    endExclusive = new Date(Date.UTC(y, m, 1));
-  } else if (period === 'quarterly') {
-    // Rolling 3 months ending today (inclusive). Mirror RPC: end = today + 1 day.
-    endExclusive = new Date(Date.UTC(y, m - 1, d + 1));
-    start = new Date(Date.UTC(y, m - 1 - 3, d + 1));
-  } else {
-    start = new Date(Date.UTC(y, 0, 1));
-    endExclusive = new Date(Date.UTC(y + 1, 0, 1));
-  }
-
-  // Convert exclusive end to inclusive end (last day of the window) for
-  // /transakcije's `to` filter and human-readable labels.
-  const inclusiveEnd = new Date(endExclusive.getTime() - 24 * 60 * 60 * 1000);
-
-  return {
-    from: fmt(start),
-    to: fmt(inclusiveEnd),
-    label: `${human(start)} — ${human(inclusiveEnd)}`,
-  };
-}
+// MT-8: `computeDateRange` extracted to `lib/dates/compute-period-range.ts`
+// so its lock-step contract with SQL RPC `get_spending_by_category`
+// (migration 00062) is testable in isolation. See the lib for the full
+// contract notes (weekly/monthly/quarterly/yearly window definitions).
 
 function serialise(rows: CategorySpendRow[]): SerializedCategorySpend[] {
   return rows.map((r) => ({
