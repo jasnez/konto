@@ -229,7 +229,7 @@ export async function createMerchant(input: unknown): Promise<CreateMerchantResu
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidatePath('/merchants');
+  revalidatePath('/prodavaci');
   return { success: true, data: { id: row.id } };
 }
 
@@ -328,7 +328,7 @@ export async function updateMerchant(id: unknown, input: unknown): Promise<Updat
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidatePath('/merchants');
+  revalidatePath('/prodavaci');
   return { success: true };
 }
 
@@ -380,7 +380,7 @@ export async function deleteMerchant(id: unknown): Promise<DeleteMerchantResult>
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidatePath('/merchants');
+  revalidatePath('/prodavaci');
   return { success: true };
 }
 
@@ -422,6 +422,6 @@ export async function bulkDeleteEmptyMerchants(): Promise<BulkDeleteEmptyMerchan
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidatePath('/merchants');
+  revalidatePath('/prodavaci');
   return { success: true, data: { count: data.length } };
 }

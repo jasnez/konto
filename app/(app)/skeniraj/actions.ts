@@ -469,7 +469,7 @@ export async function createTransactionFromReceipt(
 
   revalidateAfterTransactionWrite([data.account_id]);
   revalidatePath('/skeniraj');
-  if (merchantCreated) revalidatePath('/merchants');
+  if (merchantCreated) revalidatePath('/prodavaci');
 
   return {
     success: true,

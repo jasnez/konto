@@ -36,7 +36,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/pocetna', label: 'Početna', mobileLabel: 'Početna', icon: Home },
   { href: '/racuni', label: 'Računi', mobileLabel: 'Računi', icon: Wallet },
   { href: '/kategorije', label: 'Kategorije', mobileLabel: 'Kat.', icon: Tags },
-  { href: '/merchants', label: 'Prodavači', mobileLabel: 'Shop', icon: Store, desktopOnly: true },
+  { href: '/prodavaci', label: 'Prodavači', mobileLabel: 'Shop', icon: Store, desktopOnly: true },
   {
     href: '/kartice-rate',
     label: 'Kartice na rate',
@@ -63,14 +63,14 @@ export const NAV_ITEMS: NavItem[] = [
     desktopOnly: true,
   },
   {
-    href: '/import',
+    href: '/uvezi',
     label: 'Uvezi izvod',
     mobileLabel: 'Uvoz',
     icon: FileUp,
     desktopOnly: true,
   },
   { href: '/vodic', label: 'Vodič', mobileLabel: 'Vodič', icon: BookOpen, desktopOnly: true },
-  { href: '/help', label: 'Pomoć', mobileLabel: 'Pomoć', icon: HelpCircle, desktopOnly: true },
+  { href: '/pomoc', label: 'Pomoć', mobileLabel: 'Pomoć', icon: HelpCircle, desktopOnly: true },
   { href: '/uvidi', label: 'Uvidi', mobileLabel: 'Uvidi', icon: PieChart, desktopOnly: true },
   { href: '/podesavanja', label: 'Podešavanja', mobileLabel: 'Više', icon: Settings },
 ];

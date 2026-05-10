@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QuickAddTransaction } from './quick-add-transaction';
-import { createMerchant, searchMerchants } from '@/app/(app)/merchants/actions';
+import { createMerchant, searchMerchants } from '@/app/(app)/prodavaci/actions';
 import { createTransaction } from '@/app/(app)/transakcije/actions';
 import { toast } from 'sonner';
 
@@ -10,7 +10,7 @@ vi.mock('@/app/(app)/transakcije/actions', () => ({
   createTransaction: vi.fn(),
 }));
 
-vi.mock('@/app/(app)/merchants/actions', () => ({
+vi.mock('@/app/(app)/prodavaci/actions', () => ({
   createMerchant: vi.fn(),
   searchMerchants: vi.fn(),
 }));

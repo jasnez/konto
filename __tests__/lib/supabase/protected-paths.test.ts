@@ -35,7 +35,8 @@ import { PROTECTED_PATHS } from '@/lib/supabase/middleware';
  * NO authenticated data and is safe to expose without a session.
  */
 const PUBLIC_CONTENT_PAGES = new Set<string>([
-  'help', // FAQ — public marketing content
+  // UX-10: was 'help' before route renamed to /pomoc.
+  'pomoc', // FAQ — public marketing content
   'vodic', // user guide — public marketing content
   'sigurnost', // security/privacy disclosure — also short-circuited via middleware.PUBLIC_PAGE_PATHS
 ]);

@@ -122,7 +122,7 @@ export default async function ImportBatchPage(props: PageProps) {
     redirect('/transakcije');
   }
   if (batchStatus === 'rejected') {
-    redirect('/import');
+    redirect('/uvezi');
   }
 
   const a = batch.accounts;
@@ -142,7 +142,7 @@ export default async function ImportBatchPage(props: PageProps) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
         <p className="text-sm text-muted-foreground">
-          <Link className="text-primary hover:underline" href="/import">
+          <Link className="text-primary hover:underline" href="/uvezi">
             ← Natrag na uvoz
           </Link>
         </p>
@@ -163,7 +163,7 @@ export default async function ImportBatchPage(props: PageProps) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
         <p className="text-sm text-muted-foreground">
-          <Link className="text-primary hover:underline" href="/import">
+          <Link className="text-primary hover:underline" href="/uvezi">
             ← Natrag na uvoz
           </Link>
         </p>
@@ -243,7 +243,7 @@ export default async function ImportBatchPage(props: PageProps) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
         <p className="text-sm text-muted-foreground">
-          <Link className="text-primary hover:underline" href="/import">
+          <Link className="text-primary hover:underline" href="/uvezi">
             ← Natrag na uvoz
           </Link>
         </p>
@@ -266,7 +266,7 @@ export default async function ImportBatchPage(props: PageProps) {
   return (
     <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
       <p className="text-sm text-muted-foreground">
-        <Link className="text-primary hover:underline" href="/import">
+        <Link className="text-primary hover:underline" href="/uvezi">
           ← Natrag na uvoz
         </Link>
       </p>

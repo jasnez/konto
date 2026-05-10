@@ -16,7 +16,7 @@ import {
 } from 'react';
 import { toast } from 'sonner';
 import { createCashAccount } from '@/app/(app)/racuni/actions';
-import { searchMerchants, type MerchantResult } from '@/app/(app)/merchants/actions';
+import { searchMerchants, type MerchantResult } from '@/app/(app)/prodavaci/actions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -442,7 +442,7 @@ export function ImportReviewClient({
         return;
       }
       toast.message('Uvoz je otkazan.');
-      router.push('/import');
+      router.push('/uvezi');
     });
   }, [batchId, router]);
 

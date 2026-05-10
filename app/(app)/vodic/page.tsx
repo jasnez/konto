@@ -294,8 +294,8 @@ const sections: Section[] = [
         </p>
         <p>
           <strong className="text-foreground">Masovne izmjene.</strong> Na{' '}
-          <Link href="/merchants" className="font-medium text-primary hover:underline">
-            /merchants
+          <Link href="/prodavaci" className="font-medium text-primary hover:underline">
+            /prodavaci
           </Link>{' '}
           možeš jednim klikom promijeniti kategoriju za sve historijske + buduće transakcije jednog
           prodavca. Korisno kad shvatiš da je nešto pogrešno klasifikovano.
@@ -359,8 +359,8 @@ const sections: Section[] = [
         </p>
         <p>
           <strong className="text-foreground">Kako:</strong> idi na{' '}
-          <Link href="/import" className="font-medium text-primary hover:underline">
-            /import
+          <Link href="/uvezi" className="font-medium text-primary hover:underline">
+            /uvezi
           </Link>
           , odaberi račun na koji ide uvoz, povuci PDF u zonu za upload (ili klik za odabir).
           Aplikacija:
@@ -397,7 +397,7 @@ const sections: Section[] = [
           pravi PDF (ne fotografija sa ekstenzijom .pdf), pokušaj drugi izvod iste banke, osvježi
           stranicu. Ako ni to ne pomogne, unesi ručno dok ne proširimo podršku za taj oblik. Više
           detalja u{' '}
-          <Link href="/help#uvoz-ne-parsira" className="font-medium text-primary hover:underline">
+          <Link href="/pomoc#uvoz-ne-parsira" className="font-medium text-primary hover:underline">
             FAQ — Izvod se ne parsira
           </Link>
           .
@@ -751,7 +751,7 @@ export default function VodicPage() {
         <p className="text-base text-muted-foreground">
           Sve glavne funkcionalnosti na jednom mjestu. Brzi sadržaj ti dozvoljava da preskočiš
           direktno na ono što te zanima. Ako tražiš kratke odgovore na česta pitanja, idi na{' '}
-          <Link href="/help" className="font-medium text-primary hover:underline">
+          <Link href="/pomoc" className="font-medium text-primary hover:underline">
             Pomoć (FAQ)
           </Link>
           .
@@ -795,7 +795,7 @@ export default function VodicPage() {
       <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
         <p>
           Nešto nedostaje ili nije jasno?{' '}
-          <Link href="/help" className="font-medium text-primary hover:underline">
+          <Link href="/pomoc" className="font-medium text-primary hover:underline">
             Pomoć (FAQ)
           </Link>{' '}
           ima kratke odgovore;{' '}

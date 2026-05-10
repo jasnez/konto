@@ -128,7 +128,7 @@ export default async function ImportPage() {
         </div>
         <p>
           <Link
-            href="/help#uvoz-pdf"
+            href="/pomoc#uvoz-pdf"
             className="inline-flex min-h-11 min-w-0 items-center gap-1.5 rounded-md text-sm font-medium text-primary hover:underline"
             title="Kratko u Pomoći: koraci, podrška banaka, učenje kategorija."
           >

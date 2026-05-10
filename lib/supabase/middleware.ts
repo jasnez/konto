@@ -23,11 +23,12 @@ export const PROTECTED_PATHS = [
   '/uvidi',
   '/podesavanja',
   '/kategorije',
-  '/merchants',
+  // UX-10: was /merchants, /import — renamed to Bosnian.
+  '/prodavaci',
   // Phase 3 routes (added by SE-9):
   '/budzeti',
   '/ciljevi',
-  '/import',
+  '/uvezi',
   '/kartice-rate',
   '/potrosnja',
   '/pretplate',

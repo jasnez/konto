@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { createInstallmentPlan } from '@/app/(app)/kartice-rate/actions';
-import { createMerchant } from '@/app/(app)/merchants/actions';
+import { createMerchant } from '@/app/(app)/prodavaci/actions';
 import { createCashAccount } from '@/app/(app)/racuni/actions';
 import { createTransaction } from '@/app/(app)/transakcije/actions';
 import { AccountSelect, type AccountOption } from '@/components/account-select';

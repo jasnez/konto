@@ -69,7 +69,7 @@ export default async function PodesavanjaPage() {
             Vodič kroz Konto
           </Link>
           <Link
-            href="/help"
+            href="/pomoc"
             className="inline-flex h-11 min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
             Pomoć (FAQ)

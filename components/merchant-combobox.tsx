@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
-import { searchMerchants, type MerchantResult } from '@/app/(app)/merchants/actions';
+import { searchMerchants, type MerchantResult } from '@/app/(app)/prodavaci/actions';
 import {
   Command,
   CommandEmpty,

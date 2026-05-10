@@ -6,6 +6,21 @@ import { withSentryConfig } from '@sentry/nextjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
+  // UX-10: Permanent redirects from old English routes to Bosnian
+  // equivalents. Browsers preserve URL fragments (#hash) through 301s, so
+  // legacy bookmarks like `/help#uvoz-pdf` correctly land on
+  // `/pomoc#uvoz-pdf`. The `:path*` variant catches nested routes (e.g.
+  // `/import/[batchId]` → `/uvezi/[batchId]`).
+  async redirects() {
+    return [
+      { source: '/help', destination: '/pomoc', permanent: true },
+      { source: '/help/:path*', destination: '/pomoc/:path*', permanent: true },
+      { source: '/import', destination: '/uvezi', permanent: true },
+      { source: '/import/:path*', destination: '/uvezi/:path*', permanent: true },
+      { source: '/merchants', destination: '/prodavaci', permanent: true },
+      { source: '/merchants/:path*', destination: '/prodavaci/:path*', permanent: true },
+    ];
+  },
   // SE-4: Static security headers. CSP is nonce-based and therefore
   // generated per-request in middleware.ts (nonce must change each request).
   async headers() {
