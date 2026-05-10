@@ -381,9 +381,16 @@ describe('runDetectionPipeline (acceptance)', () => {
   });
 
   it('Test 2: 6 monthly with amount drift ±3% → confidence > 0.85', () => {
+    // Base amount picked so the ±3% jitter (±1200 cents) stays comfortably
+    // within ONE amount tier (RC-1: tier 2 = 5_001–50_000 cents).
+    // Original test used -50000 ± 1500 which straddled the 50_000c
+    // boundary post-RC-1 stratification → split into 2 bi-monthly
+    // sub-groups (unsupported period) → 0 candidates. -40000 ± 1200
+    // keeps all 6 rows in tier 2 so the original "drift detection"
+    // intent is preserved.
     const rows = monthlySeries('2026-01-01', 6, { merchantRaw: 'KIRIJA' }).map((r, i) => ({
       ...r,
-      base_amount_cents: -50000 + (i % 2 === 0 ? -1500 : 1500), // 3% jitter
+      base_amount_cents: -40000 + (i % 2 === 0 ? -1200 : 1200), // 3% jitter
     }));
     const candidates = runDetectionPipeline(rows);
     expect(candidates.length).toBe(1);
@@ -552,6 +559,126 @@ describe('runDetectionPipeline (acceptance)', () => {
     expect(candidate.occurrences).toBe(6);
     expect(candidate.transactionIds.length).toBe(6);
     expect(candidate.suggestedCategoryId).toBe('cat-streaming');
+  });
+});
+
+// ─── RC-1: amount-tier stratification ───────────────────────────────────────
+
+describe('stratifyByAmountTier (RC-1)', () => {
+  it('places small/medium/large amounts in correct tiers', async () => {
+    // Import the helper directly via dynamic import — keeps the top
+    // import block clean and tests can still introspect the bucketing.
+    const { stratifyByAmountTier } = await import('../recurring-detection');
+    const rows = [
+      makeTx({ date: '2026-01-01', amountCents: -500 }), // 5 KM → tier 1 (S)
+      makeTx({ date: '2026-01-02', amountCents: -3500 }), // 35 KM → tier 1 (S)
+      makeTx({ date: '2026-01-03', amountCents: -10_000 }), // 100 KM → tier 2 (M)
+      makeTx({ date: '2026-01-04', amountCents: -49_000 }), // 490 KM → tier 2 (M)
+      makeTx({ date: '2026-01-05', amountCents: -100_000 }), // 1000 KM → tier 3 (L)
+      makeTx({ date: '2026-01-06', amountCents: -500_000 }), // 5000 KM → tier 3 (L)
+    ];
+    const tiers = stratifyByAmountTier(rows);
+    expect(tiers.get(1)).toHaveLength(2);
+    expect(tiers.get(2)).toHaveLength(2);
+    expect(tiers.get(3)).toHaveLength(2);
+  });
+
+  it('treats boundary values according to inclusive-upper-bound rule', async () => {
+    const { stratifyByAmountTier } = await import('../recurring-detection');
+    const rows = [
+      makeTx({ date: '2026-01-01', amountCents: -5000 }), // exactly tier 1 upper bound
+      makeTx({ date: '2026-01-02', amountCents: -5001 }), // just over → tier 2
+      makeTx({ date: '2026-01-03', amountCents: -50_000 }), // exactly tier 2 upper bound
+      makeTx({ date: '2026-01-04', amountCents: -50_001 }), // just over → tier 3
+    ];
+    const tiers = stratifyByAmountTier(rows);
+    expect(tiers.get(1)).toHaveLength(1);
+    expect(tiers.get(2)).toHaveLength(2);
+    expect(tiers.get(3)).toHaveLength(1);
+  });
+});
+
+describe('runDetectionPipeline RC-1 (Starbucks + insurance scenario)', () => {
+  it('does NOT lump monthly small-ticket + annual large-ticket from same merchant into one candidate', () => {
+    // The exact scenario the audit (RC-1) called out: a merchant tagged
+    // ambiguously (e.g. user manually labelled both Starbucks AND a
+    // year-end insurance payment with the same merchant) used to land
+    // in one group. analyzeIntervals would average the bimodal cadence
+    // into a fake "monthly" pattern with high amount-CV that still
+    // sneaked above the 0.5 confidence threshold. Post-RC-1 the tier
+    // stratification keeps each amount cohort separate — the small-
+    // ticket monthly pattern produces its own candidate; the single
+    // annual large-ticket payment is below MIN_OCCURRENCES and yields
+    // no candidate (correct: 1 occurrence is not "recurring").
+    const monthlyCoffee = monthlySeries('2026-01-15', 6, {
+      merchantId: 'mer-mistagged',
+      amountCents: -500, // 5 KM, tier 1
+    });
+    const annualInsurance = [
+      makeTx({
+        date: '2026-03-01',
+        merchantId: 'mer-mistagged',
+        amountCents: -50_000, // 500 KM, tier 2 (≤50k boundary)
+      }),
+      // Only 1 occurrence — won't qualify as recurring on its own.
+    ];
+    const candidates = runDetectionPipeline([...monthlyCoffee, ...annualInsurance]);
+
+    // Pre-fix: there'd be 1 candidate with bimodal amounts and (depending
+    // on data shape) either fake-monthly or rejected for high CV.
+    // Post-fix: only the coffee tier (tier 1) yields a candidate; the
+    // insurance is alone in tier 2 and falls below MIN_OCCURRENCES.
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].period).toBe('monthly');
+    // Average amount should reflect ONLY the coffee tier, NOT the
+    // bimodal mix that would average to ~-7000.
+    expect(Number(candidates[0].averageAmountCents)).toBeLessThan(-100);
+    expect(Number(candidates[0].averageAmountCents)).toBeGreaterThan(-1000);
+  });
+
+  it('two separate recurring patterns at same merchant in different tiers BOTH detected', () => {
+    // Future-looking: same merchant pays out small AND large recurring
+    // (e.g. company that bills both a monthly subscription and a yearly
+    // hardware fee). Post-RC-1 each tier produces its own candidate.
+    const tier1Series = monthlySeries('2026-01-15', 6, {
+      merchantId: 'mer-multi-tier',
+      amountCents: -2000, // 20 KM, tier 1
+    });
+    const tier2Series = monthlySeries('2026-01-20', 6, {
+      merchantId: 'mer-multi-tier',
+      amountCents: -25_000, // 250 KM, tier 2
+    });
+    const candidates = runDetectionPipeline([...tier1Series, ...tier2Series]);
+
+    expect(candidates).toHaveLength(2);
+    // Both detected as monthly with distinct average amounts.
+    const tier1Cand = candidates.find((c) => Number(c.averageAmountCents) > -10_000);
+    const tier2Cand = candidates.find((c) => Number(c.averageAmountCents) <= -10_000);
+    expect(tier1Cand).toBeDefined();
+    expect(tier2Cand).toBeDefined();
+    expect(tier1Cand?.period).toBe('monthly');
+    expect(tier2Cand?.period).toBe('monthly');
+  });
+
+  it('tier suffix in groupKey prevents collision between same-merchant tiers', () => {
+    // Verify the groupKey tier suffix actually differentiates candidates.
+    const tier1 = monthlySeries('2026-01-15', 6, {
+      merchantId: 'mer-collision',
+      amountCents: -1500,
+    });
+    const tier3 = monthlySeries('2026-01-20', 6, {
+      merchantId: 'mer-collision',
+      amountCents: -200_000, // 2000 KM, tier 3
+    });
+    const candidates = runDetectionPipeline([...tier1, ...tier3]);
+    expect(candidates).toHaveLength(2);
+    const keys = candidates.map((c) => c.groupKey);
+    // Same merchant prefix, different tier suffix.
+    expect(keys[0]).toContain('mer-collision');
+    expect(keys[1]).toContain('mer-collision');
+    expect(keys[0]).not.toBe(keys[1]);
+    expect(keys.some((k) => k.endsWith('#tier-1'))).toBe(true);
+    expect(keys.some((k) => k.endsWith('#tier-3'))).toBe(true);
   });
 });
 
