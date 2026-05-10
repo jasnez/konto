@@ -482,7 +482,7 @@ export function TransactionsClient({
         open={bulkDeleteOpen}
         onOpenChange={setBulkDeleteOpen}
         title={`Obrisati ${String(selectedIds.size)} transakcija?`}
-        description="Sve odabrane transakcije će biti soft obrisane i možeš ih kasnije vratiti."
+        description="Brisanje je povratno — možeš ih vratiti kasnije."
         onConfirm={handleBulkDelete}
       />
 

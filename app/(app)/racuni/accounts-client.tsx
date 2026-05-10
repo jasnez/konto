@@ -243,7 +243,7 @@ export function AccountsClient({
         open={bulkDeleteOpen}
         onOpenChange={setBulkDeleteOpen}
         title={`Obrisati ${String(selectedIds.size)} ${selectedIds.size === 1 ? 'račun' : 'računa'}?`}
-        description="Računi i sve njihove transakcije biće soft obrisane (mogu se vratiti kroz restore)."
+        description="Brisanje je povratno — računi i njihove transakcije se mogu vratiti kasnije."
         onConfirm={handleBulkDelete}
       />
     </>

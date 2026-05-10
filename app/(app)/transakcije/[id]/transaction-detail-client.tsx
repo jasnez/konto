@@ -89,7 +89,7 @@ const SOURCE_LABELS: Record<string, string> = {
   import_xlsx: 'Iz Excel-a',
   voice: 'Glasovni unos',
   recurring: 'Pretplata',
-  split: 'Split',
+  split: 'Podjela',
 };
 
 function formatSourceLabel(source: string): string {
@@ -202,9 +202,8 @@ export function TransactionDetailClient({
     }
 
     if (result.error === 'CROSS_CURRENCY_NOT_SUPPORTED') {
-      toast.error('Različite valute nisu podržane.', {
-        description:
-          'Pretvaranje radi samo između računa u istoj valuti. Ručno obriši ovu transakciju i napravi transfer iz Brzog unosa.',
+      toast.error('Pretvaranje u transfer radi samo između računa u istoj valuti.', {
+        description: 'Obriši ovu transakciju ručno, pa napravi transfer kroz Brzi unos.',
       });
       return;
     }

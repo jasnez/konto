@@ -415,7 +415,7 @@ export function ImportReviewClient({
               'Sve odabrane stavke već postoje kao transakcije. Izmijeni ih ili isključi duplikate.',
             );
           } else if (res.error === 'EXTERNAL_SERVICE_ERROR') {
-            toast.error('Tečaj ili vanjski servis trenutno ne odgovara. Pokušaj za minut.');
+            toast.error('Servis za tečajeve trenutno ne odgovara. Pokušaj za minut.');
           } else {
             toast.error('Uvoz nije uspio.');
           }

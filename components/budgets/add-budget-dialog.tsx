@@ -24,7 +24,7 @@ const ERROR_COPY: Record<string, string> = {
   DUPLICATE_ACTIVE:
     'Već imaš aktivan budžet za ovu kategoriju i period. Deaktiviraj prvo postojeći.',
   UNAUTHORIZED: 'Sesija je istekla. Prijavi se ponovo.',
-  DATABASE_ERROR: 'Greška u bazi. Pokušaj opet za par sekundi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 export function AddBudgetDialog({

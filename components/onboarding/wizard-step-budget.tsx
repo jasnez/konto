@@ -17,7 +17,7 @@ const ERROR_COPY: Record<string, string> = {
   CATEGORY_NOT_BUDGETABLE: 'Kategorija nije pogodna za budžet (mora biti tip troška ili štednje).',
   DUPLICATE_ACTIVE: 'Već imaš aktivan budžet za ovu kategoriju.',
   UNAUTHORIZED: 'Sesija je istekla.',
-  DATABASE_ERROR: 'Greška u bazi. Pokušaj ponovo.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 export interface WizardStepBudgetProps {

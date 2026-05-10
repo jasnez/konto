@@ -47,16 +47,16 @@ export interface PretplateClientProps {
 const CANCEL_ERROR: Record<string, string> = {
   NOT_FOUND: 'Pretplata više ne postoji.',
   UNAUTHORIZED: 'Sesija je istekla.',
-  DATABASE_ERROR: 'Greška u bazi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 const CONFIRM_ERROR: Record<string, string> = {
   REFERENCED_NOT_OWNED: 'Kategorija/račun mora biti tvoj.',
   UNAUTHORIZED: 'Sesija je istekla.',
-  DATABASE_ERROR: 'Greška u bazi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 const IGNORE_ERROR: Record<string, string> = {
   UNAUTHORIZED: 'Sesija je istekla.',
-  DATABASE_ERROR: 'Greška u bazi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 export function PretplateClient({

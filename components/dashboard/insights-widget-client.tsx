@@ -38,7 +38,7 @@ export function InsightsWidgetList({ items }: InsightsWidgetListProps) {
   if (visible.length === 0) {
     return (
       <p className="text-center text-sm text-muted-foreground">
-        Nema više uvida za prikaz.
+        Sve si pregledao/la. Novi uvidi se generišu svaku noć u 04:00.
       </p>
     );
   }

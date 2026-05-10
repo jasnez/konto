@@ -22,7 +22,7 @@ export interface AddGoalDialogProps {
 const ERROR_COPY: Record<string, string> = {
   ACCOUNT_NOT_FOUND: 'Odabrani račun nije pronađen. Odaberi drugi račun.',
   UNAUTHORIZED: 'Sesija je istekla. Prijavi se ponovo.',
-  DATABASE_ERROR: 'Greška u bazi. Pokušaj opet za par sekundi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 export function AddGoalDialog({ open, onOpenChange, accounts, baseCurrency }: AddGoalDialogProps) {

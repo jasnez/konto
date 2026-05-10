@@ -28,7 +28,7 @@ import {
 const DISMISS_ERROR_COPY: Record<string, string> = {
   NOT_FOUND: 'Uvid više ne postoji.',
   UNAUTHORIZED: 'Sesija je istekla. Prijavi se ponovo.',
-  DATABASE_ERROR: 'Greška u bazi. Pokušaj ponovo.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
   VALIDATION_ERROR: 'Nevažeći zahtjev.',
 };
 
@@ -36,7 +36,7 @@ const UNDISMISS_ERROR_COPY: Record<string, string> = {
   NOT_FOUND: 'Uvid više ne postoji.',
   CONFLICT: 'Postoji noviji uvid sa istim ključem.',
   UNAUTHORIZED: 'Sesija je istekla. Prijavi se ponovo.',
-  DATABASE_ERROR: 'Greška u bazi. Pokušaj ponovo.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
   VALIDATION_ERROR: 'Nevažeći zahtjev.',
 };
 
@@ -73,9 +73,7 @@ export interface UseInsightDismissReturn {
   pending: boolean;
 }
 
-export function useInsightDismiss(
-  options: UseInsightDismissOptions = {},
-): UseInsightDismissReturn {
+export function useInsightDismiss(options: UseInsightDismissOptions = {}): UseInsightDismissReturn {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 

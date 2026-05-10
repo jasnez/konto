@@ -37,7 +37,7 @@ export interface AddContributionDialogProps {
 const ERROR_COPY: Record<string, string> = {
   NOT_FOUND: 'Cilj nije pronađen. Možda je obrisan.',
   UNAUTHORIZED: 'Sesija je istekla. Prijavi se ponovo.',
-  DATABASE_ERROR: 'Greška u bazi. Pokušaj opet za par sekundi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 async function fireConfetti(): Promise<void> {
@@ -81,7 +81,8 @@ export function AddContributionDialog({
     if (result.success) {
       if (result.data.justAchieved) {
         void fireConfetti();
-        toast.success(`Čestitam! Postigao si cilj "${goalName}"! 🎉`, {
+        toast.success(`Cilj "${goalName}" je postignut! 🎉`, {
+          description: 'Postavi sljedeći kad si spreman/spremna.',
           duration: 6000,
         });
       } else {

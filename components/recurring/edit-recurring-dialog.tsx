@@ -64,7 +64,7 @@ const ERROR_COPY: Record<string, string> = {
   REFERENCED_NOT_OWNED: 'Kategorija/račun mora biti tvoj.',
   NOT_FOUND: 'Pretplata više ne postoji. Osvježi stranicu.',
   UNAUTHORIZED: 'Sesija je istekla. Prijavi se ponovo.',
-  DATABASE_ERROR: 'Greška u bazi. Pokušaj opet za par sekundi.',
+  DATABASE_ERROR: 'Servis je trenutno spor. Pokušaj za minut.',
 };
 
 export interface EditRecurringDialogProps {
