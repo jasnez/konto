@@ -95,7 +95,7 @@ describe('RecurringCard', () => {
     expect(onPause).toHaveBeenCalledWith('rec-1');
 
     await user.click(screen.getByRole('button', { name: 'Meni za pretplatu' }));
-    await user.click(await screen.findByText('Otkaži'));
+    await user.click(await screen.findByText('Završi pretplatu'));
     expect(onCancel).toHaveBeenCalledWith('rec-1');
   });
 
