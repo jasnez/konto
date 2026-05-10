@@ -1,5 +1,5 @@
 /**
- * Zod schemas for the recurring (pretplate) Server Actions (F3-E2-T2).
+ * Zod schemas for the recurring (pretplate) Server Actions.
  *
  * Mirrors the split in lib/budgets/validation.ts. The detection module
  * (lib/analytics/recurring-detection.ts) emits `RecurringCandidate`s

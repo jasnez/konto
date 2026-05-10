@@ -7,7 +7,7 @@ declare global {
 const denoRuntime = (globalThis as { Deno?: DenoLike }).Deno;
 
 function handleFxRefresh(): Response {
-  // Scaffold endpoint; F1-E3-T1 will add daily EUR/* refresh + cache writes to public.fx_rates.
+  // Scaffold endpoint; TODO: add daily EUR/* refresh + cache writes to public.fx_rates.
   return new Response(
     JSON.stringify({
       ok: true,

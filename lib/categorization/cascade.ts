@@ -1,7 +1,7 @@
 /**
  * Categorization cascade for parsed bank-statement rows.
  *
- * F2-E4-T1 / docs/01-architecture.md §8 (Categorization Engine).
+ * Spec: docs/01-architecture.md §8 (Categorization Engine).
  *
  * Order of operations (cheapest → most expensive, deterministic):
  *
@@ -14,9 +14,9 @@
  *   4. `history`      — trigram match against the user's last 1000
  *                       categorised transactions, similarity > 0.7.
  *   5. `llm`          — deferred: LLM fallback is gated on `amountMinor` >
- *                       50 KM (5000 minor units) per the F2-E4-T1 spec.
- *                       Not wired up here yet (Faza 2 may defer); this
- *                       module exposes the hook so callers can plug it in.
+ *                       50 KM (5000 minor units) per the architecture spec.
+ *                       Not wired up here yet; this module exposes the
+ *                       hook so callers can plug it in.
  *   6. `none`         — nothing matched.
  *
  * Steps 1–4 run inside a single Postgres function
@@ -35,7 +35,7 @@ import type { Database, Json } from '@/supabase/types';
 
 /** Sources understood by the cascade. Mirror of `transactions.category_source`
  *  with the alias variants split apart so the review UI can colour-code
- *  exact vs fuzzy matches differently (F2-E4-T2). */
+ *  exact vs fuzzy matches differently. */
 export type CategorizationSource =
   | 'rule'
   | 'alias_exact'
@@ -73,9 +73,9 @@ const NONE_RESULT: Readonly<CategorizationResult> = Object.freeze({
   confidence: 0,
 });
 
-/** LLM gating threshold per F2-E4-T1: only consider an LLM fallback for
- *  transactions worth at least 50 KM (5000 fening). Exposed for tests +
- *  future call sites; the cascade itself does not invoke any LLM today. */
+/** LLM gating threshold: only consider an LLM fallback for transactions
+ *  worth at least 50 KM (5000 fening). Exposed for tests + future call
+ *  sites; the cascade itself does not invoke any LLM today. */
 export const LLM_FALLBACK_MIN_AMOUNT_MINOR = 5000;
 
 /**
@@ -83,7 +83,7 @@ export const LLM_FALLBACK_MIN_AMOUNT_MINOR = 5000;
  *
  * Mirror of the SQL `public.normalize_for_categorization` so callers can
  * pre-normalise on the JS side (e.g. for offline equality checks in
- * `lib/categorization/learn.ts` once F2-E4-T3 lands). The two
+ * `lib/categorization/learn.ts` once the learning loop lands). The two
  * implementations must stay in lock-step — change both or neither.
  */
 export function normalizeDescription(input: string): string {

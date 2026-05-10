@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Admin Server Actions for invite codes (F4-E2-T1).
+ * Admin Server Actions for invite codes.
  *
  * Every action re-validates the admin email gate even though the page
  * layout already does — defense in depth in case the layout check is ever

@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Server Actions for /uvidi (F3-E5-T1).
+ * Server Actions for /uvidi.
  *
  * Two actions:
  *   - `dismissInsight(id)` — marks an insight as dismissed. Standard pattern:

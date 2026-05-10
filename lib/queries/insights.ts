@@ -1,5 +1,5 @@
 /**
- * Insights read-side query helpers (F3-E5-T2).
+ * Insights read-side query helpers.
  *
  * The engine writes to `public.insights` via service-role; users read their
  * own rows via these helpers (RLS scopes everything by `auth.uid()`).

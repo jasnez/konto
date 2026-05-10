@@ -1,7 +1,7 @@
 /**
  * Learning loop for the categorization cascade.
  *
- * F2-E4-T3 / docs/01-architecture.md §8.3 (Kontinualno učenje).
+ * Spec: docs/01-architecture.md §8.3 (Kontinualno učenje).
  *
  * Whenever the user overrides a non-deterministic categorization suggestion
  * (anything other than `rule` or `alias_exact`), the import-review Server

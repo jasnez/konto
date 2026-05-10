@@ -1,5 +1,5 @@
 /**
- * Zod schemas for budget Server Actions + RHF forms (F3-E1-T2).
+ * Zod schemas for budget Server Actions + RHF forms.
  *
  * Mirrors the split in lib/accounts/validation.ts: the Form schema keeps
  * `amount_cents` as a string (RHF-friendly) and the Server schema transforms

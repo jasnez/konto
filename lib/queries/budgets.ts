@@ -1,5 +1,5 @@
 /**
- * Budget query helpers (F3-E1-T2).
+ * Budget query helpers.
  *
  * `listBudgetsWithSpent` joins `budgets` with the user's owned categories
  * and calls `get_current_period_spent` per row. Used by the /budzeti list

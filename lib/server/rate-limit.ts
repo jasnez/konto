@@ -11,7 +11,7 @@ export const IMPORT_PARSE_WINDOW_SEC = 10 * 60;
 
 /** Max new PDF uploads per user in the window below. */
 export const IMPORT_UPLOAD_MAX = 20;
-/** Upload window: 24h rolling (F2-E5-T2 "daily"). */
+/** Upload window: 24h rolling (the "daily" cap). */
 export const IMPORT_UPLOAD_WINDOW_SEC = 24 * 60 * 60;
 
 /**

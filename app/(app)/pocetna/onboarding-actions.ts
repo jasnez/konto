@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Server Actions for the onboarding wizard (F3-E6-T1).
+ * Server Actions for the onboarding wizard.
  *
  * Three actions:
  *   - `markOnboardingStep(step)` — flips one step to true in the
@@ -33,12 +33,7 @@ type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
-const StepSchema = z.union([
-  z.literal(1),
-  z.literal(2),
-  z.literal(3),
-  z.literal(4),
-]);
+const StepSchema = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]);
 
 export type WizardStepNumber = z.infer<typeof StepSchema>;
 
@@ -165,9 +160,7 @@ export async function markOnboardingStep(step: unknown): Promise<MarkStepResult>
  *     jsonb (used by the global "Preskoči" button so the user doesn't see
  *     a half-checked progress bar if they ever reset).
  */
-export async function completeOnboarding(
-  options?: unknown,
-): Promise<CompleteOnboardingResult> {
+export async function completeOnboarding(options?: unknown): Promise<CompleteOnboardingResult> {
   const parsed = CompleteOnboardingSchema.safeParse(options);
   // Schema is .optional() with .optional() fields — invalid is unreachable
   // unless caller passes a wrong type. Treat as no-op shape if so.
@@ -193,10 +186,7 @@ export async function completeOnboarding(
     };
   }
 
-  const { error: upErr } = await supabase
-    .from('profiles')
-    .update(updatePayload)
-    .eq('id', user.id);
+  const { error: upErr } = await supabase.from('profiles').update(updatePayload).eq('id', user.id);
 
   if (upErr) {
     logSafe('complete_onboarding_update', { userId: user.id, error: upErr.message });

@@ -1,5 +1,5 @@
 /**
- * Zod schemas for goals Server Actions + RHF forms (F3-E4-T1).
+ * Zod schemas for goals Server Actions + RHF forms.
  *
  * Mirrors the pattern in lib/budgets/validation.ts:
  *   - "Form" schemas keep `amount_cents` as a string (RHF-friendly).
