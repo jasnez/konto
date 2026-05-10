@@ -131,6 +131,12 @@ export type UpdateBudgetResult =
       details: ReturnType<typeof buildUpdateBudgetErrorDetails> | { _root: string[] };
     }
   | { success: false; error: 'UNAUTHORIZED' }
+  // BG-1: changing `period` shifts the spending baseline (1000 KM/month
+  // ≠ 1000 KM/week). Auto-scaling is mathematically dubious (30-day
+  // month / 7 = 4.29 weeks). Server rejects period-only changes; the
+  // UI must show the conversion math and ask the user to re-enter the
+  // amount explicitly.
+  | { success: false; error: 'PERIOD_CHANGE_REQUIRES_AMOUNT' }
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'CATEGORY_NOT_BUDGETABLE' }
   | { success: false; error: 'DUPLICATE_ACTIVE' }
@@ -299,9 +305,11 @@ export async function updateBudget(id: unknown, input: unknown): Promise<UpdateB
     return { success: false, error: 'UNAUTHORIZED' };
   }
 
+  // BG-2: select carries the full budget so we can detect period change
+  // (BG-1) and carry over unchanged fields when soft-archiving (BG-2).
   const { data: existing, error: selErr } = await supabase
     .from('budgets')
-    .select('id')
+    .select('id, category_id, currency, amount_cents, period, rollover')
     .eq('id', idParse.data)
     .eq('user_id', user.id)
     .maybeSingle();
@@ -315,11 +323,71 @@ export async function updateBudget(id: unknown, input: unknown): Promise<UpdateB
   }
 
   const p = parsed.data;
+  const periodChanging = p.period !== undefined && p.period !== existing.period;
+
+  // BG-1: a period change must be accompanied by an explicit new
+  // amount_cents. Auto-scaling 1000 KM/month → 1000 KM/week without
+  // user input would silently mislead the spending baseline (the SQL
+  // RPC `get_period_spent_for_category` compares against the budget's
+  // current amount as-is). Push the conversion decision back to the UI.
+  if (periodChanging && p.amount_cents === undefined) {
+    return { success: false, error: 'PERIOD_CHANGE_REQUIRES_AMOUNT' };
+  }
+
+  // BG-2: when period changes, soft-archive the old row + insert a fresh
+  // one. Two reasons:
+  //   1. Preserves history — `get_period_spent_for_category` can still
+  //      look back at "spending under last month's budget" by joining on
+  //      the inactive row's period_started_at.
+  //   2. Avoids an in-place update that would silently overwrite the
+  //      semantic meaning of the row (same DB id, different period =
+  //      different budget contract). The partial unique index
+  //      `WHERE active = true` (migration 00053) lets us reuse the same
+  //      (user, category, period) tuple by archiving the previous one
+  //      first.
+  if (periodChanging) {
+    const { error: archiveErr } = await supabase
+      .from('budgets')
+      .update({ active: false })
+      .eq('id', existing.id)
+      .eq('user_id', user.id);
+    if (archiveErr) {
+      logSafe('update_budget_archive', {
+        userId: user.id,
+        code: archiveErr.code,
+        error: archiveErr.message,
+      });
+      return { success: false, error: 'DATABASE_ERROR' };
+    }
+
+    const { error: insertErr } = await supabase.from('budgets').insert({
+      user_id: user.id,
+      category_id: p.category_id ?? existing.category_id,
+      // p.amount_cents is guaranteed defined per BG-1 check above.
+      amount_cents: centsToDbInt(p.amount_cents ?? 0n),
+      currency: p.currency ?? existing.currency,
+      period: p.period ?? existing.period,
+      rollover: p.rollover ?? existing.rollover,
+    });
+    if (insertErr) {
+      logSafe('update_budget_archive_insert', {
+        userId: user.id,
+        code: insertErr.code,
+        error: insertErr.message,
+      });
+      const mapped = mapBudgetWriteError(insertErr.message, insertErr.code);
+      return { success: false, ...mapped };
+    }
+
+    revalidateBudgetPaths();
+    return { success: true };
+  }
+
+  // No period change: in-place UPDATE on the existing row.
   const patch: BudgetUpdate = {};
   if (p.category_id !== undefined) patch.category_id = p.category_id;
   if (p.amount_cents !== undefined) patch.amount_cents = centsToDbInt(p.amount_cents);
   if (p.currency !== undefined) patch.currency = p.currency;
-  if (p.period !== undefined) patch.period = p.period;
   if (p.rollover !== undefined) patch.rollover = p.rollover;
 
   if (Object.keys(patch).length === 0) {

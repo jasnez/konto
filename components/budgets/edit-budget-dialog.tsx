@@ -32,6 +32,12 @@ const ERROR_COPY: Record<string, string> = {
   NOT_FOUND: 'Budžet više ne postoji. Osvježi stranicu.',
   UNAUTHORIZED: 'Sesija je istekla. Prijavi se ponovo.',
   DATABASE_ERROR: 'Greška u bazi. Pokušaj opet za par sekundi.',
+  // BG-1: server rejects period change without explicit new amount.
+  // 1000 KM/mjesec ≠ 1000 KM/sedmicu — auto-scaling bi tiho promijenio
+  // baseline po kojem se mjeri potrošnja. Korisnik mora unijeti novi
+  // iznos eksplicitno.
+  PERIOD_CHANGE_REQUIRES_AMOUNT:
+    'Promjena perioda traži i novi iznos limita. Tjedni i mjesečni budžet imaju različite skale.',
 };
 
 export function EditBudgetDialog({

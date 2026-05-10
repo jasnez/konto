@@ -157,45 +157,70 @@ export async function detectRecurring(
  * Pure pipeline that turns a pre-fetched (and pre-filtered) row set into
  * candidates. Exposed for tests so they don't need a Supabase mock when
  * the caller already has the rows.
+ *
+ * RC-1: stratifies each merchant group by amount tier before period
+ * detection. A user's monthly Starbucks (≈ 5 KM) and annual car
+ * insurance (≈ 500 KM) for the same merchant ID would otherwise land
+ * in one group with bimodal amounts — `analyzeIntervals` averages them
+ * into a fake "monthly" cadence and a candidate slips through above
+ * the confidence threshold. Tier stratification keeps each amount
+ * cohort separate so each gets its own period analysis.
+ *
+ * Trade-off: a subscription whose amount drifts ACROSS a tier boundary
+ * (e.g. Netflix 9.99 → 10.99 EUR — both stay in tier S) is unaffected;
+ * a price hike crossing 5 KM ↔ 50 KM would split into two sub-groups
+ * that each may fall below `MIN_OCCURRENCES`. False-negative risk
+ * accepted in exchange for the false-positive fix; the alternative
+ * (group-median tier assignment) defeats the stratification purpose
+ * for the bimodal Starbucks/insurance case.
  */
 export function runDetectionPipeline(rows: RecurringTxRow[]): RecurringCandidate[] {
   const groups = groupTransactions(rows);
   const candidates: RecurringCandidate[] = [];
 
   for (const [groupKey, rawGroup] of groups) {
-    const group = filterIntraGroupNoise(rawGroup);
-    if (group.length < MIN_OCCURRENCES) continue;
+    // RC-1: split each merchant group by amount tier before further
+    // analysis. The tier index is appended to `groupKey` so two
+    // candidates from the same merchant at different tiers don't
+    // collide downstream.
+    const tieredGroups = stratifyByAmountTier(rawGroup);
+    for (const [tier, tieredRows] of tieredGroups) {
+      const group = filterIntraGroupNoise(tieredRows);
+      if (group.length < MIN_OCCURRENCES) continue;
 
-    const dates = group.map((r) => parseISO(r.transaction_date));
-    const amounts = group.map((r) => BigInt(r.base_amount_cents));
+      const dates = group.map((r) => parseISO(r.transaction_date));
+      const amounts = group.map((r) => BigInt(r.base_amount_cents));
 
-    const spanDays =
-      (dates[dates.length - 1].getTime() - dates[0].getTime()) / (24 * 60 * 60 * 1000);
-    if (spanDays < MIN_SPAN_DAYS) continue;
+      const spanDays =
+        (dates[dates.length - 1].getTime() - dates[0].getTime()) / (24 * 60 * 60 * 1000);
+      if (spanDays < MIN_SPAN_DAYS) continue;
 
-    const intervals = analyzeIntervals(dates);
-    const period = classifyPeriod(intervals);
-    if (period === null) continue;
+      const intervals = analyzeIntervals(dates);
+      const period = classifyPeriod(intervals);
+      if (period === null) continue;
 
-    const amountAnalysis = analyzeAmounts(amounts);
-    const confidence = computeConfidence({
-      occurrences: group.length,
-      intervalCV: intervals.cv,
-      amountCV: amountAnalysis.cv,
-      periodMatch: period.matchStrictness,
-    });
-    if (confidence < MIN_RETURN_CONFIDENCE) continue;
+      const amountAnalysis = analyzeAmounts(amounts);
+      const confidence = computeConfidence({
+        occurrences: group.length,
+        intervalCV: intervals.cv,
+        amountCV: amountAnalysis.cv,
+        periodMatch: period.matchStrictness,
+      });
+      if (confidence < MIN_RETURN_CONFIDENCE) continue;
 
-    candidates.push(
-      buildCandidate({
-        groupKey,
-        group,
-        intervals,
-        amountAnalysis,
-        period: period.period,
-        confidence,
-      }),
-    );
+      candidates.push(
+        buildCandidate({
+          // Tier suffix avoids merging back two real subscriptions at the
+          // same merchant — they remain distinct candidates.
+          groupKey: `${groupKey}#tier-${String(tier)}`,
+          group,
+          intervals,
+          amountAnalysis,
+          period: period.period,
+          confidence,
+        }),
+      );
+    }
   }
 
   candidates.sort((a, b) => b.confidence - a.confidence);
@@ -262,6 +287,45 @@ function makeGroupKey(r: RecurringTxRow): string {
   const norm = normalizeDescription(text);
   if (norm.length === 0) return `desc:_empty_:${r.base_currency}`;
   return `desc:${norm}:${r.base_currency}`;
+}
+
+/**
+ * RC-1: Split a merchant group into amount-tier sub-groups so a user's
+ * monthly small-ticket purchase (e.g. coffee) and annual large-ticket
+ * purchase (e.g. insurance) at the same merchant don't get analysed
+ * together (which produces a fake-monthly cadence over bimodal amounts).
+ *
+ * Tiers (cents, absolute value of `base_amount_cents`):
+ *   - Tier 1 (S): up to 5 000 cents (≈ 50 KM)
+ *   - Tier 2 (M): 5 001 — 50 000 cents (≈ 50 — 500 KM)
+ *   - Tier 3 (L): > 50 000 cents (> 500 KM)
+ *
+ * Per-row tier assignment (NOT per-group median): a bimodal group must
+ * actually split. Edge case: a subscription that drifts across a tier
+ * boundary (e.g. price hike from 49 KM → 60 KM crosses Tier 1 ↔ Tier 2)
+ * splits and each sub-group may fall below `MIN_OCCURRENCES`. That's a
+ * deliberate trade-off — the false-positive fix outweighs the rare
+ * false-negative case for tier-boundary drift.
+ */
+export function stratifyByAmountTier(group: RecurringTxRow[]): Map<number, RecurringTxRow[]> {
+  const out = new Map<number, RecurringTxRow[]>();
+  for (const r of group) {
+    const tier = computeAmountTier(BigInt(r.base_amount_cents));
+    const bucket = out.get(tier);
+    if (bucket) {
+      bucket.push(r);
+    } else {
+      out.set(tier, [r]);
+    }
+  }
+  return out;
+}
+
+function computeAmountTier(signedCents: bigint): number {
+  const abs = signedCents < 0n ? -signedCents : signedCents;
+  if (abs <= 5_000n) return 1;
+  if (abs <= 50_000n) return 2;
+  return 3;
 }
 
 /**

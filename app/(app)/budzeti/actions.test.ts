@@ -231,9 +231,20 @@ describe('updateBudget', () => {
     expect(result).toEqual({ success: false, error: 'NOT_FOUND' });
   });
 
-  it('happy path: pre-check passes, update succeeds', async () => {
+  // BG-2: select now carries period + carryover fields. Tests provide
+  // a full row shape so the new period-change detection works correctly.
+  const EXISTING_BUDGET = {
+    id: 'budget-1',
+    category_id: 'b1f9c7e4-3f1a-4d92-9c2e-aabbccddeeff',
+    currency: 'BAM',
+    amount_cents: 50000,
+    period: 'monthly' as const,
+    rollover: false,
+  };
+
+  it('happy path: pre-check passes, update succeeds (in-place — no period change)', async () => {
     from
-      .mockImplementationOnce(() => fluent({ data: { id: 'budget-1' }, error: null }))
+      .mockImplementationOnce(() => fluent({ data: EXISTING_BUDGET, error: null }))
       .mockImplementationOnce(() => fluent({ data: null, error: null }));
     const result = await updateBudget('c2a8d5b6-4f2b-4e83-8d3c-aabbccddeeff', {
       amount_cents: '60000',
@@ -244,14 +255,69 @@ describe('updateBudget', () => {
   });
 
   it('no-op patch (empty input) still returns success', async () => {
-    from.mockImplementationOnce(() => fluent({ data: { id: 'budget-1' }, error: null }));
+    from.mockImplementationOnce(() => fluent({ data: EXISTING_BUDGET, error: null }));
     const result = await updateBudget('c2a8d5b6-4f2b-4e83-8d3c-aabbccddeeff', {});
     expect(result).toEqual({ success: true });
   });
 
-  it('maps update unique violation → DUPLICATE_ACTIVE', async () => {
+  it('BG-1: rejects period change without amount_cents', async () => {
+    from.mockImplementationOnce(() => fluent({ data: EXISTING_BUDGET, error: null }));
+    const result = await updateBudget('c2a8d5b6-4f2b-4e83-8d3c-aabbccddeeff', {
+      // period change from 'monthly' (existing) → 'weekly' but no amount_cents
+      period: 'weekly',
+    });
+    expect(result).toEqual({ success: false, error: 'PERIOD_CHANGE_REQUIRES_AMOUNT' });
+  });
+
+  it('BG-1: same-period in patch (no real change) does NOT trigger PERIOD_CHANGE_REQUIRES_AMOUNT', async () => {
+    // User submits patch with period that matches existing — should be a
+    // no-op for period detection and proceed via in-place UPDATE path.
     from
-      .mockImplementationOnce(() => fluent({ data: { id: 'budget-1' }, error: null }))
+      .mockImplementationOnce(() => fluent({ data: EXISTING_BUDGET, error: null }))
+      .mockImplementationOnce(() => fluent({ data: null, error: null }));
+    const result = await updateBudget('c2a8d5b6-4f2b-4e83-8d3c-aabbccddeeff', {
+      period: 'monthly', // same as existing
+      rollover: true,
+    });
+    expect(result).toEqual({ success: true });
+  });
+
+  it('BG-2: period change with amount → archives old + inserts new', async () => {
+    // 1st call: select existing (monthly)
+    // 2nd call: archive UPDATE (active=false) succeeds
+    // 3rd call: insert new row (weekly) succeeds
+    from
+      .mockImplementationOnce(() => fluent({ data: EXISTING_BUDGET, error: null }))
+      .mockImplementationOnce(() => fluent({ data: null, error: null }))
+      .mockImplementationOnce(() => fluent({ data: null, error: null }));
+    const result = await updateBudget('c2a8d5b6-4f2b-4e83-8d3c-aabbccddeeff', {
+      period: 'weekly',
+      amount_cents: '12000', // new weekly amount
+    });
+    expect(result).toEqual({ success: true });
+    // 3 from() calls: select + archive update + insert
+    expect(from).toHaveBeenCalledTimes(3);
+  });
+
+  it('BG-2: period change → archive failure surfaces DATABASE_ERROR (no insert attempted)', async () => {
+    from
+      .mockImplementationOnce(() => fluent({ data: EXISTING_BUDGET, error: null }))
+      .mockImplementationOnce(() =>
+        fluent({ data: null, error: { code: '08006', message: 'connection failure' } }),
+      );
+    const result = await updateBudget('c2a8d5b6-4f2b-4e83-8d3c-aabbccddeeff', {
+      period: 'weekly',
+      amount_cents: '12000',
+    });
+    expect(result).toEqual({ success: false, error: 'DATABASE_ERROR' });
+    // Only 2 from() calls — insert is skipped on archive failure
+    expect(from).toHaveBeenCalledTimes(2);
+  });
+
+  it('BG-2: period change → insert unique violation maps to DUPLICATE_ACTIVE', async () => {
+    from
+      .mockImplementationOnce(() => fluent({ data: EXISTING_BUDGET, error: null }))
+      .mockImplementationOnce(() => fluent({ data: null, error: null }))
       .mockImplementationOnce(() =>
         fluent({
           data: null,
@@ -259,14 +325,15 @@ describe('updateBudget', () => {
         }),
       );
     const result = await updateBudget('c2a8d5b6-4f2b-4e83-8d3c-aabbccddeeff', {
-      period: 'monthly',
+      period: 'weekly',
+      amount_cents: '12000',
     });
     expect(result).toEqual({ success: false, error: 'DUPLICATE_ACTIVE' });
   });
 
-  it('maps RLS check failure on category_id change → CATEGORY_NOT_BUDGETABLE', async () => {
+  it('maps in-place update RLS check failure on category_id change → CATEGORY_NOT_BUDGETABLE', async () => {
     from
-      .mockImplementationOnce(() => fluent({ data: { id: 'budget-1' }, error: null }))
+      .mockImplementationOnce(() => fluent({ data: EXISTING_BUDGET, error: null }))
       .mockImplementationOnce(() =>
         fluent({
           data: null,
