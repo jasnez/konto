@@ -10,6 +10,7 @@ import {
   LinkAccountSchema,
   UpdateGoalSchema,
 } from '@/lib/goals/validation';
+import { ensureOwnedAccount } from '@/lib/server/db/ensure-owned';
 import type { Database } from '@/supabase/types';
 import { logSafe } from '@/lib/logger';
 
@@ -91,7 +92,11 @@ export type AddContributionResult =
         justAchieved: boolean;
       };
     }
-  | { success: false; error: 'VALIDATION_ERROR'; details: { amount_cents?: string[]; _root: string[] } }
+  | {
+      success: false;
+      error: 'VALIDATION_ERROR';
+      details: { amount_cents?: string[]; _root: string[] };
+    }
   | { success: false; error: 'UNAUTHORIZED' }
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'DATABASE_ERROR' };
@@ -149,8 +154,7 @@ export async function createGoal(input: unknown): Promise<CreateGoalResult> {
     return { success: false, error: 'UNAUTHORIZED' };
   }
 
-  const { name, target_amount_cents, currency, target_date, account_id, icon, color } =
-    parsed.data;
+  const { name, target_amount_cents, currency, target_date, account_id, icon, color } = parsed.data;
 
   // If an account is being linked, verify it belongs to this user before
   // writing the goal row. This prevents inserting a goal with a foreign
@@ -267,20 +271,20 @@ export async function updateGoal(id: unknown, input: unknown): Promise<UpdateGoa
 
   const p = parsed.data;
 
-  // If a new account is being linked, verify ownership before writing.
+  // MT-12: ownership check via shared helper instead of hand-rolled select.
+  // Note: helper also enforces `is('deleted_at', null)` — soft-deleted
+  // accounts can no longer be linked. That's a small behavior tightening
+  // (you shouldn't link a goal to a deleted account anyway). Helper's
+  // 'NOT_FOUND' is mapped to the existing 'ACCOUNT_NOT_FOUND' code so
+  // clients keep the more specific error.
   if (p.account_id !== undefined && p.account_id !== null) {
-    const { data: acct, error: acctErr } = await supabase
-      .from('accounts')
-      .select('id')
-      .eq('id', p.account_id)
-      .eq('user_id', user.id)
-      .maybeSingle();
-    if (acctErr) {
-      logSafe('update_goal_account_check', { userId: user.id, error: acctErr.message });
+    const ownedAccount = await ensureOwnedAccount(supabase, user.id, p.account_id);
+    if (!ownedAccount.ok) {
+      if (ownedAccount.error === 'NOT_FOUND') {
+        return { success: false, error: 'ACCOUNT_NOT_FOUND' };
+      }
+      logSafe('update_goal_account_check', { userId: user.id, error: ownedAccount.error });
       return { success: false, error: 'DATABASE_ERROR' };
-    }
-    if (!acct) {
-      return { success: false, error: 'ACCOUNT_NOT_FOUND' };
     }
   }
 
@@ -349,10 +353,7 @@ export async function updateGoal(id: unknown, input: unknown): Promise<UpdateGoa
  * account. If linked, `recompute_goal_from_account` can overwrite the value
  * later. The two flows are independent.
  */
-export async function addContribution(
-  id: unknown,
-  input: unknown,
-): Promise<AddContributionResult> {
+export async function addContribution(id: unknown, input: unknown): Promise<AddContributionResult> {
   const idParse = GoalIdParamSchema.safeParse(id);
   if (!idParse.success) {
     return {
