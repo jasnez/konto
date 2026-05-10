@@ -322,6 +322,41 @@ export async function forecastCashflow(
   const rawHistoryRows = (historyRes.data ?? []) as HistoryRow[];
   const txAccountById = new Map<string, string>();
   for (const t of rawHistoryRows) txAccountById.set(t.id, t.account_id);
+
+  // DL-10: fetch transfer-pair rows that sit OUTSIDE the 90d history
+  // window. Edge case: a long-running savings/loan transfer relationship
+  // can have its pair leg older than 90 days. Without this fetch, the
+  // filter loop below sees `txAccountById.get(t.transfer_pair_id) ===
+  // undefined` and silently skips the transfer, artificially inflating
+  // the projected balance. We only fetch for missing IDs (no `gte` on
+  // transaction_date) so the cost is bounded to N missing-pair lookups,
+  // not a full historical scan.
+  const missingPairIds: string[] = [];
+  for (const t of rawHistoryRows) {
+    if (t.is_transfer && t.transfer_pair_id !== null && !txAccountById.has(t.transfer_pair_id)) {
+      missingPairIds.push(t.transfer_pair_id);
+    }
+  }
+  if (missingPairIds.length > 0) {
+    const { data: pairRows, error: pairErr } = await supabase
+      .from('transactions')
+      .select('id, account_id')
+      .eq('user_id', userId)
+      .in('id', missingPairIds);
+    if (pairErr) {
+      // Non-fatal: log and proceed. Falling back to skipping the in-window
+      // leg is the same behaviour as before this fix — no new regression.
+      logSafe('forecast_missing_pair_fetch', {
+        userId,
+        error: pairErr.message,
+        missingCount: missingPairIds.length,
+      });
+    } else {
+      // supabase-js types `data` as a non-null array on success; no `?? []`.
+      for (const p of pairRows) txAccountById.set(p.id, p.account_id);
+    }
+  }
+
   const SPENDING = SPENDING_ACCOUNT_TYPES as readonly string[];
   // Filter rules:
   //   - Drop opening_balance category (already shapes start balance via
