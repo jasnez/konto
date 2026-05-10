@@ -30,7 +30,7 @@ test('category and merchant core flow', async ({ page }) => {
     await page.getByRole('button', { name: 'Obriši' }).click();
     await expect(page.getByText(categoryRenamed)).toHaveCount(0);
 
-    await page.goto('/merchants');
+    await page.goto('/prodavaci');
     await expect(page.getByRole('heading', { name: 'Prodavači' }).first()).toBeVisible();
     await expect(page.getByText('Ne mogu učitati prodavače.')).toHaveCount(0);
     await page.getByRole('button', { name: 'Dodaj prodavača' }).first().click();
