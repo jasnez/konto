@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { addContribution, createGoal, deleteGoal, linkAccount, updateGoal } from '../actions';
-import {
-  AddContributionSchema,
-  CreateGoalSchema,
-  UpdateGoalSchema,
-} from '@/lib/goals/validation';
+import { AddContributionSchema, CreateGoalSchema, UpdateGoalSchema } from '@/lib/goals/validation';
 import { revalidatePath } from 'next/cache';
 
 vi.mock('next/cache', () => ({
@@ -25,10 +21,7 @@ vi.mock('@/lib/supabase/server', () => ({
 
 interface ChainTerminal {
   data: unknown;
-  error:
-    | (Error & { code?: string; message?: string })
-    | { code?: string; message: string }
-    | null;
+  error: (Error & { code?: string; message?: string }) | { code?: string; message: string } | null;
 }
 
 /**
@@ -92,9 +85,9 @@ describe('CreateGoalSchema', () => {
   });
 
   it('rejects target_amount_cents = 0', () => {
-    expect(
-      CreateGoalSchema.safeParse({ ...VALID_CREATE, target_amount_cents: '0' }).success,
-    ).toBe(false);
+    expect(CreateGoalSchema.safeParse({ ...VALID_CREATE, target_amount_cents: '0' }).success).toBe(
+      false,
+    );
   });
 
   it('rejects negative target_amount_cents', () => {
@@ -108,9 +101,9 @@ describe('CreateGoalSchema', () => {
   });
 
   it('rejects name longer than 200 chars', () => {
-    expect(
-      CreateGoalSchema.safeParse({ ...VALID_CREATE, name: 'x'.repeat(201) }).success,
-    ).toBe(false);
+    expect(CreateGoalSchema.safeParse({ ...VALID_CREATE, name: 'x'.repeat(201) }).success).toBe(
+      false,
+    );
   });
 
   it('accepts valid hex color', () => {
@@ -135,9 +128,9 @@ describe('CreateGoalSchema', () => {
   });
 
   it('rejects malformed target_date', () => {
-    expect(
-      CreateGoalSchema.safeParse({ ...VALID_CREATE, target_date: '31-12-2027' }).success,
-    ).toBe(false);
+    expect(CreateGoalSchema.safeParse({ ...VALID_CREATE, target_date: '31-12-2027' }).success).toBe(
+      false,
+    );
   });
 
   it('accepts missing target_date (optional)', () => {
@@ -211,7 +204,8 @@ describe('createGoal', () => {
   it('happy path (no account) → returns id and revalidates', async () => {
     from.mockImplementationOnce(() => fluent({ data: { id: GOAL_ID }, error: null }));
     const r = await createGoal(VALID_CREATE);
-    expect(r).toEqual({ success: true, data: { id: GOAL_ID } });
+    // GL-1: success now carries recomputeFailed (false here — no account → no RPC).
+    expect(r).toEqual({ success: true, data: { id: GOAL_ID }, recomputeFailed: false });
     expect(revalidatePath).toHaveBeenCalledWith('/ciljevi');
     expect(revalidatePath).toHaveBeenCalledWith('/pocetna');
   });
@@ -225,7 +219,7 @@ describe('createGoal', () => {
     rpc.mockResolvedValueOnce({ error: null });
 
     const r = await createGoal(VALID_CREATE_WITH_ACCOUNT);
-    expect(r).toEqual({ success: true, data: { id: GOAL_ID } });
+    expect(r).toEqual({ success: true, data: { id: GOAL_ID }, recomputeFailed: false });
     expect(rpc).toHaveBeenCalledWith('recompute_goal_from_account', { p_goal_id: GOAL_ID });
   });
 
@@ -236,12 +230,12 @@ describe('createGoal', () => {
     expect(r).toEqual({ success: false, error: 'ACCOUNT_NOT_FOUND' });
   });
 
-  it('recompute RPC failure is non-fatal — still returns success', async () => {
+  it('GL-1: recompute RPC failure is non-fatal but surfaces recomputeFailed=true', async () => {
     from.mockImplementationOnce(() => fluent({ data: { id: ACCOUNT_ID }, error: null }));
     from.mockImplementationOnce(() => fluent({ data: { id: GOAL_ID }, error: null }));
     rpc.mockResolvedValueOnce({ error: { message: 'timeout' } });
     const r = await createGoal(VALID_CREATE_WITH_ACCOUNT);
-    expect(r).toEqual({ success: true, data: { id: GOAL_ID } });
+    expect(r).toEqual({ success: true, data: { id: GOAL_ID }, recomputeFailed: true });
   });
 
   it('returns DATABASE_ERROR on insert failure', async () => {
@@ -297,7 +291,11 @@ describe('updateGoal', () => {
     // Update call
     from.mockImplementationOnce(() => fluent({ data: null, error: null }));
 
-    expect(await updateGoal(GOAL_ID, { name: 'Novo ime' })).toEqual({ success: true });
+    // GL-1: updateGoal success now carries recomputeFailed flag.
+    expect(await updateGoal(GOAL_ID, { name: 'Novo ime' })).toEqual({
+      success: true,
+      recomputeFailed: false,
+    });
     expect(revalidatePath).toHaveBeenCalledWith('/ciljevi');
   });
 
@@ -305,7 +303,7 @@ describe('updateGoal', () => {
     from.mockImplementationOnce(() =>
       fluent({ data: { id: GOAL_ID, account_id: null }, error: null }),
     );
-    expect(await updateGoal(GOAL_ID, {})).toEqual({ success: true });
+    expect(await updateGoal(GOAL_ID, {})).toEqual({ success: true, recomputeFailed: false });
     // from should have been called only once (the ownership pre-check)
     expect(from).toHaveBeenCalledTimes(1);
   });
@@ -519,7 +517,11 @@ describe('linkAccount', () => {
     // Update goal.account_id
     from.mockImplementationOnce(() => fluent({ data: null, error: null }));
 
-    expect(await linkAccount(GOAL_ID, { account_id: ACCOUNT_ID })).toEqual({ success: true });
+    // GL-1: linkAccount success now carries recomputeFailed flag.
+    expect(await linkAccount(GOAL_ID, { account_id: ACCOUNT_ID })).toEqual({
+      success: true,
+      recomputeFailed: false,
+    });
     expect(rpc).toHaveBeenCalledWith('recompute_goal_from_account', { p_goal_id: GOAL_ID });
     expect(revalidatePath).toHaveBeenCalledWith('/ciljevi');
   });
@@ -528,7 +530,10 @@ describe('linkAccount', () => {
     from.mockImplementationOnce(() => fluent({ data: { id: GOAL_ID }, error: null }));
     from.mockImplementationOnce(() => fluent({ data: null, error: null }));
 
-    expect(await linkAccount(GOAL_ID, { account_id: null })).toEqual({ success: true });
+    expect(await linkAccount(GOAL_ID, { account_id: null })).toEqual({
+      success: true,
+      recomputeFailed: false,
+    });
     expect(rpc).not.toHaveBeenCalled();
   });
 
@@ -563,12 +568,15 @@ describe('linkAccount', () => {
     if (!r.success) expect(r.error).toBe('VALIDATION_ERROR');
   });
 
-  it('recompute RPC failure is non-fatal — still returns success', async () => {
+  it('GL-1: recompute RPC failure is non-fatal but surfaces recomputeFailed=true', async () => {
     from.mockImplementationOnce(() => fluent({ data: { id: GOAL_ID }, error: null }));
     from.mockImplementationOnce(() => fluent({ data: { id: ACCOUNT_ID }, error: null }));
     from.mockImplementationOnce(() => fluent({ data: null, error: null }));
     rpc.mockResolvedValueOnce({ error: { message: 'rpc timeout' } });
 
-    expect(await linkAccount(GOAL_ID, { account_id: ACCOUNT_ID })).toEqual({ success: true });
+    expect(await linkAccount(GOAL_ID, { account_id: ACCOUNT_ID })).toEqual({
+      success: true,
+      recomputeFailed: true,
+    });
   });
 });

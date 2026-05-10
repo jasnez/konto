@@ -1,10 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { format, parseISO } from 'date-fns';
 import { bs } from 'date-fns/locale';
-import { AlertTriangle, ArrowRight, Check, ChevronDown, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Check, ChevronDown, RefreshCw, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
@@ -138,6 +140,11 @@ function formatHumanDate(iso: string): string {
 
 export function ForecastWidget({ forecast, recurring, installments }: ForecastWidgetProps) {
   const [days, setDays] = useState<ForecastWindow>(30);
+  // MT-11: explicit refresh control. Long-running tabs would otherwise show
+  // a stale projection (Server Component only ran once on initial render).
+  // router.refresh() re-runs the Server Component → fresh forecast.
+  const router = useRouter();
+  const [isRefreshing, startRefresh] = useTransition();
 
   const fullProjection = useMemo<ForecastDay[]>(
     () => forecast.projections.map(deserialiseDay),
@@ -159,6 +166,10 @@ export function ForecastWidget({ forecast, recurring, installments }: ForecastWi
   const baselineOutflow = BigInt(forecast.baselineOutflowCents);
 
   const insufficientHistoryWarning = forecast.warnings.find((w) => w.includes('istorije'));
+  // EH-2: FX-failure warnings (e.g. "Nedostaju 2 stavke (FX kurs nedostupan).")
+  // are surfaced separately so users know why some events are missing from the
+  // projection.
+  const fxWarning = forecast.warnings.find((w) => w.includes('FX kurs'));
   const isEmpty =
     slice.length === 0 ||
     (startBalance === 0n &&
@@ -171,35 +182,53 @@ export function ForecastWidget({ forecast, recurring, installments }: ForecastWi
     <Card data-testid="forecast-widget">
       <CardHeader className="flex flex-col gap-3 space-y-0 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <CardTitle className="text-lg">Projekcija</CardTitle>
-        <Tabs
-          value={String(days)}
-          onValueChange={(v) => {
-            const parsed = Number(v);
-            if (parsed === 30 || parsed === 60 || parsed === 90) {
-              setDays(parsed);
-            }
-          }}
-          className="self-start sm:self-auto"
-        >
-          <TabsList aria-label="Period projekcije">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Tabs
+            value={String(days)}
+            onValueChange={(v) => {
+              const parsed = Number(v);
+              if (parsed === 30 || parsed === 60 || parsed === 90) {
+                setDays(parsed);
+              }
+            }}
+          >
+            <TabsList aria-label="Period projekcije">
+              {WINDOW_OPTIONS.map((opt) => (
+                <TabsTrigger key={opt} value={String(opt)} className="px-3">
+                  {opt} dana
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {/* Hidden panels are required by Radix Tabs so each trigger's
+                aria-controls points to a real DOM element (WCAG / axe). The
+                chart lives outside the Tabs component intentionally — we only
+                use Tabs for the keyboard-navigable toggle chrome. */}
             {WINDOW_OPTIONS.map((opt) => (
-              <TabsTrigger key={opt} value={String(opt)} className="px-3">
-                {opt} dana
-              </TabsTrigger>
+              <TabsContent key={opt} value={String(opt)} className="hidden" />
             ))}
-          </TabsList>
-          {/* Hidden panels are required by Radix Tabs so each trigger's
-              aria-controls points to a real DOM element (WCAG / axe). The
-              chart lives outside the Tabs component intentionally — we only
-              use Tabs for the keyboard-navigable toggle chrome. */}
-          {WINDOW_OPTIONS.map((opt) => (
-            <TabsContent key={opt} value={String(opt)} className="hidden" />
-          ))}
-        </Tabs>
+          </Tabs>
+          {/* MT-11: explicit refresh — the alternative was leaving stale
+              projections sitting in a long-running tab indefinitely. */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            disabled={isRefreshing}
+            onClick={() => {
+              startRefresh(() => {
+                router.refresh();
+              });
+            }}
+            aria-label="Osvježi projekciju"
+            title="Osvježi projekciju"
+          >
+            <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} aria-hidden />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3 px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
         {isEmpty ? (
-          <ForecastEmptyState />
+          <ForecastEmptyState hasStartBalance={startBalance > 0n} />
         ) : (
           <ForecastChart days={slice} currency={forecast.baseCurrency} trendDown={trendDown} />
         )}
@@ -207,6 +236,14 @@ export function ForecastWidget({ forecast, recurring, installments }: ForecastWi
         {insufficientHistoryWarning && !isEmpty && (
           <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
             {insufficientHistoryWarning}
+          </p>
+        )}
+
+        {/* EH-2: separate amber banner for FX failures so users know why
+            some installments / recurring events are missing. */}
+        {fxWarning && !isEmpty && (
+          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+            {fxWarning}
           </p>
         )}
 
@@ -460,14 +497,39 @@ function RunwayStripe({
   );
 }
 
-function ForecastEmptyState() {
+// DL-11: differentiate two empty states.
+//   - hasStartBalance=false → user has no accounts (or all balances are zero
+//     and no spending activity) → call to action is "add first account".
+//   - hasStartBalance=true → user has accounts with money but no recurring/
+//     installment events → call to action is "add subscriptions or installments
+//     so they show up in the projection".
+function ForecastEmptyState({ hasStartBalance }: { hasStartBalance: boolean }) {
+  if (!hasStartBalance) {
+    return (
+      <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-6 text-center">
+        <span aria-hidden className="text-3xl">
+          <Sparkles className="h-8 w-8 text-emerald-500" />
+        </span>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          Dodaj svoj prvi račun da bi projekcija imala polaznu tačku.
+        </p>
+        <Link
+          href="/racuni/novi"
+          className="inline-flex h-11 items-center gap-1 rounded-md px-3 text-sm font-medium text-primary transition-colors hover:bg-accent"
+        >
+          Dodaj račun
+          <ArrowRight className="h-4 w-4" aria-hidden />
+        </Link>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-6 text-center">
       <span aria-hidden className="text-3xl">
         <Sparkles className="h-8 w-8 text-emerald-500" />
       </span>
       <p className="max-w-sm text-sm text-muted-foreground">
-        Dodaj prvu transakciju ili potvrdi pretplatu da vidiš projekciju budućeg salda.
+        Dodaj prve transakcije ili pretplate za projekciju budućeg salda.
       </p>
       <Link
         href="/transakcije/nova"

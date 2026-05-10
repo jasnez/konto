@@ -109,6 +109,12 @@ export function SortableDashboard({ initialOrder, slots, children }: SortableDas
         setEditing(false);
         toast.success('Redoslijed sačuvan');
       } else {
+        // DD-1: roll the optimistic draft back to the server's last known
+        // good state BEFORE surfacing the toast. Otherwise the user sees the
+        // failed-to-save order persist visually until router.refresh() lands
+        // (which it doesn't on this branch — only happens on success). If
+        // they drag again before realising, the second save races the first.
+        setDraftOrder(initialOrder);
         toast.error('Greška pri snimanju redoslijeda. Pokušaj ponovo.');
       }
     });

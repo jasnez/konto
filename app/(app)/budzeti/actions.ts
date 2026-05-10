@@ -154,6 +154,13 @@ export type DeleteBudgetResult =
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function centsToDbInt(c: bigint): number {
+  // MT-10: guard the bigint→number narrowing. Above 2^53 the conversion
+  // silently rounds — a malicious or accidentally-large amount would write
+  // a corrupted value to the DB. Throw early with a clear error instead;
+  // the Zod schema is the first line of defence but this is belt + braces.
+  if (c > BigInt(Number.MAX_SAFE_INTEGER) || c < BigInt(Number.MIN_SAFE_INTEGER)) {
+    throw new Error(`centsToDbInt: bigint ${c.toString()} exceeds Number.MAX_SAFE_INTEGER`);
+  }
   return Number(c);
 }
 

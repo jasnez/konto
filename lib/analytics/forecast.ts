@@ -368,11 +368,15 @@ export async function forecastCashflow(
 
   // 2. Start balance — sum in-scope accounts in their original currency,
   //    convert each to base currency on today's date, then add.
+  // EH-2: shared sink so all 3 helpers feed into one count we surface as
+  // a user-visible warning at the bottom of this function.
+  const fxSink: FxFailureSink = { count: 0 };
   const startBalanceCents = await computeStartBalance(
     accounts,
     baseCurrency,
     todayIso,
     Boolean(options.skipFx),
+    fxSink,
   );
 
   // 3. Generate predicted events.
@@ -383,6 +387,7 @@ export async function forecastCashflow(
     baseCurrency,
     todayIso,
     Boolean(options.skipFx),
+    fxSink,
   );
   const installmentEvents = await generateInstallmentEvents(
     installments,
@@ -391,6 +396,7 @@ export async function forecastCashflow(
     baseCurrency,
     todayIso,
     Boolean(options.skipFx),
+    fxSink,
   );
 
   // 4. Baseline daily flow (offsets recurring + installment so we don't
@@ -418,6 +424,14 @@ export async function forecastCashflow(
     baseline,
   );
 
+  // EH-2: surface FX failures (Frankfurter outage, unsupported currency)
+  // as a user-visible warning so the user understands why some installments
+  // / recurring entries are missing from the projection. No leak of which
+  // currency / which row failed — just the count.
+  if (fxSink.count > 0) {
+    warnings.push(`Nedostaju ${String(fxSink.count)} stavke (FX kurs nedostupan).`);
+  }
+
   return {
     baseCurrency,
     startBalanceCents,
@@ -434,11 +448,22 @@ export async function forecastCashflow(
 
 // ─── Start balance ──────────────────────────────────────────────────────────
 
+/**
+ * EH-2: Optional FX-failure sink. Helpers populate `count` when a
+ * convertToBase call throws (e.g. Frankfurter outage). Caller can read
+ * after to surface a user-facing warning. Optional — tests omit and get
+ * the existing silent-skip behaviour.
+ */
+export interface FxFailureSink {
+  count: number;
+}
+
 async function computeStartBalance(
   accounts: AccountRow[],
   baseCurrency: string,
   todayIso: string,
   skipFx: boolean,
+  fxSink?: FxFailureSink,
 ): Promise<bigint> {
   const inScope = accounts.filter(
     (a) =>
@@ -463,6 +488,8 @@ async function computeStartBalance(
         to: baseCurrency,
         error: err instanceof Error ? err.message : String(err),
       });
+      // EH-2: signal the failure so caller can surface a warning.
+      if (fxSink) fxSink.count += 1;
       // Conservatively pretend the account didn't exist if FX fails — better
       // than including it as if it were already in base.
     }
@@ -490,6 +517,7 @@ export async function generateRecurringEvents(
   baseCurrency: string,
   todayIso: string,
   skipFx: boolean,
+  fxSink?: FxFailureSink,
 ): Promise<DatedForecastEvent[]> {
   const out: DatedForecastEvent[] = [];
   const horizon = addDays(today, daysAhead);
@@ -526,6 +554,8 @@ export async function generateRecurringEvents(
           recurringId: r.id,
           error: err instanceof Error ? err.message : String(err),
         });
+        // EH-2: signal failure for caller-visible warning.
+        if (fxSink) fxSink.count += 1;
         continue;
       }
     }
@@ -598,6 +628,7 @@ export async function generateInstallmentEvents(
   baseCurrency: string,
   todayIso: string,
   skipFx: boolean,
+  fxSink?: FxFailureSink,
 ): Promise<DatedForecastEvent[]> {
   const out: DatedForecastEvent[] = [];
   const horizon = addDays(today, daysAhead);
@@ -623,6 +654,8 @@ export async function generateInstallmentEvents(
           installmentId: ip.id,
           error: err instanceof Error ? err.message : String(err),
         });
+        // EH-2: signal failure for caller-visible warning.
+        if (fxSink) fxSink.count += 1;
         continue;
       }
     }

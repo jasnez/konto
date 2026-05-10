@@ -21,6 +21,19 @@ vi.mock('recharts', async () => {
   };
 });
 
+// MT-11: ForecastWidget uses useRouter for the refresh button. Stub the
+// app router so renders don't throw "invariant: app router not mounted".
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    refresh: vi.fn(),
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+}));
+
 function makeDay(
   date: string,
   balanceCents: bigint,
@@ -87,9 +100,20 @@ describe('ForecastWidget', () => {
     expect(within(tabs).getByRole('tab', { name: '90 dana' })).toBeTruthy();
   });
 
-  it('shows empty state when projections are empty', () => {
+  it('shows empty state (no accounts) when start balance is zero and projections are empty', () => {
+    // DL-11: differentiated empty state. startBalance === 0 → "no accounts"
+    // copy with CTA to /racuni/novi.
     render(<ForecastWidget forecast={makeForecast({ startBalanceCents: 0n, projections: [] })} />);
-    expect(screen.getByText(/Dodaj prvu transakciju/u)).toBeTruthy();
+    expect(screen.getByText(/Dodaj svoj prvi račun/u)).toBeTruthy();
+  });
+
+  it('shows empty state (no events) when there is balance but no projection events', () => {
+    // DL-11: when startBalance > 0 but events list is empty, show "add
+    // transactions/recurring" copy instead.
+    render(
+      <ForecastWidget forecast={makeForecast({ startBalanceCents: 50_000n, projections: [] })} />,
+    );
+    expect(screen.getByText(/Dodaj prve transakcije/u)).toBeTruthy();
   });
 
   it('shows insufficient-history warning banner alongside the chart', () => {
