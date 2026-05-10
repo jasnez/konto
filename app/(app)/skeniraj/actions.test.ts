@@ -84,11 +84,16 @@ function makeSupabase(cfg: FakeSupabaseConfig = {}) {
       };
     }
     if (table === 'accounts') {
+      // MT-12: ownership check switched to ensureOwnedAccount helper which
+      // does .select().eq(id).eq(user_id).is(deleted_at).maybeSingle().
+      // Mock now has TWO .eq() in the chain.
       return {
         select: () => ({
           eq: () => ({
-            is: () => ({
-              maybeSingle: () => Promise.resolve({ data: account, error: null }),
+            eq: () => ({
+              is: () => ({
+                maybeSingle: () => Promise.resolve({ data: account, error: null }),
+              }),
             }),
           }),
         }),
@@ -120,11 +125,16 @@ function makeSupabase(cfg: FakeSupabaseConfig = {}) {
       };
     }
     if (table === 'categories') {
+      // MT-12: ownership check switched to ensureOwnedCategory helper which
+      // does .select().eq(id).eq(user_id).is(deleted_at).maybeSingle().
       return {
         select: () => ({
           eq: () => ({
-            maybeSingle: () =>
-              Promise.resolve({ data: { id: 'cat1', user_id: 'u1' }, error: null }),
+            eq: () => ({
+              is: () => ({
+                maybeSingle: () => Promise.resolve({ data: { id: 'cat1' }, error: null }),
+              }),
+            }),
           }),
         }),
       };

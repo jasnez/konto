@@ -13,6 +13,7 @@ import {
   emptyExtractedReceipt,
   type ExtractedReceipt,
 } from '@/lib/schemas/receipt';
+import { ensureOwnedAccount, ensureOwnedCategory } from '@/lib/server/db/ensure-owned';
 import { revalidateAfterTransactionWrite } from '@/lib/server/revalidate-views';
 import { createClient } from '@/lib/supabase/server';
 import type { Json } from '@/supabase/types';
@@ -345,25 +346,23 @@ export async function createTransactionFromReceipt(
     };
   }
 
-  const { data: account, error: acctErr } = await supabase
-    .from('accounts')
-    .select('id, user_id, currency, is_active')
-    .eq('id', data.account_id)
-    .is('deleted_at', null)
-    .maybeSingle();
-  if (acctErr) return { success: false, error: 'DATABASE_ERROR' };
-  if (account?.user_id !== user.id) {
-    return { success: false, error: 'NOT_FOUND' };
+  // MT-12: replace hand-rolled ownership selects with shared helpers.
+  // Helpers enforce `eq('user_id', user.id)` at the query level (cleaner
+  // than post-fetch `account?.user_id !== user.id` checks) plus
+  // `is('deleted_at', null)` for accounts. Helpers return NOT_FOUND on
+  // ownership-fail per SE-14 standardization. `ensureOwnedAccount`
+  // surfaces `currency` for the FX pipeline below.
+  const ownedAccount = await ensureOwnedAccount(supabase, user.id, data.account_id);
+  if (!ownedAccount.ok) {
+    return { success: false, error: ownedAccount.error };
   }
+  const accountCurrency = ownedAccount.currency;
 
   if (data.category_id) {
-    const { data: cat, error: catErr } = await supabase
-      .from('categories')
-      .select('id, user_id')
-      .eq('id', data.category_id)
-      .maybeSingle();
-    if (catErr) return { success: false, error: 'DATABASE_ERROR' };
-    if (cat?.user_id !== user.id) return { success: false, error: 'NOT_FOUND' };
+    const ownedCategory = await ensureOwnedCategory(supabase, user.id, data.category_id);
+    if (!ownedCategory.ok) {
+      return { success: false, error: ownedCategory.error };
+    }
   }
 
   // Base currency for FX.
@@ -391,7 +390,7 @@ export async function createTransactionFromReceipt(
   let ledgerCents: bigint;
   try {
     ledgerCents = await computeAccountLedgerCents(
-      account.currency,
+      accountCurrency,
       signedCents,
       data.currency,
       fxResult.baseCents,
