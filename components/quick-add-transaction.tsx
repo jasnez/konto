@@ -925,7 +925,11 @@ export function QuickAddTransaction({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-xl">
         <DialogTitle>Brzi unos</DialogTitle>
-        <DialogDescription>Dodaj transakciju bez napuštanja trenutne stranice.</DialogDescription>
+        {/* Visually hidden description satisfies Radix a11y requirement
+            without crowding the title with a redundant explanation. */}
+        <DialogDescription className="sr-only">
+          Forma za dodavanje transakcije: iznos, kategorija, datum.
+        </DialogDescription>
         {content}
       </DialogContent>
     </Dialog>

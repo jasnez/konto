@@ -99,7 +99,7 @@ export function RecurringCard({ item, onEdit, onPause, onCancel }: RecurringCard
               className="text-destructive focus:text-destructive"
             >
               <Ban className="mr-2 h-4 w-4" aria-hidden />
-              Otkaži
+              Završi pretplatu
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

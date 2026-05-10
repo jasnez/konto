@@ -117,7 +117,7 @@ test('F2: cijeli import flow @slow', async ({ page }, testInfo) => {
 
     // 8. Prva stavka (najnoviji datum) — opis je u <input> value, ne u textContent reda.
     const firstRow = dataRows.nth(0);
-    await expect(firstRow.getByPlaceholder('Novi trgovac — dodaj')).toHaveValue(STAVKA_OSTAJE);
+    await expect(firstRow.getByPlaceholder('Novi prodavač — dodaj')).toHaveValue(STAVKA_OSTAJE);
     const categoryCombobox = firstRow.getByRole('combobox');
     await categoryCombobox.click();
     await expect(page.getByRole('listbox')).toBeVisible();
@@ -137,7 +137,9 @@ test('F2: cijeli import flow @slow', async ({ page }, testInfo) => {
 
     // 9. Isključi drugu stavku (uncheck "Uključi u uvoz"); pričekaj server action.
     const secondRow = dataRows.nth(1);
-    await expect(secondRow.getByPlaceholder('Novi trgovac — dodaj')).toHaveValue(STAVKA_ISKLJUCENA);
+    await expect(secondRow.getByPlaceholder('Novi prodavač — dodaj')).toHaveValue(
+      STAVKA_ISKLJUCENA,
+    );
     await secondRow.getByLabel('Uključi u uvoz').uncheck();
     await expect(secondRow.getByLabel('Uključi u uvoz')).not.toBeChecked();
     await expect(page.getByText(/\b1\s+od\s+2\s+označeno za uvoz/u)).toBeVisible({

@@ -153,8 +153,8 @@ function CreateAccountForm({ onSuccess, successToast, draftKey }: CreateAccountF
       return;
     }
     if (result.error === 'OPENING_BALANCE_CATEGORY_MISSING') {
-      toast.error('Nedostaje kategorija “Početno stanje”.', {
-        description: 'Ažuriraj bazu (migracija) ili kontaktiraj podršku.',
+      toast.error('Nešto je nepotpuno na strani Konta.', {
+        description: 'Javi nam na hello@konto.app i riješićemo za nekoliko minuta.',
       });
       return;
     }
@@ -185,7 +185,7 @@ function CreateAccountForm({ onSuccess, successToast, draftKey }: CreateAccountF
               </FormControl>
               {accountType === 'credit_card' || accountType === 'loan' ? (
                 <FormDescription>
-                  Za kreditnu karticu/kredit unesi negativan iznos (zaduzenje).
+                  Za kreditnu karticu/kredit unesi negativan iznos (zaduženje).
                 </FormDescription>
               ) : null}
               <FormMessage />

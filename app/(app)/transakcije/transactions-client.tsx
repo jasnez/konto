@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import { format, isThisWeek, isToday, isYesterday, parseISO } from 'date-fns';
 import { bs } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -342,13 +343,19 @@ export function TransactionsClient({
             {hasActiveFilters ? '🔍' : '💸'}
           </span>
           <p className="max-w-sm text-base font-medium">
-            {hasActiveFilters ? 'Nema transakcija za ove filtere.' : 'Još nema transakcija.'}
-          </p>
-          <p className="max-w-sm text-sm text-muted-foreground">
             {hasActiveFilters
-              ? 'Pokušaj smanjiti filtere ili ih očistiti.'
-              : 'Koristi brzi unos (ili + Dodaj) da dodaš prvu — pojaviće se ovdje.'}
+              ? 'Nema rezultata za ove filtere.'
+              : 'Tvoja prva transakcija je tu odmah.'}
           </p>
+          {hasActiveFilters ? (
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Smanji filtere ili ih očisti — odmah ćeš vidjeti rezultate.
+            </p>
+          ) : (
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Uvezi PDF izvod za 10 sekundi ili dodaj jednu ručno za 30.
+            </p>
+          )}
           {hasActiveFilters ? (
             // The "no matches for filters" branch needs an explicit way out.
             // Without it, the user has to scroll back up to the filter strip
@@ -366,9 +373,14 @@ export function TransactionsClient({
               Očisti filtere
             </Button>
           ) : (
-            <QuickAddTrigger className="h-11 w-full max-w-xs" variant="default" size="default">
-              Otvori brzi unos
-            </QuickAddTrigger>
+            <div className="flex w-full max-w-xs flex-col gap-2">
+              <Button asChild type="button" className="h-11 w-full">
+                <Link href="/skeniraj">Uvezi PDF izvod</Link>
+              </Button>
+              <QuickAddTrigger className="h-11 w-full" variant="outline" size="default">
+                Dodaj ručno
+              </QuickAddTrigger>
+            </div>
           )}
         </div>
       ) : (

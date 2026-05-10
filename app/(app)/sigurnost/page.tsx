@@ -14,7 +14,7 @@ export default function SigurnostPage() {
       <div className="space-y-2">
         <h1 className="text-headline">Sigurnost i privatnost</h1>
         <p className="text-base text-muted-foreground">
-          Sažetak onoga što trebaš znati o tome kako Konto čuva i obrađuje tvoje podatke.
+          Sve bitno o tome kako Konto čuva tvoje podatke — bez sitnih slova.
         </p>
       </div>
 
@@ -26,18 +26,15 @@ export default function SigurnostPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
-              Fajl se učitava u <strong className="text-foreground">zaštićeno skladište</strong>{' '}
-              povezano s tvojim nalogom. Na serveru iz PDF-a pokušavamo izvući strojno čitljiv tekst
-              (i pri potrebi OCR za slike stranice).{' '}
-              <strong className="text-foreground">Prije</strong> slanja u model, tekst prolazi kroz
-              pripremu i <strong className="text-foreground">redakciju osjetljivih podataka</strong>{' '}
-              (vidi odlomak ispod). Tako modelu šaljemo sadržaj koji u najvećoj mjeri opisuje
-              transakcije, a ne tvoje lične/brojčane identitete u punom obliku.
+              Tvoj PDF ide u <strong className="text-foreground">zaštićeno skladište</strong> vezano
+              samo za tvoj nalog. Iz PDF-a izvlačimo tekst (a za skenirane stranice koristimo OCR).{' '}
+              <strong className="text-foreground">Prije</strong> slanja u AI model, automatski{' '}
+              <strong className="text-foreground">redaktujemo osjetljive podatke</strong> (vidi
+              odlomak ispod). Tako AI vidi opise transakcija — ne tvoj IBAN, JMBG ili broj kartice.
             </p>
             <p>
-              Odgovor modela tumačimo u strukturirane transakcije (datum, iznos, valuta, opis,
-              referenca). Nakon toga u aplikaciji uvek pregledaš i po želji urediš prije konačnog
-              uvođenja u Konto.
+              AI nam vrati strukturirane transakcije (datum, iznos, valuta, opis, referenca). Ti ih
+              uvijek pregledaš i po želji urediš prije nego što uđu u Konto.
             </p>
           </CardContent>
         </Card>
@@ -65,8 +62,8 @@ export default function SigurnostPage() {
               </li>
             </ul>
             <p>
-              I dalje sačuvaj očekivani nivo opreza: PDF može sadržavati i druge osetljive podatke;
-              pregled u aplikaciji je zadnja linija provjere prije uvođenja.
+              I dalje budi oprezan/oprezna: PDF može sadržavati i druge osjetljive podatke koje
+              automatika ne prepozna. Pregled u aplikaciji je zadnja linija provjere prije uvoza.
             </p>
           </CardContent>
         </Card>
@@ -77,12 +74,11 @@ export default function SigurnostPage() {
           </CardHeader>
           <CardContent className="text-sm leading-relaxed text-muted-foreground">
             <p>
-              Izvod u skladištu nije namenjen arhiviranju. Zadržavamo fajl najviše{' '}
-              <strong className="text-foreground">24 sata</strong> (i brisanje zastarjelih stavki
-              radi periodično u pozadini). Nakon{' '}
-              <strong className="text-foreground">potvrde uvođenja</strong> pokušavamo odmah
-              obrisati objekat; u svakom slučaju ne oslanjaj se na dugotrajno čuvanje sirovog PDF-a
-              u aplikaciji.
+              Sirovi PDF nije za arhiviranje. Zadržavamo fajl najviše{' '}
+              <strong className="text-foreground">24 sata</strong> (zastarjeli fajlovi se brišu
+              periodično u pozadini). Nakon{' '}
+              <strong className="text-foreground">potvrde uvoza</strong> pokušavamo odmah obrisati
+              fajl. Ne računaj da PDF ostaje dostupan duže od toga.
             </p>
           </CardContent>
         </Card>
@@ -93,14 +89,12 @@ export default function SigurnostPage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm leading-relaxed text-muted-foreground">
             <p>
-              Za strukturiranje transakcija iz redaktovanog teksta koristimo{' '}
-              <strong className="text-foreground">Google Generative Language API</strong> s modelom{' '}
-              <strong className="text-foreground">Gemini 2.5 Flash-Lite</strong> (niska temperatura,
-              ograničeno trajanje zahtjeva u kodu). Google navodi mogućnost{' '}
-              <strong className="text-foreground">obrade u EU</strong> kroz prilagođenje projekata i
-              regiona — u produkciji oslanjamo se na API ključ i konfiguraciju koje ispunjavaju
-              važeće zahtjeve. Podaci otvorenog sadržaja ne šaljemo više korisnicima: samo ono što
-              prethodi redakciji i sâm upit modelu, po ovim pravilima.
+              Za strukturiranje teksta iz PDF-a koristimo{' '}
+              <strong className="text-foreground">Gemini 2.5 Flash-Lite</strong> (Google) s niskom
+              temperaturom i ograničenim trajanjem zahtjeva. Pozive šaljemo s{' '}
+              <strong className="text-foreground">EU konfiguracijom</strong> (region i podešavanja
+              Google Cloud projekta). Modelu ide samo redaktovan tekst tvog izvoda — ništa drugo i
+              nikad podaci drugih korisnika.
             </p>
           </CardContent>
         </Card>
@@ -109,55 +103,47 @@ export default function SigurnostPage() {
       <Separator />
 
       <section id="uvidi-engine" className="scroll-mt-20 space-y-4">
-        <h2 className="text-lg font-medium tracking-tight">
-          Uvidi (insights) — analiza tvojih podataka
-        </h2>
+        <h2 className="text-lg font-medium tracking-tight">Uvidi — analiza tvojih podataka</h2>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Šta radi engine i šta NE radi</CardTitle>
+            <CardTitle className="text-base">Šta analiza radi (i šta ne radi)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
               Konto svake noći pokreće{' '}
-              <strong className="text-foreground">analizu tvojih transakcija</strong> da bi otkrio
-              anomalije (npr. potrošnja u kategoriji veća od prosjeka), prilike za uštedu, prijetnje
-              budžetu i neaktivne pretplate. Rezultat ide u tabelu{' '}
-              <code className="rounded bg-muted px-1 py-0.5 text-xs">insights</code> na koju samo ti
-              imaš pristup (RLS).
+              <strong className="text-foreground">analizu tvojih transakcija</strong> da bi
+              otkrio/la anomalije (npr. potrošnja u kategoriji veća od prosjeka), prilike za uštedu,
+              prijetnje budžetu i neaktivne pretplate. Rezultat vidiš samo ti.
             </p>
             <p>
               <strong className="text-foreground">Sve se dešava na našem serveru.</strong> Tvoji
-              podaci ne idu trećim stranama — analiza koristi samo agregate (sume po kategoriji po
-              mjesecu, prosjeke, standardne devijacije). Engine{' '}
-              <strong className="text-foreground">ne šalje ništa</strong> ka eksternim API-jima: ni
-              LLM-ovima, ni analytics provajderima, ni reklamnim mrežama.
+              podaci ne idu trećim stranama — analiza radi sa zbrojevima po kategoriji, mjesecu i
+              prosjekima. <strong className="text-foreground">Ništa ne šalje van Konta</strong> — ni
+              AI modelima, ni analitici, ni reklamnim mrežama.
             </p>
             <p>
-              <strong className="text-foreground">Tehnička izolacija:</strong>
+              <strong className="text-foreground">Kako je izolovano:</strong>
             </p>
             <ul className="ml-5 list-disc space-y-1.5">
               <li>
-                Cron job (Vercel) trča u 03:00 UTC i obrađuje svakog korisnika zasebno; nema
-                cross-user agregacije.
+                Analiza se pokreće svake noći u <strong className="text-foreground">04:00</strong>{' '}
+                (po BiH vremenu), zasebno za svakog korisnika. Nikad ne kombinujemo podatke više
+                korisnika.
               </li>
               <li>
-                Sva polja u <code className="rounded bg-muted px-1 py-0.5 text-xs">insights</code>{' '}
-                tabeli (naslov, body, metadata) su generisana na našem serveru, nikad ne sadrže
-                IBAN, JMBG, broj kartice ni email — samo imena tvojih kategorija/trgovaca i iznose u
-                tvojoj valuti.
+                Tekst uvida nikad ne sadrži IBAN, JMBG, broj kartice ni email — samo imena tvojih
+                kategorija i prodavača i iznose u tvojoj valuti.
               </li>
               <li>
-                Kad odbiješ uvid (klikneš X), označava se kao{' '}
-                <code className="rounded bg-muted px-1 py-0.5 text-xs">dismissed_at</code> i ostaje
-                u bazi 90 dana radi historije, nakon čega se trajno briše.
+                Kad odbiješ uvid (klikneš X), ostaje u bazi 90 dana radi historije, pa se trajno
+                briše.
               </li>
               <li>
-                Možeš ručno pokrenuti analizu (dugme "Generiši ponovo" u dev modu); rate-limited na
-                jedan poziv u 60 sekundi.
+                U razvojnom modu možeš ručno pokrenuti analizu — limit je jedan poziv u 60 sekundi.
               </li>
             </ul>
             <p>
-              Detalji o tome šta tačno engine traži:{' '}
+              Detalji o tome šta tačno analiza traži:{' '}
               <Link href="/pomoc#uvidi-engine" className="font-medium text-primary hover:underline">
                 Pomoć — uvidi
               </Link>
@@ -173,12 +159,12 @@ export default function SigurnostPage() {
         <h2 className="text-lg font-medium tracking-tight">Prijava sigurnosnih ranjivosti</h2>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Otkrio si problem?</CardTitle>
+            <CardTitle className="text-base">Pronađena ranjivost?</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
-              Ako si pronašao ranjivost koja može uticati na povjerljivost, integritet ili
-              dostupnost korisničkih podataka, javi nam direktno na{' '}
+              Ako pronađeš ranjivost koja može uticati na povjerljivost, integritet ili dostupnost
+              korisničkih podataka, javi nam direktno na{' '}
               <a
                 href="mailto:security@konto.app"
                 className="font-medium text-primary hover:underline"
@@ -188,10 +174,10 @@ export default function SigurnostPage() {
               . Odgovaramo unutar 72 sata.
             </p>
             <p>
-              Za prvi kontakt dovoljan je opis problema i koraci za reprodukciju — eksploit detalje
+              Za prvi kontakt dovoljan je opis problema i koraci za reprodukciju — exploit detalje
               ne moraš slati u istom mailu. Molimo te da ne pokrećeš testove koji opterećuju servis
-              (DDoS, masovno scraping) niti da pristupaš tuđim nalozima; ozbiljnost prijave
-              cijenimo, ali ne na štetu drugih korisnika.
+              (DDoS, masovni scraping) ni da pristupaš tuđim nalozima; ozbiljnost prijave cijenimo,
+              ali ne na štetu drugih korisnika.
             </p>
             <p>
               Strojno čitljiva verzija je na{' '}
