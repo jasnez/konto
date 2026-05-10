@@ -49,7 +49,7 @@ function buildSupabaseMock(options: {
   downloadData?: Blob | null;
   downloadError?: { message: string } | null;
   insertError?: { message: string } | null;
-  /** false = rate limit exceeded (F2-E5-T2). */
+  /** false = rate limit exceeded. */
   allowParse?: boolean;
 }) {
   const updateCalls: UpdateCall[] = [];

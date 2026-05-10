@@ -1,5 +1,5 @@
 /**
- * Top-bar notification bell (F3-E5-T2).
+ * Top-bar notification bell.
  *
  * Server Component — fetches the active-insight count once per render of
  * the (app) layout. Renders a relative-positioned bell icon with a badge

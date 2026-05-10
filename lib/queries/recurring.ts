@@ -1,7 +1,7 @@
 /**
- * Read-side helpers for recurring (pretplate) data (F3-E2-T2).
+ * Read-side helpers for recurring (pretplate) data.
  *
- * `listActiveRecurring` is the workhorse for the /pretplate page (T3)
+ * `listActiveRecurring` is the workhorse for the /pretplate page
  * and the dashboard widget (future). `monthlyEquivalentCents` does the
  * frequency normalisation the UI footer needs for the "Mjesečni
  * ekvivalent svih pretplata" line.

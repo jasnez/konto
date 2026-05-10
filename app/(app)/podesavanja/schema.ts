@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Must match the CHECK constraints on public.profiles (base_currency, locale).
  * See supabase/migrations/..._initial_schema.sql for the original allow-lists
- * and ..._simplify_currency_locale.sql for the narrowed set used in Faza 0.
+ * and ..._simplify_currency_locale.sql for the currently-narrowed set.
  * Kept as constants so the <Select> options in the client form and the Zod
  * enum here stay in sync.
  */

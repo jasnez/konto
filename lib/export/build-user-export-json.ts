@@ -185,7 +185,8 @@ export async function buildUserExportJsonForRequest(
     merchants: merchantsRes.data ?? [],
     merchant_aliases: aliasesRes.data ?? [],
     transactions: transactionsRes.data ?? [],
-    // Faza 3 tabele — prazno dok migracije ne postoje u šemi
+    // budgets/goals/recurring/insights tables — empty placeholder while
+    // their schema/migrations aren't yet exported through this route
     categorization_rules: [] as unknown[],
     budgets: [] as unknown[],
     goals: [] as unknown[],

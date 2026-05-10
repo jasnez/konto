@@ -1,5 +1,5 @@
 /**
- * Insights engine (F3-E5-T1).
+ * Insights engine.
  *
  * Public API:
  *   - `generateInsights(supabase, userId, today?) → Promise<EngineResult>`

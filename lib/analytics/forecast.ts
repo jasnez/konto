@@ -1,5 +1,5 @@
 /**
- * Cashflow forecasting (F3-E3-T1).
+ * Cashflow forecasting.
  *
  * Project the user's available-cash balance N days into the future
  * given (a) current account balances, (b) confirmed

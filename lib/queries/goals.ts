@@ -1,5 +1,5 @@
 /**
- * Goals query helpers (F3-E4-T1).
+ * Goals query helpers.
  *
  * `listGoals` returns goals with progress computed client-side from
  * `current_amount_cents / target_amount_cents`.
@@ -62,8 +62,7 @@ interface GoalRowRaw {
 function monthsUntil(targetDate: string, today: Date): number {
   const target = new Date(targetDate);
   const diff =
-    (target.getFullYear() - today.getFullYear()) * 12 +
-    (target.getMonth() - today.getMonth());
+    (target.getFullYear() - today.getFullYear()) * 12 + (target.getMonth() - today.getMonth());
   return Math.max(0, diff);
 }
 
@@ -139,7 +138,10 @@ export async function listGoals(
     );
     // Supabase join returns array or object depending on cardinality.
     // We use accounts (singular join) which returns an object or null.
-    const accountRaw = r.account as { id: string; name: string } | null | { id: string; name: string }[];
+    const accountRaw = r.account as
+      | { id: string; name: string }
+      | null
+      | { id: string; name: string }[];
     const account = Array.isArray(accountRaw) ? (accountRaw[0] ?? null) : accountRaw;
 
     return {

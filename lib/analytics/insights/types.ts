@@ -1,5 +1,5 @@
 /**
- * Insights engine types (F3-E5-T1).
+ * Insights engine types.
  *
  * The engine is **synchronous in spirit**: each detector is a pure function
  * over a pre-loaded `DetectorContext`. The engine itself is async only

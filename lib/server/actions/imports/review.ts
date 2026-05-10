@@ -82,8 +82,8 @@ export async function updateParsedTransaction(
   const p = parsed.data;
 
   // Explicit ownership check (defence in depth on top of RLS). We also pull
-  // the fields the learning loop (F2-E4-T3) needs so we can decide whether
-  // to record a correction without a second round-trip.
+  // the fields the learning loop needs so we can decide whether to record
+  // a correction without a second round-trip.
   const { data: row, error: loadErr } = await supabase
     .from('parsed_transactions')
     .select(
@@ -165,7 +165,7 @@ export async function updateParsedTransaction(
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  // Learning loop (F2-E4-T3): when the user genuinely overrides a
+  // Learning loop: when the user genuinely overrides a
   // non-deterministic suggestion, ledger the correction and check whether
   // we have enough evidence to materialise an alias. We deliberately:
   //   - skip 'rule' / 'alias_exact' (the user is overriding a rule of their

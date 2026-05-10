@@ -1,5 +1,5 @@
 /**
- * Recurring transaction detection (F3-E2-T1).
+ * Recurring transaction detection.
  *
  * Pure-TypeScript algorithm. Given the user's last 6 months of
  * transactions, returns candidate subscriptions/recurring charges that

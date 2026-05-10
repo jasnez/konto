@@ -1,5 +1,5 @@
 /**
- * Invite-only sign-up feature flag (F4-E2-T1).
+ * Invite-only sign-up feature flag.
  *
  * Controlled by the `ENABLE_INVITES` env var. Stays off by default so dev /
  * test environments don't have to ship invite codes around. In production
@@ -15,7 +15,7 @@ export function invitesEnabled(): boolean {
 }
 
 /**
- * Hardcoded admin email from env (F4-E2-T1 admin UI).
+ * Hardcoded admin email from env (used by /admin/invites UI).
  *
  * The /admin/invites page checks `user.email === adminEmail()` and 404s
  * if it doesn't match. Returns null when unset → admin UI is disabled.

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Main onboarding orchestrator (F3-E6-T1).
+ * Main onboarding orchestrator.
  *
  * 4-step wizard for fresh users:
  *   1. Create first account

@@ -9,11 +9,11 @@ export const metadata: Metadata = {
 };
 
 /**
- * Placeholder waiting-list page for closed-beta gating (F4-E2-T1).
+ * Placeholder waiting-list page for closed-beta gating.
  *
  * The /prijava and /registracija forms link here when ENABLE_INVITES=true
- * and the user doesn't have a code yet. F4-E2-T2 replaces this stub with a
- * real form that writes to a `waiting_list` table.
+ * and the user doesn't have a code yet. A future iteration replaces this
+ * stub with a real form that writes to a `waiting_list` table.
  */
 export default function CekanjePage() {
   return (
@@ -22,8 +22,8 @@ export default function CekanjePage() {
         <h1 className="text-2xl font-semibold sm:text-3xl">Lista čekanja</h1>
         <p className="text-sm text-muted-foreground sm:text-base">
           Konto je trenutno u zatvorenom beta testu. Otvorit ćemo se kad budemo sigurni da
-          aplikacija stoji na svojim nogama. Ako želiš da te obavijestimo, javi se direktno —
-          forma za čekanje stiže uskoro.
+          aplikacija stoji na svojim nogama. Ako želiš da te obavijestimo, javi se direktno — forma
+          za čekanje stiže uskoro.
         </p>
       </div>
       <div className="flex items-center gap-3 rounded-xl border border-dashed p-4 text-sm">

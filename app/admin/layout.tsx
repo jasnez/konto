@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { adminEmail } from '@/lib/auth/invite-config';
 
 /**
- * Admin shell (F4-E2-T1).
+ * Admin shell.
  *
  * Sole gating mechanism: the authenticated user's email must equal
  * `process.env.ADMIN_EMAIL`. There is no role/permission table — for closed
