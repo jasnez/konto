@@ -156,23 +156,18 @@ export async function createGoal(input: unknown): Promise<CreateGoalResult> {
 
   const { name, target_amount_cents, currency, target_date, account_id, icon, color } = parsed.data;
 
-  // If an account is being linked, verify it belongs to this user before
-  // writing the goal row. This prevents inserting a goal with a foreign
-  // account_id that would pass the FK constraint but fail the recompute RPC
-  // silently (the RPC would just no-op rather than error).
+  // MT-12: ownership check via shared helper. Same caveat as updateGoal —
+  // helper enforces is('deleted_at', null), so soft-deleted accounts can no
+  // longer be linked at create time. NOT_FOUND mapped to ACCOUNT_NOT_FOUND
+  // to keep the more specific client-facing error code.
   if (account_id) {
-    const { data: acct, error: acctErr } = await supabase
-      .from('accounts')
-      .select('id')
-      .eq('id', account_id)
-      .eq('user_id', user.id)
-      .maybeSingle();
-    if (acctErr) {
-      logSafe('create_goal_account_check', { userId: user.id, error: acctErr.message });
+    const ownedAccount = await ensureOwnedAccount(supabase, user.id, account_id);
+    if (!ownedAccount.ok) {
+      if (ownedAccount.error === 'NOT_FOUND') {
+        return { success: false, error: 'ACCOUNT_NOT_FOUND' };
+      }
+      logSafe('create_goal_account_check', { userId: user.id, error: ownedAccount.error });
       return { success: false, error: 'DATABASE_ERROR' };
-    }
-    if (!acct) {
-      return { success: false, error: 'ACCOUNT_NOT_FOUND' };
     }
   }
 
@@ -546,20 +541,15 @@ export async function linkAccount(id: unknown, input: unknown): Promise<LinkAcco
 
   const { account_id } = parsed.data;
 
-  // If linking, verify the account belongs to the user.
+  // MT-12: ownership check via shared helper.
   if (account_id !== null) {
-    const { data: acct, error: acctErr } = await supabase
-      .from('accounts')
-      .select('id')
-      .eq('id', account_id)
-      .eq('user_id', user.id)
-      .maybeSingle();
-    if (acctErr) {
-      logSafe('link_account_account_select', { userId: user.id, error: acctErr.message });
+    const ownedAccount = await ensureOwnedAccount(supabase, user.id, account_id);
+    if (!ownedAccount.ok) {
+      if (ownedAccount.error === 'NOT_FOUND') {
+        return { success: false, error: 'ACCOUNT_NOT_FOUND' };
+      }
+      logSafe('link_account_account_select', { userId: user.id, error: ownedAccount.error });
       return { success: false, error: 'DATABASE_ERROR' };
-    }
-    if (!acct) {
-      return { success: false, error: 'ACCOUNT_NOT_FOUND' };
     }
   }
 
