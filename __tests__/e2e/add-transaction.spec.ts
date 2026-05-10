@@ -12,7 +12,7 @@ function modPlusK(): string {
   return platform() === 'darwin' ? 'Meta+k' : 'Control+k';
 }
 
-test('desktop: Cmd+K → modal → Spasi → vidi u listi', async ({ page }, testInfo) => {
+test('desktop: Cmd+K → modal → Sačuvaj → vidi u listi', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'mobile-safari');
   test.setTimeout(90_000);
 
@@ -28,7 +28,7 @@ test('desktop: Cmd+K → modal → Spasi → vidi u listi', async ({ page }, tes
 
     await quickDialog.getByLabel('Iznos').fill('12,50');
     await quickDialog.getByPlaceholder('npr. Konzum').fill(merchant);
-    await quickDialog.getByRole('button', { name: 'Spasi' }).click();
+    await quickDialog.getByRole('button', { name: 'Sačuvaj' }).click();
 
     await expect(page.getByText('Transakcija je dodata.')).toBeVisible();
     await expect(page.getByText(merchant).first()).toBeVisible({ timeout: 20_000 });
@@ -37,7 +37,7 @@ test('desktop: Cmd+K → modal → Spasi → vidi u listi', async ({ page }, tes
   }
 });
 
-test('mobile: FAB → sheet → Spasi → vidi na početnoj', async ({ page }, testInfo) => {
+test('mobile: FAB → sheet → Sačuvaj → vidi na početnoj', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile-safari');
   test.setTimeout(90_000);
 
@@ -59,7 +59,7 @@ test('mobile: FAB → sheet → Spasi → vidi na početnoj', async ({ page }, t
     const merchantInput = quickSheet.getByPlaceholder('npr. Konzum');
     await e2eFill(merchantInput, merchant, webKitFill);
     await expect(merchantInput).toHaveValue(merchant);
-    await clickDomButton(quickSheet.getByRole('button', { name: 'Spasi' }));
+    await clickDomButton(quickSheet.getByRole('button', { name: 'Sačuvaj' }));
 
     await expect(page.getByText('Transakcija je dodata.')).toBeVisible();
     await expect(page.getByText(merchant).first()).toBeVisible({ timeout: 20_000 });

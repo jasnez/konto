@@ -74,7 +74,7 @@ export function WizardStepBudget({
           Postavi prvi budžet
         </h2>
         <p className="text-sm text-muted-foreground sm:text-base">
-          Mjesečni ili sedmični limit po kategoriji. Vidjećeš upozorenje kad si blizu kraja.
+          Mjesečni ili sedmični limit po kategoriji. Upozorenje stiže kad si blizu limita.
         </p>
       </header>
 

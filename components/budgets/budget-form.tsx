@@ -63,10 +63,11 @@ export interface BudgetFormProps {
   draftKey?: string;
 }
 
-const PERIOD_LABEL: Record<'monthly' | 'weekly', string> = {
-  monthly: 'mjesečno',
-  weekly: 'sedmično',
-};
+// Previously held an adverb map ('mjesečno'/'sedmično') interpolated into the
+// rollover description as `sljedeći ${PERIOD_LABEL[period]} period`. That
+// produced ungrammatical output ("sljedeći mjesečno period" — adverb where an
+// adjective belongs). The variable is now omitted from the description; the
+// period itself is implicit from the form's own period selector right above.
 
 export function BudgetForm({
   mode,
@@ -238,7 +239,7 @@ export function BudgetForm({
               <div className="space-y-0.5">
                 <FormLabel className="text-base">Prenesi neutrošeno</FormLabel>
                 <FormDescription>
-                  Ako ne potrošiš sve, ostatak ide u sljedeći {PERIOD_LABEL[watchedPeriod]} period.
+                  Ako ne potrošiš sve, ostatak ide u sljedeći period.
                 </FormDescription>
               </div>
               <FormControl>
@@ -270,7 +271,7 @@ export function BudgetForm({
         {!hideSubmit && (
           <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />}
-            {mode === 'create' ? 'Spasi budžet' : 'Sačuvaj izmjene'}
+            {mode === 'create' ? 'Kreiraj budžet' : 'Sačuvaj'}
           </Button>
         )}
       </form>
@@ -337,17 +338,22 @@ function PreviewPanel({ categoryId, period, currency }: PreviewPanelProps) {
   }
   if (spent === null) return null;
 
-  const periodLabel = period === 'monthly' ? 'mjesec' : 'sedmicu';
+  // Impersonal phrasing — sidesteps the masculine-default past participle
+  // ("nisi imao", "si potrošio") that excluded ~half of users. Bonus: works
+  // for both period values without the prior "Prošlu mjesec" agreement bug
+  // (mjesec is masculine; the accusative "Prošlu" only fits feminine
+  // sedmica). Distinct full phrases per period now agree correctly.
+  const periodPhrase = period === 'monthly' ? 'Prošli mjesec' : 'Prošla sedmica';
   const formatted = formatMoney(spent, currency, 'bs-BA', { showCurrency: true });
 
   return (
     <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
       {spent === 0n ? (
-        <>Prošlu {periodLabel} nisi imao transakcija u ovoj kategoriji.</>
+        <>{periodPhrase} — bez transakcija u ovoj kategoriji.</>
       ) : (
         <>
-          Prošlu {periodLabel} si potrošio <strong className="text-foreground">{formatted}</strong>{' '}
-          u ovoj kategoriji.
+          {periodPhrase}: <strong className="text-foreground">{formatted}</strong> potrošeno u ovoj
+          kategoriji.
         </>
       )}
     </div>

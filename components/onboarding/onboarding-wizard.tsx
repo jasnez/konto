@@ -138,7 +138,7 @@ export function OnboardingWizard({
         if (!markResult.success) {
           // EH-3: don't advance past a persist failure — user retries
           // the step instead of seeing the next one with stale tracker.
-          toast.error('Ne mogu spasiti napredak. Pokušaj osvježiti.');
+          toast.error('Ne mogu sačuvati napredak. Pokušaj osvježiti.');
           return;
         }
         // Step is committed — safe to advance the UI.
@@ -166,7 +166,7 @@ export function OnboardingWizard({
           toast.error('Ne mogu preskočiti. Pokušaj ponovo.');
           return;
         }
-        toast.success('Možeš se vratiti na onboarding kasnije iz Podešavanja.');
+        toast.success('Možeš nastaviti onboarding kad god — kroz Podešavanja → Vodič.');
         router.refresh();
         router.push('/pocetna');
       })();

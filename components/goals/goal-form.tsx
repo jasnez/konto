@@ -325,7 +325,7 @@ export function GoalForm({
         {!hideSubmit && (
           <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />}
-            {mode === 'create' ? 'Kreiraj cilj' : 'Sačuvaj izmjene'}
+            {mode === 'create' ? 'Kreiraj cilj' : 'Sačuvaj'}
           </Button>
         )}
       </form>

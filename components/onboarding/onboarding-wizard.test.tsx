@@ -176,7 +176,7 @@ describe('OnboardingWizard', () => {
     expect(screen.getByTestId('step1-stub')).toBeInTheDocument();
     expect(screen.queryByTestId('step2-stub')).not.toBeInTheDocument();
     // User-visible error toast.
-    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Ne mogu spasiti'));
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Ne mogu sačuvati'));
   });
 
   it('EH-3: completeOnboarding failure is non-blocking — still reaches Done', async () => {

@@ -1,15 +1,20 @@
 'use client';
 
 /**
- * Onboarding done screen — confetti + "Spreman si!" + redirect to /pocetna
- * after 2 seconds. The completing Server Action (`completeOnboarding`)
- * has already run in the parent's transition before this renders, so by
- * the time we redirect, the dashboard's `onboarding_completed_at` guard
- * will pass and render the regular layout.
+ * Onboarding done screen — confetti + "Sve je spremno." + redirect to /pocetna
+ * after 2 seconds, with a visible "Otvori početnu" button so the user has
+ * agency if the auto-redirect lags. The completing Server Action
+ * (`completeOnboarding`) has already run in the parent's transition before
+ * this renders, so by the time we redirect, the dashboard's
+ * `onboarding_completed_at` guard will pass and render the regular layout.
+ *
+ * Copy uses impersonal "Sve je spremno." (not gendered "Spreman si!") so
+ * the moment lands the same for every user.
  */
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const REDIRECT_DELAY_MS = 2000;
 
@@ -41,6 +46,11 @@ export function WizardDone() {
     };
   }, [router]);
 
+  function goToDashboard(): void {
+    router.refresh();
+    router.push('/pocetna');
+  }
+
   return (
     <section
       aria-labelledby="wizard-done-title"
@@ -50,11 +60,14 @@ export function WizardDone() {
         <CheckCircle2 className="h-9 w-9" aria-hidden />
       </div>
       <h2 id="wizard-done-title" className="text-2xl font-semibold sm:text-3xl">
-        Spreman si!
+        Sve je spremno.
       </h2>
       <p className="max-w-md text-sm text-muted-foreground sm:text-base">
-        Dashboard se otvara za par sekundi. Ako želiš odmah, klikni dolje.
+        Početna se otvara za par sekundi. Ili otvori odmah.
       </p>
+      <Button type="button" onClick={goToDashboard} className="mt-2">
+        Otvori početnu
+      </Button>
     </section>
   );
 }

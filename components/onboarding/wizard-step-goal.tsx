@@ -38,8 +38,8 @@ export function WizardStepGoal({
           Postavi cilj štednje
         </h2>
         <p className="text-sm text-muted-foreground sm:text-base">
-          Ljetovanje, novi telefon, hitna rezerva — definiši koliko skupljaš i do kad. Konto računa
-          koliko trebaš odvajati mjesečno.
+          Ljetovanje, novi telefon, hitna rezerva — postavi iznos i rok. Konto izračuna koliko treba
+          odvajati mjesečno.
         </p>
       </header>
 

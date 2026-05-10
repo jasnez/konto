@@ -47,11 +47,11 @@ test('zahtjev za brisanje naloga → /obrisan', async ({ page }, testInfo) => {
     await expect(emailInput).toHaveValue(session.email);
     if (isMobileSafari) {
       await page
-        .getByRole('checkbox', { name: /Razumijem da se ova akcija ne može poništiti/u })
+        .getByRole('checkbox', { name: /Razumijem da se brisanje naloga ne može poništiti/u })
         .click();
       await clickDomButton(page.getByRole('button', { name: 'Obriši nalog' }));
     } else {
-      await page.getByLabel(/Razumijem da se ova akcija ne može poništiti/u).check();
+      await page.getByLabel(/Razumijem da se brisanje naloga ne može poništiti/u).check();
       await page.getByRole('button', { name: 'Obriši nalog' }).click();
     }
     await expect(page).toHaveURL(/\/obrisan(?:\?.*)?$/u, { timeout: 30_000 });

@@ -211,7 +211,7 @@ function InviteStep({
               {form.formState.isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                  Provjeravam…
+                  Provjera…
                 </>
               ) : (
                 'Nastavi'
@@ -272,8 +272,10 @@ function EmailStep({
     }
 
     if (result.error === 'EMAIL_ALREADY_EXISTS') {
+      // Don't expose the route path in the message — the visible
+      // "Već imaš nalog? Prijavi se." link below the form is the affordance.
       form.setError('email', {
-        message: 'Već postoji nalog s ovim emailom. Idi na /prijava.',
+        message: 'Već imaš nalog s ovim emailom. Prijavi se ispod.',
       });
       return;
     }
@@ -331,7 +333,7 @@ function EmailStep({
                       autoCapitalize="none"
                       autoCorrect="off"
                       required
-                      placeholder="ti@primjer.ba"
+                      placeholder="ime@primjer.ba"
                       className="h-11"
                       autoFocus
                       {...field}
@@ -345,7 +347,7 @@ function EmailStep({
               {form.formState.isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                  Šaljem…
+                  Slanje…
                 </>
               ) : (
                 'Pošalji mi kod'

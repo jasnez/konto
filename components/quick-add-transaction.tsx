@@ -896,7 +896,7 @@ export function QuickAddTransaction({
             disabled={form.formState.isSubmitting || effectiveAccounts.length === 0}
           >
             {form.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Spasi
+            Sačuvaj
           </Button>
         </div>
       </form>
