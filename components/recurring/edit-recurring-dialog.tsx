@@ -207,7 +207,7 @@ export function EditRecurringDialog({
               name="merchantId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Trgovac (merchant)</FormLabel>
+                  <FormLabel>Prodavač</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger className="h-11">
@@ -215,7 +215,7 @@ export function EditRecurringDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={NO_MERCHANT}>Bez trgovca</SelectItem>
+                      <SelectItem value={NO_MERCHANT}>Bez prodavača</SelectItem>
                       {merchants.map((m) => (
                         <SelectItem key={m.id} value={m.id}>
                           {m.name}

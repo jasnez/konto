@@ -370,7 +370,7 @@ export function ImportReviewClient({
           ...(categoryId ? { category_id: categoryId } : {}),
         });
         if (!res.success) {
-          toast.error('Trgovac nije snimljen.');
+          toast.error('Prodavač nije snimljen.');
           return;
         }
         if (res.data?.aliasCreated === true) {
@@ -1297,7 +1297,7 @@ const MerchantDescriptionField = memo(function MerchantDescriptionField({
         type="text"
         className="h-11 w-full min-w-[10rem] rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         value={description}
-        placeholder={unknownMerchant ? 'Novi trgovac — dodaj' : undefined}
+        placeholder={unknownMerchant ? 'Novi prodavač — dodaj' : undefined}
         onChange={(e) => {
           const v = e.target.value;
           onDescriptionChange(v);

@@ -63,12 +63,6 @@ export interface BudgetFormProps {
   draftKey?: string;
 }
 
-// Previously held an adverb map ('mjesečno'/'sedmično') interpolated into the
-// rollover description as `sljedeći ${PERIOD_LABEL[period]} period`. That
-// produced ungrammatical output ("sljedeći mjesečno period" — adverb where an
-// adjective belongs). The variable is now omitted from the description; the
-// period itself is implicit from the form's own period selector right above.
-
 export function BudgetForm({
   mode,
   categories,
