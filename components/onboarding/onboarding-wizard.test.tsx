@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'sonner';
 import { OnboardingWizard } from './onboarding-wizard';
 
 vi.mock('next/navigation', () => ({
@@ -17,16 +18,25 @@ vi.mock('@/app/(app)/pocetna/onboarding-actions', () => ({
   completeOnboarding,
 }));
 
+vi.mock('sonner', () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}));
+
+afterEach(() => {
+  // Reset the default-success mock implementation between tests so the
+  // EH-3 failure tests can override per-test without leaking forward.
+  markOnboardingStep.mockImplementation(() => Promise.resolve({ success: true }));
+  completeOnboarding.mockImplementation(() => Promise.resolve({ success: true }));
+  vi.clearAllMocks();
+});
+
 // Mute the inner forms so we don't need full deps; the tests focus on
 // orchestration (phase transitions + skip + Server Action calls).
 vi.mock('./wizard-step-account', () => ({
-  WizardStepAccount: ({
-    onComplete,
-    onSkip,
-  }: {
-    onComplete: () => void;
-    onSkip: () => void;
-  }) => (
+  WizardStepAccount: ({ onComplete, onSkip }: { onComplete: () => void; onSkip: () => void }) => (
     <div data-testid="step1-stub">
       <button type="button" onClick={onComplete}>
         Step 1 done
@@ -49,13 +59,7 @@ vi.mock('./wizard-step-import', () => ({
 }));
 
 vi.mock('./wizard-step-budget', () => ({
-  WizardStepBudget: ({
-    onComplete,
-    onSkip,
-  }: {
-    onComplete: () => void;
-    onSkip: () => void;
-  }) => (
+  WizardStepBudget: ({ onComplete, onSkip }: { onComplete: () => void; onSkip: () => void }) => (
     <div data-testid="step3-stub">
       <button type="button" onClick={onComplete}>
         Step 3 done
@@ -68,13 +72,7 @@ vi.mock('./wizard-step-budget', () => ({
 }));
 
 vi.mock('./wizard-step-goal', () => ({
-  WizardStepGoal: ({
-    onComplete,
-    onSkip,
-  }: {
-    onComplete: () => void;
-    onSkip: () => void;
-  }) => (
+  WizardStepGoal: ({ onComplete, onSkip }: { onComplete: () => void; onSkip: () => void }) => (
     <div data-testid="step4-stub">
       <button type="button" onClick={onComplete}>
         Step 4 done
@@ -128,20 +126,22 @@ describe('OnboardingWizard', () => {
     const user = userEvent.setup();
     render(<OnboardingWizard progress={FRESH} {...PROPS} />);
     await user.click(screen.getByText('Step 1 done'));
-    expect(screen.getByTestId('step2-stub')).toBeInTheDocument();
+    // EH-3: advance is now pessimistic — wait for the Server Action to
+    // resolve before the next step is rendered.
     await waitFor(() => {
-      expect(markOnboardingStep).toHaveBeenCalledWith(1);
+      expect(screen.getByTestId('step2-stub')).toBeInTheDocument();
     });
+    expect(markOnboardingStep).toHaveBeenCalledWith(1);
   });
 
   it('advances step1 → step2 on skip and still marks the step', async () => {
     const user = userEvent.setup();
     render(<OnboardingWizard progress={FRESH} {...PROPS} />);
     await user.click(screen.getByText('Step 1 skip'));
-    expect(screen.getByTestId('step2-stub')).toBeInTheDocument();
     await waitFor(() => {
-      expect(markOnboardingStep).toHaveBeenCalledWith(1);
+      expect(screen.getByTestId('step2-stub')).toBeInTheDocument();
     });
+    expect(markOnboardingStep).toHaveBeenCalledWith(1);
   });
 
   it('reaches Done after step 4 and calls completeOnboarding', async () => {
@@ -153,10 +153,51 @@ describe('OnboardingWizard', () => {
       />,
     );
     await user.click(screen.getByText('Step 4 done'));
-    expect(screen.getByTestId('done-stub')).toBeInTheDocument();
     await waitFor(() => {
-      expect(markOnboardingStep).toHaveBeenCalledWith(4);
+      expect(screen.getByTestId('done-stub')).toBeInTheDocument();
+    });
+    expect(markOnboardingStep).toHaveBeenCalledWith(4);
+    await waitFor(() => {
       expect(completeOnboarding).toHaveBeenCalled();
+    });
+  });
+
+  it('EH-3: stays on current step when markOnboardingStep fails', async () => {
+    markOnboardingStep.mockImplementationOnce(() =>
+      Promise.resolve({ success: false, error: 'DATABASE_ERROR' }),
+    );
+    const user = userEvent.setup();
+    render(<OnboardingWizard progress={FRESH} {...PROPS} />);
+    await user.click(screen.getByText('Step 1 done'));
+    // Server Action fired and resolved — but the wizard MUST stay on step 1.
+    await waitFor(() => {
+      expect(markOnboardingStep).toHaveBeenCalledWith(1);
+    });
+    expect(screen.getByTestId('step1-stub')).toBeInTheDocument();
+    expect(screen.queryByTestId('step2-stub')).not.toBeInTheDocument();
+    // User-visible error toast.
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Ne mogu spasiti'));
+  });
+
+  it('EH-3: completeOnboarding failure is non-blocking — still reaches Done', async () => {
+    completeOnboarding.mockImplementationOnce(() =>
+      Promise.resolve({ success: false, error: 'DATABASE_ERROR' }),
+    );
+    const user = userEvent.setup();
+    render(
+      <OnboardingWizard
+        progress={{ step1: true, step2: true, step3: true, step4: false }}
+        {...PROPS}
+      />,
+    );
+    await user.click(screen.getByText('Step 4 done'));
+    // Step marker succeeded, so Done is shown — completion timestamp can
+    // be filled by a future retry. UI is not blocked.
+    await waitFor(() => {
+      expect(screen.getByTestId('done-stub')).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Ne mogu označiti'));
     });
   });
 

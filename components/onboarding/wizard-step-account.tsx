@@ -27,8 +27,11 @@ export function WizardStepAccount({ onComplete, onSkip }: WizardStepAccountProps
           Dodaj svoj prvi račun
         </h2>
         <p className="text-sm text-muted-foreground sm:text-base">
-          Tekući, štedni, kreditna ili kešh — sve što pratiš novac. Možeš ih kasnije dodati još
-          kroz <Link href="/racuni" className="underline">Računi</Link>.
+          Tekući, štedni, kreditna ili kešh — sve što pratiš novac. Možeš ih kasnije dodati još kroz{' '}
+          <Link href="/racuni" className="underline">
+            Računi
+          </Link>
+          .
         </p>
       </header>
 
@@ -36,6 +39,9 @@ export function WizardStepAccount({ onComplete, onSkip }: WizardStepAccountProps
         mode="create"
         onSuccess={onComplete}
         successToast="Račun kreiran. Nastavljamo na sljedeći korak."
+        // OB-1: persist field values to localStorage so a tab close mid-step
+        // doesn't lose what the user typed. Cleared automatically on success.
+        draftKey="onboarding-step1-account"
       />
 
       <div className="flex justify-center pt-2">

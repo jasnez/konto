@@ -103,41 +103,55 @@ export function OnboardingWizard({
   const [phase, setPhase] = useState<Phase>(() => firstIncompletePhase(progress));
   const [pending, startTransition] = useTransition();
 
-  /** Mark current phase done in DB, then advance. Server-side update + local move. */
+  /**
+   * Mark current phase done in DB, THEN advance the local UI. EH-3:
+   * was previously optimistic (advance first, then write); on Server
+   * Action failure the user saw the next step despite the JSONB tracker
+   * being unset — next login they'd be back on this step with their
+   * previously-saved data (account, budget, etc.) already in DB,
+   * confused why they had to redo the form.
+   *
+   * Pessimistic flow:
+   *   - `markOnboardingStep` runs first inside the transition.
+   *   - On success → `setPhase(nextPhase)`.
+   *   - On failure → stay on `currentPhase` + toast error so the user
+   *     can retry instead of being silently advanced past a save error.
+   *
+   * Edge case: if `markOnboardingStep` succeeds but the subsequent
+   * `completeOnboarding` (final step only) fails, we still advance to
+   * `done` because the per-step marker IS set; the timestamp will be
+   * filled by a future `markOnboardingStep` retry or via the Skip path.
+   */
   function advance(currentPhase: Phase): void {
     const stepNum = phaseToStepNumber(currentPhase);
     const nextPhase = nextPhaseFor(currentPhase);
 
-    // Optimistic UI: advance locally before the Server Action confirms.
-    // If the Server Action fails, we toast and stay on the next step
-    // anyway — the user's progress isn't lost (worst case a row of jsonb
-    // doesn't get marked, which only means they'd resume here on refresh).
-    setPhase(nextPhase);
-
-    if (stepNum === null) return;
+    if (stepNum === null) {
+      // Already at done; no-op.
+      setPhase(nextPhase);
+      return;
+    }
 
     startTransition(() => {
       void (async () => {
+        const markResult = await markOnboardingStep(stepNum);
+        if (!markResult.success) {
+          // EH-3: don't advance past a persist failure — user retries
+          // the step instead of seeing the next one with stale tracker.
+          toast.error('Ne mogu spasiti napredak. Pokušaj osvježiti.');
+          return;
+        }
+        // Step is committed — safe to advance the UI.
+        setPhase(nextPhase);
+
         if (nextPhase === 'done') {
-          // Final step: mark this step + set completion timestamp in one shot.
-          // We DON'T pass markRemainingTrue here because the user reached Done
-          // via the happy path (or by skipping each individual step), so the
-          // jsonb is already coherent.
-          const markResult = await markOnboardingStep(stepNum);
-          if (!markResult.success) {
-            toast.error('Ne mogu spasiti napredak. Pokušaj osvježiti.');
-          }
+          // Final step: also stamp the completion timestamp. Failure here
+          // is non-blocking — the per-step marker is already set above so
+          // a future retry can fill the timestamp.
           const completeResult = await completeOnboarding();
           if (!completeResult.success) {
             toast.error('Ne mogu označiti onboarding kao gotov.');
           }
-          // router.refresh() not strictly needed — WizardDone schedules a
-          // navigation to /pocetna which triggers the next render.
-          return;
-        }
-        const result = await markOnboardingStep(stepNum);
-        if (!result.success) {
-          toast.error('Ne mogu spasiti napredak. Pokušaj osvježiti.');
         }
       })();
     });

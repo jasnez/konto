@@ -4,11 +4,9 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
-import {
-  CreateGoalFormSchema,
-  type CreateGoalFormValues,
-} from '@/lib/goals/validation';
+import { CreateGoalFormSchema, type CreateGoalFormValues } from '@/lib/goals/validation';
 import { CURRENCIES } from '@/lib/accounts/constants';
+import { useFormDraft } from '@/lib/hooks/use-form-draft';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -45,6 +43,13 @@ export interface GoalFormProps {
   onSubmit: (values: CreateGoalFormValues) => Promise<string | null>;
   formId?: string;
   hideSubmit?: boolean;
+  /**
+   * OB-1: opt-in localStorage draft persistence (e.g. onboarding wizard
+   * step). Hydrates form from + saves to localStorage on every change
+   * (debounced 500 ms). Cleared automatically on successful submit. Forms
+   * outside the wizard (Add/Edit dialog) omit this and behave as before.
+   */
+  draftKey?: string;
 }
 
 // ─── Predefined icon palette ──────────────────────────────────────────────────
@@ -81,6 +86,7 @@ export function GoalForm({
   onSubmit,
   formId,
   hideSubmit,
+  draftKey,
 }: GoalFormProps) {
   const form = useForm<CreateGoalFormValues>({
     resolver: zodResolver(CreateGoalFormSchema) as never,
@@ -95,6 +101,8 @@ export function GoalForm({
     },
     mode: 'onSubmit',
   });
+  // OB-1: opt-in draft persistence (no-op when draftKey is undefined).
+  const { clearDraft } = useFormDraft(draftKey, form);
 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const isSubmitting = form.formState.isSubmitting;
@@ -108,7 +116,10 @@ export function GoalForm({
     const error = await onSubmit(values);
     if (error) {
       setSubmitError(error);
+      return;
     }
+    // OB-1: clear persisted draft on success. No-op when draftKey undefined.
+    clearDraft();
   }
 
   return (

@@ -46,8 +46,8 @@ export function WizardStepBudget({
             Postavi prvi budžet
           </h2>
           <p className="text-sm text-muted-foreground sm:text-base">
-            Trenutno nemaš kategorija troška. Kreiraj jednu i vrati se na ovaj korak —
-            ili preskoči pa ćeš dodati budžete kasnije.
+            Trenutno nemaš kategorija troška. Kreiraj jednu i vrati se na ovaj korak — ili preskoči
+            pa ćeš dodati budžete kasnije.
           </p>
         </header>
         <Card className="p-5">
@@ -82,6 +82,9 @@ export function WizardStepBudget({
         mode="create"
         categories={categories}
         baseCurrency={baseCurrency}
+        // OB-1: persist field values to localStorage so a tab close mid-step
+        // doesn't lose what the user typed. Cleared automatically on success.
+        draftKey="onboarding-step3-budget"
         onSubmit={async (values) => {
           const result = await createBudget(values);
           if (result.success) {

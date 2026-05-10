@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 import { CreateBudgetFormSchema, type CreateBudgetFormValues } from '@/lib/budgets/validation';
 import { CURRENCIES, getCurrencyLabel } from '@/lib/accounts/constants';
 import { formatMoney } from '@/lib/format/format-money';
+import { useFormDraft } from '@/lib/hooks/use-form-draft';
 import { previewCategoryPeriodSpent } from '@/app/(app)/budzeti/actions';
 import { Button } from '@/components/ui/button';
 import {
@@ -53,6 +54,13 @@ export interface BudgetFormProps {
   formId?: string;
   /** Hide the inline submit button (used by Dialog footer flow). */
   hideSubmit?: boolean;
+  /**
+   * OB-1: opt-in localStorage draft persistence (e.g. onboarding wizard
+   * step). Hydrates form from + saves to localStorage on every change
+   * (debounced 500 ms). Cleared automatically on successful submit. Forms
+   * outside the wizard (Add/Edit dialog) omit this and behave as before.
+   */
+  draftKey?: string;
 }
 
 const PERIOD_LABEL: Record<'monthly' | 'weekly', string> = {
@@ -68,6 +76,7 @@ export function BudgetForm({
   onSubmit,
   formId,
   hideSubmit,
+  draftKey,
 }: BudgetFormProps) {
   const form = useForm<CreateBudgetFormValues>({
     resolver: zodResolver(CreateBudgetFormSchema) as never,
@@ -80,6 +89,8 @@ export function BudgetForm({
     },
     mode: 'onSubmit',
   });
+  // OB-1: opt-in draft persistence (no-op when draftKey is undefined).
+  const { clearDraft } = useFormDraft(draftKey, form);
 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const isSubmitting = form.formState.isSubmitting;
@@ -93,7 +104,10 @@ export function BudgetForm({
     const error = await onSubmit(values);
     if (error) {
       setSubmitError(error);
+      return;
     }
+    // OB-1: clear persisted draft on success. No-op when draftKey undefined.
+    clearDraft();
   }
 
   return (

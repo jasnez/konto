@@ -38,8 +38,8 @@ export function WizardStepGoal({
           Postavi cilj štednje
         </h2>
         <p className="text-sm text-muted-foreground sm:text-base">
-          Ljetovanje, novi telefon, hitna rezerva — definiši koliko skupljaš i do kad.
-          Konto računa koliko trebaš odvajati mjesečno.
+          Ljetovanje, novi telefon, hitna rezerva — definiši koliko skupljaš i do kad. Konto računa
+          koliko trebaš odvajati mjesečno.
         </p>
       </header>
 
@@ -47,6 +47,9 @@ export function WizardStepGoal({
         mode="create"
         accounts={accounts}
         baseCurrency={baseCurrency}
+        // OB-1: persist field values to localStorage so a tab close mid-step
+        // doesn't lose what the user typed. Cleared automatically on success.
+        draftKey="onboarding-step4-goal"
         onSubmit={async (values) => {
           const result = await createGoal(values);
           if (result.success) {
