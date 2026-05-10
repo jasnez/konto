@@ -146,9 +146,9 @@ export type ConvertToTransferResult =
   | { success: true; data: { fromId: string; toId: string } }
   | { success: false; error: 'VALIDATION_ERROR'; details: ValidationDetails }
   | { success: false; error: 'UNAUTHORIZED' }
-  // SE-14: ownership-fail returns NOT_FOUND. The RPC may also raise
-  // 'FORBIDDEN: from_account/to_account' (migration 00049) — those are
-  // mapped to NOT_FOUND below for the same reason.
+  // SE-14: ownership-fail returns NOT_FOUND. The RPC (migration 00073)
+  // raises COUNTERPARTY_NOT_FOUND with errcode KX006 for non-owned
+  // counterparty — collapsed to NOT_FOUND in the action below.
   | { success: false; error: 'NOT_FOUND' }
   | { success: false; error: 'ALREADY_TRANSFER' }
   | { success: false; error: 'SAME_ACCOUNT' }
@@ -955,36 +955,47 @@ export async function convertTransactionToTransfer(
   });
 
   if (error) {
-    // The RPC raises specific exception messages we surface back unchanged so
-    // the caller can render a precise toast. Anything else collapses to a
-    // generic database error.
-    const message = error.message || '';
-    if (message.includes('UNAUTHORIZED')) {
-      return { success: false, error: 'UNAUTHORIZED' };
+    // TR-1: errcode-based mapping. The RPC (migration 00073) raises each
+    // exception with an explicit SQLSTATE in class `KX` (Konto eXception)
+    // — a user-defined class per Postgres §60.1. Matching on `error.code`
+    // is robust against future message-text changes; the previous
+    // `error.message.includes(...)` approach was brittle and could
+    // silently collapse to DATABASE_ERROR if the message wording shifted.
+    //
+    // Code → action surface mapping:
+    //   KX001  UNAUTHORIZED              → UNAUTHORIZED
+    //   KX002  NOT_FOUND                 → NOT_FOUND
+    //   KX003  ALREADY_TRANSFER          → ALREADY_TRANSFER
+    //   KX004  ZERO_AMOUNT               → DATABASE_ERROR (internal guard, no UI surface)
+    //   KX005  SAME_ACCOUNT              → SAME_ACCOUNT
+    //   KX006  COUNTERPARTY_NOT_FOUND    → NOT_FOUND (SE-14 collapse — don't leak existence)
+    //   KX007  CROSS_CURRENCY_NOT_SUPPORTED → CROSS_CURRENCY_NOT_SUPPORTED
+    //
+    // Any unmapped errcode (or no errcode at all — shouldn't happen post
+    // 00073) falls through to DATABASE_ERROR with a logSafe entry.
+    switch (error.code) {
+      case 'KX001':
+        return { success: false, error: 'UNAUTHORIZED' };
+      case 'KX002':
+        return { success: false, error: 'NOT_FOUND' };
+      case 'KX003':
+        return { success: false, error: 'ALREADY_TRANSFER' };
+      case 'KX005':
+        return { success: false, error: 'SAME_ACCOUNT' };
+      case 'KX006':
+        // SE-14: collapse "counterparty not yours" into NOT_FOUND so we
+        // don't leak whether the counterparty UUID exists for someone else.
+        return { success: false, error: 'NOT_FOUND' };
+      case 'KX007':
+        return { success: false, error: 'CROSS_CURRENCY_NOT_SUPPORTED' };
+      default:
+        logSafe('convert_transaction_to_transfer_rpc_error', {
+          userId: user.id,
+          code: error.code,
+          error: error.message,
+        });
+        return { success: false, error: 'DATABASE_ERROR' };
     }
-    if (message.includes('NOT_FOUND')) {
-      return { success: false, error: 'NOT_FOUND' };
-    }
-    if (message.includes('ALREADY_TRANSFER')) {
-      return { success: false, error: 'ALREADY_TRANSFER' };
-    }
-    if (message.includes('SAME_ACCOUNT')) {
-      return { success: false, error: 'SAME_ACCOUNT' };
-    }
-    if (message.includes('CROSS_CURRENCY_NOT_SUPPORTED')) {
-      return { success: false, error: 'CROSS_CURRENCY_NOT_SUPPORTED' };
-    }
-    // SE-14: RPC raises 'FORBIDDEN: from_account/to_account' (migration 00049)
-    // for ownership-fail. Mapped to NOT_FOUND on the action surface so we don't
-    // leak "ID exists but isn't yours" vs. "ID doesn't exist at all".
-    if (message.includes('FORBIDDEN')) {
-      return { success: false, error: 'NOT_FOUND' };
-    }
-    logSafe('convert_transaction_to_transfer_rpc_error', {
-      userId: user.id,
-      error: error.message,
-    });
-    return { success: false, error: 'DATABASE_ERROR' };
   }
 
   const result = data as unknown as ConvertRpcResult;
