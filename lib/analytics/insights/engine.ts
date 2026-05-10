@@ -183,10 +183,7 @@ async function loadLiveDedupKeys(
   return new Set<string>(data.map((r) => r.dedup_key));
 }
 
-async function loadBaseCurrency(
-  supabase: EngineSupabaseClient,
-  userId: string,
-): Promise<string> {
+async function loadBaseCurrency(supabase: EngineSupabaseClient, userId: string): Promise<string> {
   const { data, error } = await supabase
     .from('profiles')
     .select('base_currency')
@@ -300,6 +297,34 @@ export async function generateInsights(
   }
 
   const rows = fresh.map((ins) => toInsertRow(userId, ins));
+
+  // MT-12 (Low): pre-delete expired insights with the same dedup_key. The
+  // unique partial index `idx_insights_user_dedup_active` excludes
+  // dismissed_at IS NOT NULL but cannot exclude `valid_until < now()`
+  // (Postgres requires partial-index predicates to be IMMUTABLE, and
+  // `now()` isn't). The daily cleanup cron only sweeps once a day; if a
+  // detector regenerates between cron runs and the previous insight has
+  // expired, the new INSERT trips the unique constraint and the whole
+  // batch fails. Pre-deleting expired-with-same-key in the same call
+  // closes the gap without a schema change.
+  const dedupKeys = fresh.map((ins) => ins.dedupKey);
+  const todayIso = today.toISOString();
+  const { error: precleanError } = await supabase
+    .from('insights')
+    .delete()
+    .eq('user_id', userId)
+    .is('dismissed_at', null)
+    .in('dedup_key', dedupKeys)
+    .lt('valid_until', todayIso);
+  if (precleanError) {
+    // Non-fatal: log and continue. If a real conflict still exists the
+    // INSERT below will surface it.
+    logSafe('insights.engine.preclean_error', {
+      userId,
+      error: precleanError.message,
+    });
+  }
+
   const { data, error } = await supabase.from('insights').insert(rows).select('id');
   if (error) {
     logSafe('insights.engine.insert_error', {
