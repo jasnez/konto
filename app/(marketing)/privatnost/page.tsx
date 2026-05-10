@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: 'Kako Konto čuva tvoje podatke i koja su tvoja prava.',
 };
 
-const LAST_UPDATED = '2. maj 2026.';
+const LAST_UPDATED = '10. maj 2026.';
 
 function Section({
   id,
@@ -234,6 +234,15 @@ export default function PrivatnostPage() {
               <tr>
                 <td className="px-3 py-2 font-medium text-foreground">Resend</td>
                 <td className="px-3 py-2">Slanje email-ova (potvrde brisanja, magic link)</td>
+                <td className="px-3 py-2">EU</td>
+              </tr>
+              <tr>
+                <td className="px-3 py-2 font-medium text-foreground">api.frankfurter.app</td>
+                <td className="px-3 py-2">
+                  Dnevni kursni list (request sadrži samo valutne kodove poput „BAM/EUR” — bez
+                  ličnih podataka; poziva ga server, ne tvoj browser, pa tvoja IP adresa nije
+                  vidljiva)
+                </td>
                 <td className="px-3 py-2">EU</td>
               </tr>
             </tbody>
