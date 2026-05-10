@@ -164,7 +164,7 @@ describe('uploadStatement', () => {
         original_filename: 'statement.pdf',
       }),
     );
-    expect(revalidatePath).toHaveBeenCalledWith('/import');
+    expect(revalidatePath).toHaveBeenCalledWith('/uvezi');
   });
 
   it('odbija fajl veci od 10 MB', async () => {

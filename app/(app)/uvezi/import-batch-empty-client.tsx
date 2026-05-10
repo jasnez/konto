@@ -17,7 +17,7 @@ export function ImportBatchEmptyClient() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Button type="button" variant="secondary" className="min-h-11 w-full sm:w-auto" asChild>
-          <Link href="/import">Pokušaj ponovo s drugim PDF-om</Link>
+          <Link href="/uvezi">Pokušaj ponovo s drugim PDF-om</Link>
         </Button>
         <Button type="button" className="min-h-11 w-full sm:w-auto" asChild>
           <Link href="/transakcije/nova">Ručno unesi transakcije</Link>

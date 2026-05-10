@@ -15,7 +15,7 @@ const faqBlocks = [
       <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
         <p>
           Na stranici{' '}
-          <Link href="/import" className="font-medium text-primary hover:underline">
+          <Link href="/uvezi" className="font-medium text-primary hover:underline">
             Uvezi izvod
           </Link>{' '}
           biraš račun, učitavaš PDF, aplikacija ga sprema u zaštićeno skladište, izvuče tekst i

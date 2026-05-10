@@ -109,7 +109,9 @@ export default function SigurnostPage() {
       <Separator />
 
       <section id="uvidi-engine" className="scroll-mt-20 space-y-4">
-        <h2 className="text-lg font-medium tracking-tight">Uvidi (insights) — analiza tvojih podataka</h2>
+        <h2 className="text-lg font-medium tracking-tight">
+          Uvidi (insights) — analiza tvojih podataka
+        </h2>
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Šta radi engine i šta NE radi</CardTitle>
@@ -127,8 +129,8 @@ export default function SigurnostPage() {
               <strong className="text-foreground">Sve se dešava na našem serveru.</strong> Tvoji
               podaci ne idu trećim stranama — analiza koristi samo agregate (sume po kategoriji po
               mjesecu, prosjeke, standardne devijacije). Engine{' '}
-              <strong className="text-foreground">ne šalje ništa</strong> ka eksternim API-jima:
-              ni LLM-ovima, ni analytics provajderima, ni reklamnim mrežama.
+              <strong className="text-foreground">ne šalje ništa</strong> ka eksternim API-jima: ni
+              LLM-ovima, ni analytics provajderima, ni reklamnim mrežama.
             </p>
             <p>
               <strong className="text-foreground">Tehnička izolacija:</strong>
@@ -141,8 +143,8 @@ export default function SigurnostPage() {
               <li>
                 Sva polja u <code className="rounded bg-muted px-1 py-0.5 text-xs">insights</code>{' '}
                 tabeli (naslov, body, metadata) su generisana na našem serveru, nikad ne sadrže
-                IBAN, JMBG, broj kartice ni email — samo imena tvojih kategorija/trgovaca i iznose
-                u tvojoj valuti.
+                IBAN, JMBG, broj kartice ni email — samo imena tvojih kategorija/trgovaca i iznose u
+                tvojoj valuti.
               </li>
               <li>
                 Kad odbiješ uvid (klikneš X), označava se kao{' '}
@@ -150,16 +152,13 @@ export default function SigurnostPage() {
                 u bazi 90 dana radi historije, nakon čega se trajno briše.
               </li>
               <li>
-                Možeš ručno pokrenuti analizu (dugme "Generiši ponovo" u dev modu); rate-limited
-                na jedan poziv u 60 sekundi.
+                Možeš ručno pokrenuti analizu (dugme "Generiši ponovo" u dev modu); rate-limited na
+                jedan poziv u 60 sekundi.
               </li>
             </ul>
             <p>
               Detalji o tome šta tačno engine traži:{' '}
-              <Link
-                href="/help#uvidi-engine"
-                className="font-medium text-primary hover:underline"
-              >
+              <Link href="/pomoc#uvidi-engine" className="font-medium text-primary hover:underline">
                 Pomoć — uvidi
               </Link>
               .
@@ -212,8 +211,8 @@ export default function SigurnostPage() {
 
       <p className="text-sm text-muted-foreground">
         Korisnički vodič (FAQ):{' '}
-        <Link href="/help" className="font-medium text-primary hover:underline">
-          /help
+        <Link href="/pomoc" className="font-medium text-primary hover:underline">
+          /pomoc
         </Link>
         .
       </p>

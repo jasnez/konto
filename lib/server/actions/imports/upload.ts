@@ -164,6 +164,6 @@ export async function uploadStatement(formData: FormData): Promise<UploadStateme
     return { success: false, error: 'DATABASE_ERROR' };
   }
 
-  revalidatePath('/import');
+  revalidatePath('/uvezi');
   return { success: true, data: { batchId } };
 }

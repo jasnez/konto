@@ -27,7 +27,7 @@ export function buildValidationDetails(error: z.ZodError): ValidationDetails {
 
 export function revalidateImportViews(accountId: string | null): void {
   revalidateAfterTransactionWrite(accountId ? [accountId] : []);
-  revalidatePath('/import');
+  revalidatePath('/uvezi');
 }
 
 export function bigintToDbInt(value: bigint): number {

@@ -10,11 +10,12 @@ const SHELL_PATH_PREFIXES = [
   '/racuni',
   '/podesavanja',
   '/kategorije',
-  '/merchants',
+  // UX-10: was /merchants, /uvoz — renamed to Bosnian.
+  '/prodavaci',
   '/budzet',
   '/ciljevi',
   '/uvidi',
-  '/uvoz',
+  '/uvezi',
 ] as const;
 
 function isAuthenticatedShellPath(path: string): boolean {

@@ -69,7 +69,7 @@ export function ImportBatchFailedClient({
         return;
       }
       toast.success('Uvoz je uklonjen.');
-      router.push('/import');
+      router.push('/uvezi');
       router.refresh();
     });
   }
