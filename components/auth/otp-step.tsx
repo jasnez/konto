@@ -103,7 +103,7 @@ export function OtpStep({ email, onResend, onChangeEmail }: OtpStepProps) {
         <CardDescription>
           Poslali smo 6-cifreni kod na <span className="font-medium text-foreground">{email}</span>.
           <br />
-          Provjeri i spam folder. Kod važi 15 minuta.
+          Provjeri i spam folder. Kod vrijedi 15 minuta.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -154,7 +154,7 @@ export function OtpStep({ email, onResend, onChangeEmail }: OtpStepProps) {
               {form.formState.isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                  Provjeravam…
+                  Provjera…
                 </>
               ) : (
                 'Prijavi se'
@@ -174,7 +174,7 @@ export function OtpStep({ email, onResend, onChangeEmail }: OtpStepProps) {
             {isResending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                Šaljem…
+                Slanje…
               </>
             ) : cooldown > 0 ? (
               `Pošalji novi kod (${String(cooldown)}s)`

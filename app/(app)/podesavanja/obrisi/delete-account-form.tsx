@@ -20,7 +20,8 @@ const ERROR_MESSAGES: Record<ActionError, string> = {
   EMAIL_MISMATCH: 'Email se ne poklapa sa nalogom.',
   ALREADY_PENDING: 'Nalog je već označen za brisanje.',
   EMAIL_SEND_FAILED: 'Nismo mogli poslati email. Pokušaj ponovo.',
-  EMAIL_NOT_CONFIGURED: 'Slanje emaila nije podešeno. Javi administratoru.',
+  EMAIL_NOT_CONFIGURED:
+    'Email servis trenutno ne radi. Javi nam na hello@konto.app — ovo je naš propust.',
   DATABASE_ERROR: 'Nije uspjelo. Pokušaj ponovo.',
 };
 
@@ -96,7 +97,7 @@ export function DeleteAccountForm() {
         />
         <div className="grid gap-1.5 leading-none">
           <Label htmlFor="delete-understood" className="text-sm font-normal leading-snug">
-            Razumijem da se ova akcija ne može poništiti
+            Razumijem da se brisanje naloga ne može poništiti.
           </Label>
           {form.formState.errors.understood ? (
             <p className="text-sm text-destructive">{form.formState.errors.understood.message}</p>
@@ -105,7 +106,7 @@ export function DeleteAccountForm() {
       </div>
 
       <Button type="submit" variant="destructive" disabled={isPending} className="w-full sm:w-auto">
-        {isPending ? 'Brišem…' : 'Obriši nalog'}
+        {isPending ? 'Brisanje…' : 'Obriši nalog'}
       </Button>
     </form>
   );

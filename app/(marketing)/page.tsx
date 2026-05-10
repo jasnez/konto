@@ -11,7 +11,7 @@ export default function LandingPage() {
           Novac, lokalno i privatno.
         </h1>
         <p className="text-pretty text-lg text-muted-foreground sm:text-xl">
-          Lična financije koje žive na tvom kontu — bez povezivanja banke.
+          Lične finansije koje žive na tvom kontu. Bez povezivanja banke.
         </p>
         <div className="flex flex-col items-center gap-3 sm:flex-row">
           <Button asChild size="lg" className="h-11">

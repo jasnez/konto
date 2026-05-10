@@ -228,7 +228,7 @@ export function PretplateClient({
               className="self-start sm:self-auto"
             >
               <Search className="mr-2 h-5 w-5" aria-hidden />
-              {scanBusy ? 'Skeniram…' : 'Pronađi nove'}
+              {scanBusy ? 'Skeniranje…' : 'Pronađi nove'}
             </Button>
           </div>
         )}

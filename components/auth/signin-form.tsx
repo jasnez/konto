@@ -103,8 +103,10 @@ function EmailStep({
     }
 
     if (result.error === 'EMAIL_NOT_FOUND') {
+      // Don't expose the route path in the message — the visible
+      // "Nemaš nalog? Napravi ga." link below the form is the affordance.
       form.setError('email', {
-        message: 'Nemamo nalog za ovaj email. Napravi ga na /registracija.',
+        message: 'Nemamo nalog za ovaj email. Napravi novi ispod.',
       });
       return;
     }
@@ -157,7 +159,7 @@ function EmailStep({
                       autoCapitalize="none"
                       autoCorrect="off"
                       required
-                      placeholder="ti@primjer.ba"
+                      placeholder="ime@primjer.ba"
                       className="h-11"
                       {...field}
                     />
@@ -170,7 +172,7 @@ function EmailStep({
               {form.formState.isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                  Šaljem…
+                  Slanje…
                 </>
               ) : (
                 'Pošalji mi kod'

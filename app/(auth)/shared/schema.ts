@@ -40,7 +40,7 @@ const InviteCodeSchema = z
       ctx.addIssue({
         code: 'custom',
         message:
-          'Pozivnica ne smije sadržavati 0, 1, O, I ili l. Provjeri da nisi pomiješao slova i cifre.',
+          'Pozivnica ne smije sadržavati 0, 1, O, I ili l — da se ne pomiješaju s drugim slovima.',
       });
     }
   });

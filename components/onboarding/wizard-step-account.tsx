@@ -24,10 +24,11 @@ export function WizardStepAccount({ onComplete, onSkip }: WizardStepAccountProps
     <section aria-labelledby="wizard-step-account" className="space-y-6">
       <header className="space-y-2">
         <h2 id="wizard-step-account" className="text-2xl font-semibold sm:text-3xl">
-          Dodaj svoj prvi račun
+          Dodaj prvi račun
         </h2>
         <p className="text-sm text-muted-foreground sm:text-base">
-          Tekući, štedni, kreditna ili kešh — sve što pratiš novac. Možeš ih kasnije dodati još kroz{' '}
+          Tekući, štedni, kreditna kartica ili gotovina — sve gdje držiš novac. Više možeš dodati
+          kasnije kroz{' '}
           <Link href="/racuni" className="underline">
             Računi
           </Link>

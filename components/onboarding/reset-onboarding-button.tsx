@@ -28,7 +28,9 @@ export function ResetOnboardingButton() {
       void (async () => {
         const result = await resetOnboarding();
         if (result.success) {
-          toast.success('Onboarding resetovan. Otvori /pocetna.');
+          toast.success('Onboarding je resetovan.', {
+            description: 'Otvori početnu da vidiš wizard ponovo.',
+          });
           router.refresh();
           return;
         }
@@ -42,13 +44,7 @@ export function ResetOnboardingButton() {
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={handleClick}
-      disabled={pending}
-    >
+    <Button type="button" variant="outline" size="sm" onClick={handleClick} disabled={pending}>
       🧪 Reset onboarding
     </Button>
   );

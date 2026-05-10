@@ -193,7 +193,7 @@ export function SortableDashboard({ initialOrder, slots, children }: SortableDas
 
           <div className="sticky bottom-0 z-20 -mx-4 mt-2 flex gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
             <Button onClick={save} disabled={isPending} className="flex-1 sm:flex-none">
-              {isPending ? 'Čuvam…' : 'Sačuvaj'}
+              {isPending ? 'Spremanje…' : 'Sačuvaj'}
             </Button>
             <Button
               variant="ghost"

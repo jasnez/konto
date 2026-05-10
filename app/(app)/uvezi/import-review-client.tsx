@@ -335,7 +335,9 @@ export function ImportReviewClient({
           return;
         }
         if (res.data?.aliasCreated === true) {
-          toast.success('Naučio sam — sljedeći put ću ovo automatski kategorisati.');
+          toast.success(
+            'Zapamtili smo. Sljedeća slična transakcija ide u istu kategoriju automatski.',
+          );
         }
       })();
     },
@@ -372,7 +374,9 @@ export function ImportReviewClient({
           return;
         }
         if (res.data?.aliasCreated === true) {
-          toast.success('Naučio sam — sljedeći put ću ovo automatski kategorisati.');
+          toast.success(
+            'Zapamtili smo. Sljedeća slična transakcija ide u istu kategoriju automatski.',
+          );
         }
       })();
     },
@@ -419,10 +423,10 @@ export function ImportReviewClient({
         }
         if (res.data.skippedDuplicates > 0) {
           toast.success(
-            `Importovano ${String(res.data.imported)} transakcija. ${String(res.data.skippedDuplicates)} preskočene kao duplikati.`,
+            `Uvezeno ${String(res.data.imported)} transakcija. ${String(res.data.skippedDuplicates)} preskočene kao duplikati.`,
           );
         } else {
-          toast.success(`Importovano ${String(res.data.imported)} transakcija.`);
+          toast.success(`Uvezeno ${String(res.data.imported)} transakcija.`);
         }
         router.push('/transakcije');
       });
@@ -811,10 +815,10 @@ export function ImportReviewClient({
               {isWorking ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden />
-                  Uvozim…
+                  Uvoz…
                 </>
               ) : (
-                'Potvrdi i importuj'
+                'Potvrdi i uvezi'
               )}
             </Button>
           </div>

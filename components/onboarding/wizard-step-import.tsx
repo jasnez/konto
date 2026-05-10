@@ -42,7 +42,7 @@ export function WizardStepImport({ onComplete }: WizardStepImportProps) {
           Dodaj prvu transakciju
         </h2>
         <p className="text-sm text-muted-foreground sm:text-base">
-          Najbrže je uvesti izvod iz banke. Ili upiši jednu ručno da vidiš kako sve radi.
+          Najbrže: uvezi PDF izvod iz banke. Sporije, ali isto fino: dodaj jednu ručno.
         </p>
       </header>
 
@@ -56,9 +56,9 @@ export function WizardStepImport({ onComplete }: WizardStepImportProps) {
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <FileUp className="h-5 w-5" aria-hidden />
             </div>
-            <h3 className="font-semibold">Uvezi izvod (PDF)</h3>
+            <h3 className="font-semibold">Uvezi PDF izvod</h3>
             <p className="text-sm text-muted-foreground">
-              Pošalji izvod iz banke i dobićeš sve transakcije odjednom, već kategorisane.
+              Sve transakcije odjednom, već raspoređene po kategorijama.
             </p>
             <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-primary">
               Otvori uvoz
@@ -74,7 +74,7 @@ export function WizardStepImport({ onComplete }: WizardStepImportProps) {
             </div>
             <h3 className="font-semibold">Dodaj ručno</h3>
             <p className="text-sm text-muted-foreground">
-              Brzi unos jedne transakcije — iznos, kategorija, datum. Gotovo za 30 sekundi.
+              Iznos, kategorija, datum — gotovo za 30 sekundi.
             </p>
             <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-primary">
               Otvori unos

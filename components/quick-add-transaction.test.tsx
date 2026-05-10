@@ -156,7 +156,7 @@ describe('QuickAddTransaction', () => {
     const amountInput = await screen.findByRole('textbox', { name: 'Iznos' });
     await user.clear(amountInput);
     await user.type(amountInput, '12,50');
-    await user.click(screen.getByRole('button', { name: 'Spasi' }));
+    await user.click(screen.getByRole('button', { name: 'Sačuvaj' }));
 
     await waitFor(() => {
       expect(createTransactionMock).toHaveBeenCalledTimes(1);
@@ -194,7 +194,7 @@ describe('QuickAddTransaction', () => {
     const merchantInput = screen.getByPlaceholderText('npr. Konzum');
     await user.type(merchantInput, 'Konzum');
 
-    await user.click(screen.getByRole('button', { name: 'Spasi' }));
+    await user.click(screen.getByRole('button', { name: 'Sačuvaj' }));
 
     await waitFor(() => {
       expect(createTransactionMock).toHaveBeenCalledTimes(1);
@@ -232,7 +232,7 @@ describe('QuickAddTransaction', () => {
     const merchantInput = screen.getByPlaceholderText('npr. Konzum');
     await user.type(merchantInput, 'Bingo');
 
-    await user.click(screen.getByRole('button', { name: 'Spasi' }));
+    await user.click(screen.getByRole('button', { name: 'Sačuvaj' }));
 
     await waitFor(() => {
       expect(createTransactionMock).toHaveBeenCalledTimes(1);
@@ -274,7 +274,7 @@ describe('QuickAddTransaction', () => {
     const amountInput = screen.getByRole('textbox', { name: 'Iznos' });
     await user.clear(amountInput);
     await user.type(amountInput, '20,00');
-    await user.click(screen.getByRole('button', { name: 'Spasi' }));
+    await user.click(screen.getByRole('button', { name: 'Sačuvaj' }));
 
     // Resolve the pending merchant call
     resolveCreateMerchant({ success: true, data: { id: 'lidl-id' } });

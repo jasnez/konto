@@ -138,9 +138,9 @@ export default async function PodesavanjaPage() {
 
       <section className="space-y-3">
         <div className="space-y-1">
-          <h2 className="text-lg font-medium tracking-tight">Zona rizika</h2>
+          <h2 className="text-lg font-medium tracking-tight">Brisanje naloga</h2>
           <p className="text-sm text-muted-foreground">
-            Trajno uklanjanje naloga i svih podataka nakon 30 dana.
+            Trajno brisanje naloga i svih podataka. Imaš 30 dana da otkažeš ako se predomisliš.
           </p>
         </div>
         <Link
@@ -155,9 +155,9 @@ export default async function PodesavanjaPage() {
 
       <section className="space-y-3">
         <div className="space-y-1">
-          <h2 className="text-lg font-medium tracking-tight">Sesija</h2>
+          <h2 className="text-lg font-medium tracking-tight">Odjava</h2>
           <p className="text-sm text-muted-foreground">
-            Odjava briše sesiju samo na ovom uređaju. Možeš se opet prijaviti istim emailom.
+            Odjavljuje samo ovaj uređaj. Možeš se vratiti istim emailom.
           </p>
         </div>
         <SignOutButton />

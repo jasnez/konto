@@ -168,7 +168,7 @@ export function CashReconcileButton({
               }}
               disabled={submitting}
             >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : 'Spasi'}
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : 'Sačuvaj'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -22,13 +22,13 @@ export function RecurringEmptyState({ onScan, onAddManual, busy }: RecurringEmpt
       <div className="max-w-sm space-y-1">
         <h2 className="text-lg font-semibold">Još nema pretplata</h2>
         <p className="text-sm text-muted-foreground">
-          Skeniraj svoju istoriju transakcija — Konto sam pronalazi ponavljajuće troškove (Netflix,
+          Skeniraj svoju istoriju transakcija — Konto pronalazi ponavljajuće troškove (Netflix,
           kirija, internet). Možeš i ručno dodati pretplatu koja još nije u istoriji.
         </p>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
         <Button onClick={onScan} disabled={busy} size="lg">
-          {busy ? 'Skeniram…' : 'Pronađi pretplate'}
+          {busy ? 'Skeniranje…' : 'Pronađi pretplate'}
         </Button>
         {onAddManual && (
           <Button onClick={onAddManual} variant="outline" size="lg" disabled={busy}>

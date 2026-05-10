@@ -145,7 +145,7 @@ test('F2: cijeli import flow @slow', async ({ page }, testInfo) => {
     });
 
     // 10.
-    await page.getByRole('button', { name: 'Potvrdi i importuj' }).click();
+    await page.getByRole('button', { name: 'Potvrdi i uvezi' }).click();
     // 11.–12.
     await expect(page).toHaveURL(/\/transakcije/u, { timeout: 60_000 });
     const main = page.getByRole('main');

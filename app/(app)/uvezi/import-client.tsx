@@ -186,7 +186,7 @@ export function ImportStatementClient({ accounts }: ImportStatementClientProps) 
               {isPending ? (
                 <>
                   <Loader2 className="h-12 w-12 shrink-0 animate-spin text-primary" aria-hidden />
-                  <p className="text-base font-medium">Šaljem…</p>
+                  <p className="text-base font-medium">Slanje…</p>
                   <p className="text-sm text-muted-foreground">
                     Ovo može potrajati nekoliko sekundi.
                   </p>
