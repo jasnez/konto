@@ -32,8 +32,8 @@ export default function PrivatnostPage() {
         <p className="text-sm font-mono text-muted-foreground">Privatnost</p>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Politika privatnosti</h1>
         <p className="text-base text-muted-foreground">
-          Sažetak: čuvamo samo ono što ti aktivno daješ aplikaciji, držimo to u EU, ne prodajemo
-          trećim stranama, i daješ ti potpunu kontrolu nad brisanjem i izvozom.
+          Sažetak: čuvamo samo ono što ti aktivno daješ aplikaciji, ne prodajemo trećim stranama, i
+          daješ ti potpunu kontrolu nad brisanjem i izvozom.
         </p>
         <p className="text-xs text-muted-foreground">
           Zadnja izmjena: <strong className="text-foreground">{LAST_UPDATED}</strong>
@@ -47,7 +47,9 @@ export default function PrivatnostPage() {
         <p className="font-medium text-foreground">Najvažnije ukratko:</p>
         <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
           <li>Tvoje podatke nikad ne prodajemo i nikad ne dijelimo s reklamnim mrežama.</li>
-          <li>Sve čuvamo u EU (Frankfurt).</li>
+          <li>
+            Gdje se podaci obrađuju (dio u EU, dio u SAD-u) — vidi tabelu sub-procesora ispod.
+          </li>
           <li>Možeš preuzeti sve svoje podatke i obrisati nalog kad god poželiš.</li>
         </ul>
       </aside>
@@ -222,14 +224,14 @@ export default function PrivatnostPage() {
               <tr>
                 <td className="px-3 py-2 font-medium text-foreground">Vercel</td>
                 <td className="px-3 py-2">Hosting i edge</td>
-                <td className="px-3 py-2">EU regije</td>
+                <td className="px-3 py-2">SAD (serverless funkcije) · globalni edge</td>
               </tr>
               <tr>
                 <td className="px-3 py-2 font-medium text-foreground">Google Cloud (Gemini)</td>
                 <td className="px-3 py-2">
                   Strukturiranje teksta iz PDF-a (nakon redakcije osjetljivih podataka)
                 </td>
-                <td className="px-3 py-2">EU (kroz API podešavanja)</td>
+                <td className="px-3 py-2">SAD / globalno</td>
               </tr>
               <tr>
                 <td className="px-3 py-2 font-medium text-foreground">Resend</td>
@@ -248,6 +250,12 @@ export default function PrivatnostPage() {
             </tbody>
           </table>
         </div>
+        <p>
+          <strong className="text-foreground">Napomena o lokaciji obrade:</strong> hosting
+          serverless funkcija (Vercel) i AI strukturiranje PDF teksta (Google Gemini) trenutno se
+          obrađuju kod provajdera u SAD-u; ostali sub-procesori su u EU. Prije slanja AI modelu
+          redaktujemo osjetljive podatke (IBAN, broj kartice, JMBG).
+        </p>
         <p>
           <strong className="text-foreground">Ne dijelimo</strong> tvoje podatke s reklamnim
           mrežama, brokerima podataka, niti bilo kim izvan ove liste. Nikad nismo i nikad nećemo
