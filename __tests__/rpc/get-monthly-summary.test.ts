@@ -159,7 +159,7 @@ describe.skipIf(!shouldRun)('get_monthly_summary (opening_balance excluded from 
     expect(jsonBigInt(data, 'month_net')).toBe(-10_000n);
   });
 
-  it('excludes negative opening balance (debt) from month_expense; keeps other expense', async () => {
+  it('excludes ALL flow on a Pasiva (credit_card) account — income, expense and net are zero', async () => {
     const password2 = 'qa-test-password-12345';
     const create = await admin.auth.admin.createUser({
       email: uniqueEmail('summary2'),
@@ -240,9 +240,17 @@ describe.skipIf(!shouldRun)('get_monthly_summary (opening_balance excluded from 
       expect(error).toBeNull();
       if (data === null) throw new Error('null rpc data');
 
+      // Pasiva accounts (loan, credit_card) are intentionally excluded from the
+      // monthly cash-flow aggregates — see migrations 00047
+      // (dashboard_exclude_pasiva_from_flow) and 00051 (...respects_flag), where
+      // the `tx` CTE filters `a.type not in ('loan', 'credit_card')`. So BOTH the
+      // opening-balance row AND the −2.000 food expense sit on a credit_card
+      // account and never reach income/expense/net; card debt surfaces only in
+      // the liabilities / net-worth fields. (Was previously asserting 2.000 of
+      // expense — stale, pre-00047 expectation. Audit 2026-06-10.)
       expect(jsonBigInt(data, 'month_income')).toBe(0n);
-      expect(jsonBigInt(data, 'month_expense')).toBe(2_000n);
-      expect(jsonBigInt(data, 'month_net')).toBe(-2_000n);
+      expect(jsonBigInt(data, 'month_expense')).toBe(0n);
+      expect(jsonBigInt(data, 'month_net')).toBe(0n);
     } finally {
       await admin.auth.admin.deleteUser(u2);
     }
