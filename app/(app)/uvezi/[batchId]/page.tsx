@@ -183,7 +183,7 @@ export default async function ImportBatchPage(props: PageProps) {
     supabase
       .from('parsed_transactions')
       .select(
-        'id, transaction_date, raw_description, amount_minor, currency, category_id, merchant_id, selected_for_import, parse_confidence, categorization_source, categorization_confidence, status, convert_to_transfer_to_account_id',
+        'id, transaction_date, raw_description, amount_minor, currency, category_id, merchant_id, selected_for_import, parse_confidence, categorization_source, categorization_confidence, status, convert_to_transfer_to_account_id, is_potential_duplicate',
       )
       .eq('batch_id', batchId)
       .eq('user_id', user.id)
@@ -235,6 +235,7 @@ export default async function ImportBatchPage(props: PageProps) {
     categorization_confidence: r.categorization_confidence ?? 0,
     is_likely_atm: isLikelyAtmDescription(r.raw_description),
     convert_to_transfer_to_account_id: r.convert_to_transfer_to_account_id ?? null,
+    is_potential_duplicate: r.is_potential_duplicate,
   }));
 
   const cashAccount = cashRow ? { id: cashRow.id, name: cashRow.name } : null;

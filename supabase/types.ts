@@ -874,6 +874,7 @@ export type Database = {
           created_at: string;
           currency: string;
           id: string;
+          is_potential_duplicate: boolean;
           merchant_id: string | null;
           parse_confidence: string | null;
           raw_description: string;
@@ -895,6 +896,7 @@ export type Database = {
           created_at?: string;
           currency: string;
           id?: string;
+          is_potential_duplicate?: boolean;
           merchant_id?: string | null;
           parse_confidence?: string | null;
           raw_description: string;
@@ -916,6 +918,7 @@ export type Database = {
           created_at?: string;
           currency?: string;
           id?: string;
+          is_potential_duplicate?: boolean;
           merchant_id?: string | null;
           parse_confidence?: string | null;
           raw_description?: string;
