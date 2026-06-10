@@ -94,6 +94,7 @@ export async function POST(_req: NextRequest, { params }: ParseRouteParams) {
       batchId: batch.id,
       userId: user.id,
       storagePath: batch.storage_path,
+      accountId: batch.account_id,
       bankHint,
     });
     return NextResponse.json({

@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import {
-  filterDuplicates,
   loadFinalizeContext,
   persistFinalizedBatch,
   prepareImportRows,
@@ -57,20 +56,16 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
     return { success: false, error: prep.error };
   }
 
-  const dedup = await filterDuplicates(supabase, ctx.batch.account_id, prep.prepared, user.id);
-  if (!dedup.ok) {
-    return { success: false, error: dedup.error };
-  }
-  if (dedup.toInsert.length === 0) {
-    return { success: false, error: 'ALL_DUPLICATES' };
-  }
-
+  // S-1: duplicate handling moved to review. Potential duplicates are flagged
+  // at parse time and deselected by default; loadFinalizeContext only loads
+  // rows with selected_for_import = true. So every row here is one the user
+  // chose to import — finalize no longer silently drops anything.
   const persist = await persistFinalizedBatch(
     supabase,
     batchId,
     user.id,
-    dedup.toInsert,
-    dedup.skipped,
+    prep.prepared,
+    0,
     ctx.batch.storage_path,
   );
   if (!persist.ok) {
@@ -81,6 +76,6 @@ export async function finalizeImport(input: unknown): Promise<FinalizeImportResu
   revalidatePath(`/import/${batchId}`);
   return {
     success: true,
-    data: { imported: persist.imported, skippedDuplicates: dedup.skipped },
+    data: { imported: persist.imported, skippedDuplicates: 0 },
   };
 }

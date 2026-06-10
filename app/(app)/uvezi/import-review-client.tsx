@@ -68,6 +68,12 @@ export interface ReviewParsedRow {
   is_likely_atm: boolean;
   /** When set, finalize will materialise this row as a transfer to the named account. */
   convert_to_transfer_to_account_id: string | null;
+  /**
+   * Set at parse time when import_dedup_filter matched this row against an
+   * existing transaction or an earlier row in the same batch. Deselected by
+   * default; the user confirms which (if any) to import.
+   */
+  is_potential_duplicate: boolean;
 }
 
 export interface ReviewCashAccount {
@@ -280,6 +286,10 @@ export function ImportReviewClient({
         (r) =>
           r.is_likely_atm && r.selected_for_import && r.convert_to_transfer_to_account_id === null,
       ).length,
+    [rows],
+  );
+  const duplicateRowCount = useMemo(
+    () => rows.filter((r) => r.is_potential_duplicate).length,
     [rows],
   );
 
@@ -636,6 +646,23 @@ export function ImportReviewClient({
           </div>
         ) : null}
 
+        {duplicateRowCount > 0 ? (
+          <div
+            className="space-y-1 rounded-lg border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/5 px-4 py-3 text-sm text-muted-foreground"
+            role="status"
+          >
+            <p className="text-base font-medium text-foreground">
+              {duplicateRowCount} {duplicateRowCount === 1 ? 'stavka liči' : 'stavki liči'} na već
+              postojeću transakciju.
+            </p>
+            <p>
+              Takve stavke su <span className="font-medium text-foreground">isključene</span> iz
+              uvoza dok ih ne potvrdiš. Ako je u pitanju stvarno nova transakcija (npr. dvije iste
+              kupovine isti dan), čekiraj je da se uveze.
+            </p>
+          </div>
+        ) : null}
+
         {batch.parseWarnings.length > 0 ? (
           <div className="space-y-2 rounded-lg border border-border/80 bg-card p-4">
             <h2 className="text-base font-semibold">Upozorenja</h2>
@@ -925,6 +952,14 @@ const ReviewDesktopRow = memo(function ReviewDesktopRow({
       </td>
       <td className="py-2 pr-2">
         <div className="space-y-1">
+          {row.is_potential_duplicate ? (
+            <Badge
+              variant="outline"
+              className="h-6 border-[hsl(var(--warning))]/50 bg-[hsl(var(--warning))]/10 px-2 text-xs font-medium text-[hsl(var(--warning))]"
+            >
+              Moguć duplikat
+            </Badge>
+          ) : null}
           {isLikelyAtm ? (
             <AtmRowActions
               rowId={row.id}
@@ -1084,6 +1119,14 @@ const ReviewMobileCard = memo(function ReviewMobileCard(
             {categorizationMeta.label} ·{' '}
             {formatCategorizationConfidence(row.categorization_confidence)}
           </Badge>
+          {row.is_potential_duplicate ? (
+            <Badge
+              variant="outline"
+              className="h-8 border-[hsl(var(--warning))]/50 bg-[hsl(var(--warning))]/10 px-2 text-xs font-medium text-[hsl(var(--warning))]"
+            >
+              Moguć duplikat
+            </Badge>
+          ) : null}
         </div>
         {isLikelyAtm ? (
           <div className="mb-2">

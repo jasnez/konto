@@ -31,6 +31,8 @@ function buildClient(opts: {
   downloadError?: { message: string } | null;
   insertError?: { message: string } | null;
   updateError?: { message: string } | null;
+  /** 0-based indices import_dedup_filter should flag as potential duplicates. */
+  dedupIndices?: number[];
 }) {
   const inserts: InsertCall[] = [];
   const updates: UpdateCall[] = [];
@@ -63,12 +65,15 @@ function buildClient(opts: {
     throw new Error(`Unexpected table ${table}`);
   });
 
+  const rpc = vi.fn().mockResolvedValue({ data: opts.dedupIndices ?? [], error: null });
+
   const client = {
     from,
+    rpc,
     storage: { from: vi.fn(() => ({ download })) },
   };
 
-  return { client, inserts, updates, download };
+  return { client, inserts, updates, download, rpc };
 }
 
 const fakePdf = () =>
@@ -109,6 +114,7 @@ describe('runParsePipeline', () => {
       batchId: 'b1',
       userId: 'u1',
       storagePath: 'u1/x.pdf',
+      accountId: 'acc1',
       bankHint: 'Raiffeisen',
     });
 
@@ -125,6 +131,24 @@ describe('runParsePipeline', () => {
     );
   });
 
+  it('flags potential duplicates and deselects them for review (S-1)', async () => {
+    const { client, inserts } = buildClient({ downloadData: fakePdf(), dedupIndices: [0] });
+    vi.mocked(extractPdfText).mockResolvedValue(extractedText);
+    vi.mocked(parseStatementWithLLM).mockResolvedValue(parsedOk);
+    vi.mocked(runCategorizationCascade).mockResolvedValue({ source: 'none', confidence: 0 });
+
+    await runParsePipeline(client as never, {
+      batchId: 'b1',
+      userId: 'u1',
+      storagePath: 'u1/x.pdf',
+      accountId: 'acc1',
+    });
+
+    const row = inserts[0]?.rows[0];
+    expect(row.is_potential_duplicate).toBe(true);
+    expect(row.selected_for_import).toBe(false);
+  });
+
   it('throws ParsePipelineError(pdf_not_found) on download failure', async () => {
     const { client } = buildClient({ downloadError: { message: 'NoSuchKey' } });
     await expect(
@@ -132,6 +156,7 @@ describe('runParsePipeline', () => {
         batchId: 'b1',
         userId: 'u1',
         storagePath: 'u1/x.pdf',
+        accountId: 'acc1',
       }),
     ).rejects.toMatchObject({
       name: 'ParsePipelineError',
@@ -153,6 +178,7 @@ describe('runParsePipeline', () => {
         batchId: 'b1',
         userId: 'u1',
         storagePath: 'u1/x.pdf',
+        accountId: 'acc1',
       }),
     ).rejects.toMatchObject({ code: 'no_text_extracted' });
   });
@@ -168,6 +194,7 @@ describe('runParsePipeline', () => {
         batchId: 'b1',
         userId: 'u1',
         storagePath: 'u1/x.pdf',
+        accountId: 'acc1',
       }),
     ).rejects.toMatchObject({ code: 'service_unavailable' });
   });
@@ -187,6 +214,7 @@ describe('runParsePipeline', () => {
         batchId: 'b1',
         userId: 'u1',
         storagePath: 'u1/x.pdf',
+        accountId: 'acc1',
       }),
     ).rejects.toBeInstanceOf(ParsePipelineError);
   });

@@ -39,6 +39,8 @@ export interface ParsePipelineInput {
   batchId: string;
   userId: string;
   storagePath: string;
+  /** The batch's destination account — used to flag potential duplicates. */
+  accountId: string | null;
   bankHint?: string;
 }
 
@@ -62,7 +64,7 @@ export async function runParsePipeline(
   supabase: SupabaseClient<Database>,
   input: ParsePipelineInput,
 ): Promise<ParsePipelineResult> {
-  const { batchId, userId, storagePath, bankHint } = input;
+  const { batchId, userId, storagePath, accountId, bankHint } = input;
 
   const { data: fileData, error: downloadErr } = await supabase.storage
     .from('bank-statements')
@@ -118,6 +120,7 @@ export async function runParsePipeline(
         categorization_source: categorization.source,
         categorization_confidence: categorization.confidence,
         selected_for_import: true,
+        is_potential_duplicate: false,
       });
     }
 
@@ -162,6 +165,41 @@ export async function runParsePipeline(
         // Never fail the parse over LLM categorization issues — rows
         // remain source='none' and the user categorises them in review.
         logSafe('parse_pipeline_llm_categorize_error', {
+          userId,
+          batchId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    // S-1: flag potential duplicates (same account, amount, date ±1 day,
+    // merchant similarity > 0.8 — same rule as import_dedup_filter) so the
+    // review screen can surface them for confirmation instead of finalize
+    // silently dropping them. Flagged rows are deselected by default; the user
+    // re-selects to import. Non-fatal: if flagging fails, rows import normally.
+    if (accountId) {
+      try {
+        const dedupPayload = rows.map((r) => ({
+          transaction_date: r.transaction_date,
+          original_amount_cents: r.amount_minor,
+          merchant_raw: r.raw_description,
+        }));
+        const { data: dupIdx, error: dupErr } = await supabase.rpc('import_dedup_filter', {
+          p_account_id: accountId,
+          p_rows: dedupPayload,
+        });
+        if (dupErr) {
+          logSafe('parse_pipeline_dedup_flag_error', { userId, batchId, error: dupErr.message });
+        } else if (Array.isArray(dupIdx)) {
+          for (const i of dupIdx) {
+            if (i >= 0 && i < rows.length) {
+              rows[i].is_potential_duplicate = true;
+              rows[i].selected_for_import = false;
+            }
+          }
+        }
+      } catch (err) {
+        logSafe('parse_pipeline_dedup_flag_throw', {
           userId,
           batchId,
           error: err instanceof Error ? err.message : String(err),
